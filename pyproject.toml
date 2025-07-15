@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nema-quant"
+version = "0.1.0"
+authors = [
+  { name="EdAlita", email="your-email@example.com" },
+]
+description = "A tool for NEMA NU 2-2018 Image Quality analysis."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "nibabel",      # For future NIfTI support
+    "matplotlib",
+    "yacs"
+]
+
+[tool.pytest.ini_options]
+addopts = "--cov=nema_quant"
+testpaths = [
+  "tests",
+]
+
+[tool.mypy]
+mypy_path = "nema-analysis-tool"
+check_untyped_defs = true
+disallow_any_generics = true
+ignore_missing_imports = true
+no_implicit_optional = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_configs = true
+no_implicit_reexport = true
+
+
+[[tool.mypy.overrides]]
+module = "yacs.*"
+ignore_missing_imports = true
