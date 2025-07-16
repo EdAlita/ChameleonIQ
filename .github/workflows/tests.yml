@@ -6,6 +6,8 @@ on:
 
 jobs:
   tests:
+    tags:
+      - general
     runs-on: ${[ matrix.os ]}
     strategy:
       matrix:
