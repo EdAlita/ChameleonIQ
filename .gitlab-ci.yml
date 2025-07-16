@@ -1,0 +1,85 @@
+# GitLab CI/CD Configuration for NEMA Analysis Tool
+# This file defines the CI/CD pipeline for testing the project
+
+# Define stages
+stages:
+  - test
+
+# Define variables
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# Cache pip dependencies
+cache:
+  paths:
+    - .cache/pip/
+    - .tox/
+
+# Test job template
+.test_template: &test_template
+  stage: test
+  before_script:
+    - python -m pip install --upgrade pip
+    - pip install tox
+  script:
+    - tox
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - htmlcov/
+    expire_in: 1 week
+  tags:
+    - general
+
+# Test jobs for different Python versions
+test_python39:
+  <<: *test_template
+  image: python:3.9
+  variables:
+    TOXENV: py39
+
+test_python310:
+  <<: *test_template
+  image: python:3.10
+  variables:
+    TOXENV: py310
+
+test_python311:
+  <<: *test_template
+  image: python:3.11
+  variables:
+    TOXENV: py311
+
+test_python312:
+  <<: *test_template
+  image: python:3.12
+  variables:
+    TOXENV: py312
+
+# Linting job
+lint:
+  stage: test
+  image: python:3.12
+  before_script:
+    - python -m pip install --upgrade pip
+    - pip install tox
+  script:
+    - tox -e flake8
+  tags:
+    - general
+
+# Type checking job
+typecheck:
+  stage: test
+  image: python:3.12
+  before_script:
+    - python -m pip install --upgrade pip
+    - pip install tox
+  script:
+    - tox -e mypy
+  tags:
+    - general
