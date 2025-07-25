@@ -1,0 +1,6 @@
+src/nema_quant/__pycache__/*
+tests/__pycache__/*
+.coverage
+.coveragerc
+.tox/*
+config/__pycache__
