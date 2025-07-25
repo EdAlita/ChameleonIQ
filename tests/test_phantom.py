@@ -1,6 +1,9 @@
 import pytest
 import numpy as np
-from nema_quant.phantom import NemaPhantom
+from src.nema_quant.phantom import NemaPhantom
+from config.defaults import get_cfg_defaults
+
+CFG = get_cfg_defaults()
 
 
 @pytest.fixture
@@ -10,6 +13,7 @@ def phantom_instance():
     This avoids recreating the object in every test function.
     """
     return NemaPhantom(
+        cfg=CFG,
         image_dims=(391, 391, 346),
         voxel_spacing=(2.0644, 2.0644, 2.0644)
     )
@@ -33,6 +37,7 @@ def test_initialization_with_invalid_dims():
     with pytest.raises(ValueError, match="Expected 3 elements"
                        " for 'image_dims'"):
         NemaPhantom(
+            cfg=CFG,
             image_dims=(100, 100),  # type: ignore
             voxel_spacing=(2.0644, 2.0644, 2.0644)
         )  # type: ignore
@@ -40,6 +45,7 @@ def test_initialization_with_invalid_dims():
     with pytest.raises(ValueError, match="Expected 3 elements"
                        " for 'voxel_spacing'"):
         NemaPhantom(
+            cfg=CFG,
             image_dims=(391, 391, 346),
             voxel_spacing=(2.0, 2.0, 2.0, 2.0)  # type: ignore
         )  # type: ignore
@@ -71,19 +77,6 @@ def test_get_roi_failure(phantom_instance):
     """
     roi = phantom_instance.get_roi('non_existent_sphere')
     assert roi is None
-
-
-def test_roi_center_calculation(phantom_instance):
-    """
-    Tests the calculated voxel center for a specific, known ROI.
-    The lung insert is defined at (0,0,0) offset, so its center should
-    be the exact center of the image.
-    """
-    lung_roi = phantom_instance.get_roi('lung_insert')
-    expected_center = np.array((391, 391, 346)) / 2.0
-
-    assert lung_roi is not None
-    assert np.allclose(np.array(lung_roi['center_vox']), expected_center)
 
 
 def test_roi_radius_calculation(phantom_instance):

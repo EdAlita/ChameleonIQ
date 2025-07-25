@@ -18,17 +18,52 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 dependencies = [
-    "numpy",
-    "scipy",
-    "nibabel",      # For future NIfTI support
-    "matplotlib",
-    "yacs"
+    "numpy==2.2.6",
+    "scipy==1.16.0",
+    "scipy-stubs==1.16.0.2",
+    "nibabel==5.3.2",
+    "matplotlib==3.10.3",
+    "seaborn==0.13.2",
+    "pandas==2.3.1",
+    "yacs==0.1.8",
+    "opencv-python==4.12.0.88",
+    "pillow==11.3.0",
+    "reportlab==4.4.2",
+    "types-reportlab==4.4.1.20250602",
+    "SimpleITK==2.5.2",
+]
+
+[project.scripts]
+nema_quant = "nema_quant.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.4.1",
+    "pytest-cov==6.2.1",
+    "mypy==1.16.1",
+    "mypy_extensions==1.1.0",
+    "flake8==7.3.0"
 ]
 
 [tool.pytest.ini_options]
-addopts = "--cov=nema_quant"
+addopts = "--cov=src/nema_quant --cov-report=term-missing --cov-report=html"
 testpaths = [
   "tests",
+]
+pythonpath = [
+  "src",
+  "."
+]
+filterwarnings = [
+    "ignore:builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
+    "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning"
 ]
 
 [tool.mypy]
