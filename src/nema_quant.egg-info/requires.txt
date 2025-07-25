@@ -1,5 +1,0 @@
-numpy
-scipy
-nibabel
-matplotlib
-yacs
