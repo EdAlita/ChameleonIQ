@@ -99,7 +99,7 @@ def test_extract_circular_mask_2d():
     assert mask.dtype == bool
     assert mask.shape == (10, 10)
     # Fix the boolean comparison
-    assert mask[5, 5] is True
+    assert mask[5, 5]
     assert 10 <= np.sum(mask) <= 15
 
 
