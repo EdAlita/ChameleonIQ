@@ -99,7 +99,7 @@ def test_extract_circular_mask_2d():
     assert mask.dtype == bool
     assert mask.shape == (10, 10)
     # Fix the boolean comparison
-    assert mask[5, 5] == True
+    assert mask[5, 5] is True
     assert 10 <= np.sum(mask) <= 15
 
 
@@ -110,7 +110,7 @@ def test_calculate_nema_metrics(mock_extract_canny, mock_find_center, mock_cfg, 
     # Mock the functions that would cause issues
     mock_find_center.return_value = (20, 50, 50)  # (z, y, x)
     mock_extract_canny.return_value = np.array([[20, 50, 50], [21, 50, 50]])  # Mock lung centers
-    
+
     results, lung_results = analysis.calculate_nema_metrics(
         test_image_data, mock_phantom, mock_cfg
     )
@@ -169,7 +169,7 @@ def test_background_stats_calculation(mock_extract_canny, mock_find_center, mock
     # Mock the functions that would cause issues
     mock_find_center.return_value = (20, 50, 50)
     mock_extract_canny.return_value = np.array([[20, 50, 50]])
-    
+
     results, lung_results = analysis.calculate_nema_metrics(
         test_image_data, mock_phantom, mock_cfg
     )
@@ -189,7 +189,7 @@ def test_hot_sphere_counts_calculation(mock_extract_canny, mock_find_center, moc
     # Mock the functions that would cause issues
     mock_find_center.return_value = (20, 50, 50)
     mock_extract_canny.return_value = np.array([[20, 50, 50]])
-    
+
     results, lung_results = analysis.calculate_nema_metrics(
         test_image_data, mock_phantom, mock_cfg
     )
@@ -204,7 +204,7 @@ def test_calculate_background_stats():
     """Test the internal background stats calculation function."""
     # Create a simple test image
     image = np.full((20, 50, 50), 100.0, dtype=np.float32)
-    
+
     # Create a simple mock phantom
     phantom = MagicMock()
     phantom.rois = {
@@ -215,7 +215,7 @@ def test_calculate_background_stats():
             'radius_vox': 5.0
         }
     }
-    
+
     def get_roi_side_effect(name):
         roi_data = phantom.rois.get(name)
         if roi_data:
@@ -227,15 +227,15 @@ def test_calculate_background_stats():
         return None
 
     phantom.get_roi.side_effect = get_roi_side_effect
-    
+
     # Test the background stats calculation
     slices_indices = [8, 9, 10, 11, 12]
     centers_offset = [(-5, -5), (5, 5)]
-    
+
     stats = analysis._calculate_background_stats(
         image, phantom, slices_indices, centers_offset
     )
-    
+
     assert isinstance(stats, dict)
     assert 10 in stats  # Should have stats for 10mm sphere
     assert 'C_B' in stats[10]
@@ -247,14 +247,14 @@ def test_calculate_hot_sphere_counts():
     """Test the internal hot sphere counts calculation function."""
     # Create a test image with a hot spot
     image = np.full((20, 50, 50), 100.0, dtype=np.float32)
-    
+
     # Add a hot sphere at the center of slice 10
     center_y, center_x = 25, 25
     radius = 3
     y, x = np.ogrid[:50, :50]
     mask = (x - center_x) ** 2 + (y - center_y) ** 2 <= radius ** 2
     image[10, mask] = 800.0
-    
+
     # Create a mock phantom
     phantom = MagicMock()
     phantom.rois = {
@@ -265,7 +265,7 @@ def test_calculate_hot_sphere_counts():
             'radius_vox': 3.0
         }
     }
-    
+
     def get_roi_side_effect(name):
         roi_data = phantom.rois.get(name)
         if roi_data:
@@ -277,10 +277,10 @@ def test_calculate_hot_sphere_counts():
         return None
 
     phantom.get_roi.side_effect = get_roi_side_effect
-    
+
     # Test the hot sphere counts calculation
     counts = analysis._calculate_hot_sphere_counts(image, phantom, 10)
-    
+
     assert isinstance(counts, dict)
     assert 'hot_sphere_10mm' in counts
     assert counts['hot_sphere_10mm'] > 700  # Should be close to 800
@@ -290,23 +290,23 @@ def test_calculate_lung_insert_counts():
     """Test the lung insert counts calculation."""
     # Create test image
     image = np.full((20, 50, 50), 100.0, dtype=np.float32)
-    
+
     # Create lung centers array
     lung_centers = np.array([[10, 25, 25], [11, 25, 25]])
-    
+
     # Test the lung insert calculation
     CB_37 = 100.0  # Background count
     voxel_size = 2.0644
-    
+
     lung_counts = analysis._calculate_lung_insert_counts(
         image, lung_centers, CB_37, voxel_size
     )
-    
+
     assert isinstance(lung_counts, dict)
     assert len(lung_counts) == 2  # Should have 2 slices
     assert 10 in lung_counts
     assert 11 in lung_counts
-    
+
     # Values should be numeric types
     for count in lung_counts.values():
         # Accept both Python float and NumPy float types (float32, float64, etc.)
