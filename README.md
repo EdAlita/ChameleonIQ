@@ -1,3 +1,5 @@
+![Tests](https://github.com/EdAlita/nema_analysis_tool/actions/workflows/tests.yml/badge.svg)
+
 # NEMA NU 2-2018 Image Quality Analysis Tool
 
 This project is a Python-based tool for the automated analysis of PET image quality based on the NEMA NU 2-2018 standard, specifically focusing on Section 7.4.1.
