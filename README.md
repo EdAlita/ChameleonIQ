@@ -15,12 +15,17 @@ This project is a Python-based tool for the automated analysis of PET image qual
 
 ```
 nema-analysis-tool/
-├── nema_quant/       # Main source code package
-├── config/           # Configuration files
-├── tests/            # Unit and integration tests
-├── main.py           # Main entry point
-├── pyproject.toml    # Project definition and dependencies
-└── README.md
+├── src/
+│   ├── nema_quant/         # Main package source code
+│   │   ├── analysis.py     # Core NEMA analysis algorithms
+│   │   ├── io.py           # Medical image I/O operations
+│   │   ├── utils.py        # Utility functions and helpers
+│   │   ├── phantom.py      # Phantom geometry definitions
+│   │   ├── reporting.py    # Report generation and visualization
+│   │   └── cli.py          # Command-line interface
+│   └── config/             # Configuration files moved here
+├── tests/                  # Comprehensive test suite
+└── docs/                   # Documentation and examples
 ```
 
 ## Usage (Planned)
