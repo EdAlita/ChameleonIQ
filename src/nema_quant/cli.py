@@ -11,7 +11,6 @@ import logging
 import sys
 from pathlib import Path
 from typing import Optional, Tuple, Any
-import sys
 
 import numpy as np
 import numpy.typing as npt

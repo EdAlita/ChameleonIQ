@@ -35,6 +35,7 @@ dependencies = [
 
 [project.scripts]
 nema_quant = "nema_quant.__main__:main"
+nema_quant_iter = "nema_quant_iter.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -68,6 +69,7 @@ filterwarnings = [
 
 [tool.mypy]
 mypy_path = "nema-analysis-tool"
+explicit_package_bases = true
 check_untyped_defs = true
 disallow_any_generics = true
 ignore_missing_imports = true
