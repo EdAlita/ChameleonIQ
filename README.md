@@ -5,7 +5,7 @@
   <a href="https://github.com/psf/black">
     <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg">
   </a>
-  <a href="https://github.com/EdAlita/nema_analysis_tool/blob/main/LICENSE.txt">
+  <a href="https://github.com/EdAlita/nema_analysis_tool/blob/main/LICENSE">
     <img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg">
   </a>
 </p>
