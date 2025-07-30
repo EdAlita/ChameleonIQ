@@ -31,11 +31,12 @@ class NemaPhantom:
     rois : list of dict
         List of dictionaries defining each ROI: name, center (voxels), and radius (voxels).
     """
+
     def __init__(
         self,
         cfg: yacs.config.CfgNode,
         image_dims: Tuple[int, int, int],
-        voxel_spacing: Tuple[float, float, float]
+        voxel_spacing: Tuple[float, float, float],
     ) -> None:
         """
         Initializes the phantom with the properties of the target image.
@@ -106,15 +107,15 @@ class NemaPhantom:
         """
         processed_rois: Dict[str, Dict[str, Any]] = {}
         for roi_def in self.roi_definitions_mm:
-            roi_name = roi_def['name']
-            radius_mm = float(roi_def['diameter_mm']) / 2.0
+            roi_name = roi_def["name"]
+            radius_mm = float(roi_def["diameter_mm"]) / 2.0
             radius_vox = self._mm_to_voxels(radius_mm, 0)
-            center_yx = roi_def['center_yx']
+            center_yx = roi_def["center_yx"]
 
             processed_rois[roi_name] = {
-                'diameter': roi_def['diameter_mm'],
-                'center_vox': tuple(center_yx),
-                'radius_vox': radius_vox
+                "diameter": roi_def["diameter_mm"],
+                "center_vox": tuple(center_yx),
+                "radius_vox": radius_vox,
             }
 
         return processed_rois
@@ -138,7 +139,7 @@ class NemaPhantom:
         return self.rois.get(name)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     IMAGE_DIMS: Tuple[int, int, int] = (391, 391, 346)
     VOXEL_SPACING: Tuple[float, float, float] = (2.0644, 2.0644, 2.0644)
 
@@ -146,15 +147,13 @@ if __name__ == '__main__':
 
     phantom = NemaPhantom(cfg=cfg, image_dims=IMAGE_DIMS, voxel_spacing=VOXEL_SPACING)
 
-    roi_name_to_check = 'hot_sphere_10mm'
+    roi_name_to_check = "hot_sphere_10mm"
     sphere_10mm_roi = phantom.get_roi(roi_name_to_check)
 
     if sphere_10mm_roi:
         # Format the coordinates for clean printing
-        center_coords = sphere_10mm_roi['center_vox']
-        center_str = (
-            f"({center_coords[0]:.2f}, {center_coords[1]:.2f})"
-        )
+        center_coords = sphere_10mm_roi["center_vox"]
+        center_str = f"({center_coords[0]:.2f}, {center_coords[1]:.2f})"
 
         print(f"ROI: {roi_name_to_check}")
         print(f"  -> Center (voxels): {center_str} [y,x]")

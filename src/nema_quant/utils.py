@@ -1,5 +1,5 @@
 import logging
-from typing import Tuple, Optional, Any
+from typing import Any, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def find_phantom_center(
-    image_data_3d: npt.NDArray[Any],
-    threshold: float = 0.003
+    image_data_3d: npt.NDArray[Any], threshold: float = 0.003
 ) -> Tuple[float, float, float]:
     """
     Finds the center of the phantom using a robust morphological approach.
@@ -36,14 +35,13 @@ def find_phantom_center(
     """
     if image_data_3d.ndim != 3:
         raise ValueError("La imagen de entrada debe ser un array 3D (z,y,x).")
-
-    logger.info(f"Binary th: {threshold:06f}")
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug(f" Binary th: {threshold:06f}")
     binary_mask = image_data_3d > threshold
     labeled_mask, num_features = ndimage_label(binary_mask)  # type: ignore[misc]
     if num_features == 0:
         raise RuntimeError(
-            "No se pudo encontrar ningún objeto"
-            "en la imagen con el umbral actual."
+            "No se pudo encontrar ningún objeto" "en la imagen con el umbral actual."
         )
 
     largest_label = np.argmax(np.bincount(labeled_mask.ravel())[1:]) + 1
@@ -57,7 +55,7 @@ def find_phantom_center(
     centroid_zyx: Tuple[float, float, float] = (
         float(centroid_zyx_raw[0]),
         float(centroid_zyx_raw[1]),
-        float(centroid_zyx_raw[2])
+        float(centroid_zyx_raw[2]),
     )
 
     return centroid_zyx
@@ -66,7 +64,7 @@ def find_phantom_center(
 def voxel_to_mm(
     voxel_indices_zyx: Tuple[int, int, int],
     image_dims_xyz: Tuple[int, int, int],
-    voxel_spacing_xyz: Tuple[float, float, float]
+    voxel_spacing_xyz: Tuple[float, float, float],
 ) -> Tuple[float, float, float]:
     """
     Converts voxel indices (order z, y, x) to physical coordinates (mm, relative to the center).
@@ -105,7 +103,7 @@ def voxel_to_mm(
 def mm_to_voxel(
     mm_coords: Tuple[float, float, float],
     image_dims_xyz: Tuple[int, int, int],
-    voxel_spacing_xyz: Tuple[float, float, float]
+    voxel_spacing_xyz: Tuple[float, float, float],
 ) -> Tuple[int, int, int]:
     """
     Converts physical coordinates (in mm, relative to the center) to the indices of the nearest voxel.
@@ -150,7 +148,7 @@ def extract_canny_mask(
     image: npt.NDArray[Any],
     voxel_size: float = 2.0644,
     fantoma_z_center: int = 157,
-    phantom_center_yx: Optional[Tuple[int, int]] = None
+    phantom_center_yx: Optional[Tuple[int, int]] = None,
 ) -> npt.NDArray[Any]:
     """
     Extracts the lung insert mask using Canny edge detection, with anatomically consistent positioning.
@@ -172,10 +170,14 @@ def extract_canny_mask(
         Binary mask array corresponding to the lung insert region.
     """
     pixel_distance = int(56 / voxel_size)
-    lung_insert_pixel_distance = (fantoma_z_center-pixel_distance, fantoma_z_center+pixel_distance)
+    lung_insert_pixel_distance = (
+        fantoma_z_center - pixel_distance,
+        fantoma_z_center + pixel_distance,
+    )
 
-    logging.info(f"Image size {image.shape}")
-    logging.info(f"Expected lung insert Z range: {lung_insert_pixel_distance}")
+    if logger.isEnabledFor(logging.DEBUG):
+        logging.debug(f" Image size {image.shape}")
+        logging.debug(f" Expected lung insert Z range: {lung_insert_pixel_distance}")
 
     if phantom_center_yx is None:
         mid_slice = image[fantoma_z_center]
@@ -184,10 +186,13 @@ def extract_canny_mask(
         phantom_center_raw = center_of_mass(phantom_mask)
         phantom_center_yx = (int(phantom_center_raw[0]), int(phantom_center_raw[1]))
 
-    logging.info(f"Phantom center (Y, X): {phantom_center_yx}")
+    if logger.isEnabledFor(logging.DEBUG):
+        logging.debug(f" Phantom center (Y, X): {phantom_center_yx}")
 
     lung_centers = []
-    all_slices = list(range(lung_insert_pixel_distance[0], lung_insert_pixel_distance[1]+1))
+    all_slices = list(
+        range(lung_insert_pixel_distance[0], lung_insert_pixel_distance[1] + 1)
+    )
 
     search_radius_pixels = int(30 / voxel_size)
 
@@ -218,7 +223,9 @@ def extract_canny_mask(
             if np.sum(eroded_phantom) > 100:
                 masked_roi = np.where(eroded_phantom > 0, roi_slice, np.max(roi_slice))
 
-                lung_threshold = np.percentile(masked_roi[eroded_phantom > 0], 15)  # Bottom 15%
+                lung_threshold = np.percentile(
+                    masked_roi[eroded_phantom > 0], 15
+                )  # Bottom 15%
                 lung_candidates = (masked_roi <= lung_threshold) & (eroded_phantom > 0)
 
                 if np.sum(lung_candidates) > 50:
@@ -232,23 +239,27 @@ def extract_canny_mask(
                         expected_x = roi_slice.shape[1] // 2
 
                         for region_label in range(1, num_regions + 1):
-                            region_mask = (lung_labels == region_label)
+                            region_mask = lung_labels == region_label
                             region_size = np.sum(region_mask)
 
                             if region_size < 50 or region_size > 2000:
                                 continue
 
                             region_centroid = center_of_mass(region_mask)
-                            if np.isnan(region_centroid[0]) or np.isnan(region_centroid[1]):
+                            if np.isnan(region_centroid[0]) or np.isnan(
+                                region_centroid[1]
+                            ):
                                 continue
 
                             dist_from_center = np.sqrt(
-                                (region_centroid[0] - expected_y)**2 +
-                                (region_centroid[1] - expected_x)**2
+                                (region_centroid[0] - expected_y) ** 2
+                                + (region_centroid[1] - expected_x) ** 2
                             )
 
                             region_uint8 = (region_mask * 255).astype(np.uint8)
-                            contours, _ = cv2.findContours(region_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                            contours, _ = cv2.findContours(
+                                region_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+                            )
 
                             circularity = 0.0
                             if contours:
@@ -256,7 +267,9 @@ def extract_canny_mask(
                                 area = cv2.contourArea(contour)
                                 perimeter = cv2.arcLength(contour, True)
                                 if perimeter > 0:
-                                    circularity = 4 * np.pi * area / (perimeter * perimeter)
+                                    circularity = (
+                                        4 * np.pi * area / (perimeter * perimeter)
+                                    )
 
                             score = circularity * (1 / (1 + dist_from_center * 0.1))
 
@@ -268,12 +281,16 @@ def extract_canny_mask(
                             centroid_y = int(best_centroid[0]) + y_min
                             centroid_x = int(best_centroid[1]) + x_min
                             lung_insert_detected = True
-                            logging.info(f"Slice {z}: Lung insert detected at ({centroid_y}, {centroid_x}), score: {best_score:.3f}")
+                            if logger.isEnabledFor(logging.DEBUG):
+                                logging.debug(
+                                    f"  Slice {z}: Lung insert detected at ({centroid_y}, {centroid_x}), score: {best_score:.3f}"
+                                )
 
         if lung_insert_detected and centroid_y is not None and centroid_x is not None:
             lung_centers.append((z, centroid_y, centroid_x))
         else:
-            logging.info(f"Slice {z}: No valid lung insert detected")
+            if logger.isEnabledFor(logging.DEBUG):
+                logging.debug(f"  Slice {z}: No valid lung insert detected")
 
     if lung_centers:
         y_coords = [center[1] for center in lung_centers]
@@ -285,15 +302,23 @@ def extract_canny_mask(
         outlier_threshold = 10
         filtered_centers = []
         for center in lung_centers:
-            if (abs(center[1] - median_y) <= outlier_threshold and abs(center[2] - median_x) <= outlier_threshold):
+            if (
+                abs(center[1] - median_y) <= outlier_threshold
+                and abs(center[2] - median_x) <= outlier_threshold
+            ):
                 filtered_centers.append(center)
 
         if filtered_centers:
             final_avg_y = int(np.mean([center[1] for center in filtered_centers]))
             final_avg_x = int(np.mean([center[2] for center in filtered_centers]))
 
-            logging.info(f"Filtered {len(lung_centers) - len(filtered_centers)} outliers")
-            logging.info(f"Final lung insert center (Y, X): ({final_avg_y}, {final_avg_x})")
+            if logger.isEnabledFor(logging.DEBUG):
+                logging.debug(
+                    f"  Filtered {len(lung_centers) - len(filtered_centers)} outliers"
+                )
+                logging.debug(
+                    f"  Final lung insert center (Y, X): ({final_avg_y}, {final_avg_x})"
+                )
 
             complete_centers = []
             for z in all_slices:
@@ -309,7 +334,7 @@ def extract_canny_mask(
     return np.array(complete_centers)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # --- Ejemplo de Uso y Verificación con los valores del usuario ---
     dims = (391, 391, 346)
     spacing = (2.0644, 2.0644, 2.0644)
@@ -321,12 +346,16 @@ if __name__ == '__main__':
     print("-" * 30)
 
     # --- Prueba de conversión: mm -> vóxel ---
-    print(f"El vóxel más cercano al centro físico (0,0,0) es:"
-          f" {center_voxel_indices} (z,y,x)")
+    print(
+        f"El vóxel más cercano al centro físico (0,0,0) es:"
+        f" {center_voxel_indices} (z,y,x)"
+    )
 
     # --- Prueba de conversión inversa: vóxel -> mm ---
-    print(f"\nConvirtiendo los índices del vóxel central"
-          f"{center_voxel_indices} de vuelta a mm...")
+    print(
+        f"\nConvirtiendo los índices del vóxel central"
+        f"{center_voxel_indices} de vuelta a mm..."
+    )
     calculated_mm = voxel_to_mm(center_voxel_indices, dims, spacing)
     print(
         f"  -> Coordenada calculada: ({calculated_mm[0]:.2f}, "
@@ -334,8 +363,7 @@ if __name__ == '__main__':
     )
 
     # --- Verificación de simetría ---
-    print("\nVerificando que las conversiones"
-          " son inversas la una de la otra...")
+    print("\nVerificando que las conversiones" " son inversas la una de la otra...")
     test_mm = (-50.00, 34.00, 0.00)
     print(f"Test 1: {test_mm} -> Vóxel (z,y,x) -> mm (x,y,z)")
     voxel_result = mm_to_voxel(test_mm, dims, spacing)

@@ -85,3 +85,6 @@ no_implicit_reexport = true
 [[tool.mypy.overrides]]
 module = "yacs.*"
 ignore_missing_imports = true
+
+[tool.isort]
+profile = "black"

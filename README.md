@@ -28,10 +28,12 @@ nema-analysis-tool/
 └── docs/                   # Documentation and examples
 ```
 
-## Usage (Planned)
+## How to get Started?
+Read these:
+- [Installation instructions](documentation/INSTALLATION.md)
+- [Usage instructions](documentation/USAGE.md)
 
-The tool will be run from the command line:
+Additional information:
+- [What will change?](documentation/CHANGELOG.md)
 
-```bash
-python main.py /path/to/your/pet_image.raw --dims 391 391 346 --spacing 2.0644 2.0644 2.0644
-```
+[//]: # (- [Ignore label]&#40;documentation/ignore_label.md&#41;)
