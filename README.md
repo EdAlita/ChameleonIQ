@@ -1,4 +1,16 @@
-![Tests](https://github.com/EdAlita/nema_analysis_tool/actions/workflows/tests.yml/badge.svg)
+<p align="center">
+  <a href="https://github.com/EdAlita/nema_analysis_tool/actions/workflows/tests.yml">
+    <img alt="Tests" src="https://github.com/EdAlita/nema_analysis_tool/actions/workflows/tests.yml/badge.svg?branch=main">
+  </a>
+  <a href="https://github.com/psf/black">
+    <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg">
+  </a>
+  <a href="https://github.com/EdAlita/nema_analysis_tool/blob/main/LICENSE.txt">
+    <img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg">
+  </a>
+</p>
+
+
 
 # NEMA NU 2-2018 Image Quality Analysis Tool
 
