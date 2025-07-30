@@ -32,6 +32,7 @@ nema-analysis-tool/
 Read these:
 - [Installation instructions](documentation/INSTALLATION.md)
 - [Usage instructions](documentation/USAGE.md)
+- [How it works?](documentation/HOW_IT_WORKS.md)
 
 Additional information:
 - [What will change?](documentation/CHANGELOG.md)
