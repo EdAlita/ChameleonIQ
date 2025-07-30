@@ -6,3 +6,5 @@ tests/__pycache__/*
 src/config/__pycache__/*
 nema_quant.egg-info/*
 src/nema_quant.egg-info/*
+.pre-commit-config.yaml
+src/nema_quant_iter/*

@@ -1,13 +1,17 @@
-import pytest
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pytest
+
 from src.nema_quant.io import load_nii_image
 
 # Define the expected properties of the test data file.
 # These must match the properties used to generate the test file.
 TEST_IMAGE_DIMS = (346, 391, 391)
 TEST_IMAGE_DTYPE = np.float32
-TEST_FILE_PATH = Path("data/EARL_TORSO_CTstudy.2400s.DOI.EQZ.att_yes.frame02.subs05.nii")
+TEST_FILE_PATH = Path(
+    "data/EARL_TORSO_CTstudy.2400s.DOI.EQZ.att_yes.frame02.subs05.nii"
+)
 
 
 def test_load_nii_image_success():
@@ -23,10 +27,7 @@ def test_load_nii_image_success():
         )
 
     # Execute the function to be tested
-    loaded_data, _ = load_nii_image(
-        filepath=TEST_FILE_PATH,
-        return_affine=False
-    )
+    loaded_data, _ = load_nii_image(filepath=TEST_FILE_PATH, return_affine=False)
 
     # Assert the results are as expected
     assert isinstance(loaded_data, np.ndarray)

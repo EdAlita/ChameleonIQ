@@ -6,16 +6,19 @@ This module provides the command-line interface functionality for the NEMA NU 2-
 Author: Edwing Ulin-Briseno
 Date: 2025-07-16
 """
+
 import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Optional, Tuple, Any
+from typing import Any, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
+import yacs.config
 
 from config.defaults import get_cfg_defaults
+
 from .analysis import calculate_nema_metrics
 from .io import load_nii_image
 from .phantom import NemaPhantom
@@ -31,76 +34,63 @@ from .reporting import (
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser."""
     parser = argparse.ArgumentParser(
-        description='NEMA NU 2-2018 Image Quality Analysis Tool',
+        description="NEMA NU 2-2018 Image Quality Analysis Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
     Examples:
-    # Basic analysis with default configuration
-    python -m nema_quant input.nii --output results.txt
-
-    # Analysis with custom configuration
-    python -m nema_quant input.nii --config custom_config.yaml --output results.txt
-
-    # Analysis with custom voxel spacing
-    python -m nema_quant input.nii --spacing 2.0 2.0 2.0 --output results.txt
+    # Basic analysis
+    nema_quant input.nii --config custom_config.yaml --output results.txt
 
     # Verbose output
-    python -m nema_quant input.nii --output results.txt --verbose
-    """
+    nema_quant input.nii --config custom_config.yaml --output results.txt --verbose
+    """,
     )
 
     # Required arguments
     parser.add_argument(
-        'input_image',
-        type=str,
-        help='Path to input NIfTI image file (.nii or .nii.gz)'
+        "input_image", type=str, help="Path to input NIfTI image file (.nii or .nii.gz)"
     )
 
     parser.add_argument(
-        '--output', '-o',
+        "--output",
+        "-o",
         type=str,
         required=True,
-        help='Path to output text file for results'
+        help="Path to output file for results",
+    )
+
+    parser.add_argument(
+        "--config",
+        "-c",
+        type=str,
+        required=True,
+        help="Path to custom YAML configuration file",
+    )
+
+    parser.add_argument(
+        "--spacing", nargs=3, type=float, help="Voxel spacing in mm (x, y, z)"
     )
 
     # Optional arguments
     parser.add_argument(
-        '--config', '-c',
+        "--save-visualizations",
+        action="store_true",
+        help="Save visualization images of ROI masks and analysis regions",
+    )
+
+    parser.add_argument(
+        "--visualizations-dir",
         type=str,
-        help='Path to custom YAML configuration file (optional)'
+        default="visualizations",
+        help="Directory to save visualization images (default: visualizations)",
     )
 
     parser.add_argument(
-        '--spacing',
-        type=float,
-        nargs=3,
-        metavar=('X', 'Y', 'Z'),
-        help='Voxel spacing in mm (x y z). If not provided, read from image header'
+        "--verbose", "-v", action="store_true", help="Enable verbose output"
     )
 
     parser.add_argument(
-        '--save-visualizations',
-        action='store_true',
-        help='Save visualization images of ROI masks and analysis regions'
-    )
-
-    parser.add_argument(
-        '--visualizations-dir',
-        type=str,
-        default='visualizations',
-        help='Directory to save visualization images (default: visualizations)'
-    )
-
-    parser.add_argument(
-        '--verbose', '-v',
-        action='store_true',
-        help='Enable verbose output'
-    )
-
-    parser.add_argument(
-        '--version',
-        action='version',
-        version='NEMA Analysis Tool v0.1.0'
+        "--version", action="version", version="NEMA Analysis Tool v0.1.0"
     )
 
     return parser
@@ -112,19 +102,19 @@ def setup_logging(verbose: bool = False) -> None:
 
     logging.basicConfig(
         level=level,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[
             logging.StreamHandler(sys.stdout),
-        ]
+        ],
     )
 
-    logging.getLogger('matplotlib').setLevel(logging.WARNING)
-    logging.getLogger('PIL').setLevel(logging.WARNING)
-    logging.getLogger('reportlab').setLevel(logging.WARNING)
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
+    logging.getLogger("PIL").setLevel(logging.WARNING)
+    logging.getLogger("reportlab").setLevel(logging.WARNING)
 
 
-def load_configuration(config_path: Optional[str]):
+def load_configuration(config_path: Optional[str]) -> yacs.config.CfgNode:
     """Load configuration from file or use defaults."""
     cfg = get_cfg_defaults()
 
@@ -141,8 +131,11 @@ def load_configuration(config_path: Optional[str]):
     return cfg
 
 
-def get_image_properties(image_data: npt.NDArray[Any], affine: Optional[npt.NDArray[Any]],
-                         spacing_override: Optional[Tuple[float, float, float]]) -> Tuple[Tuple[int, int, int], Tuple[float, float, float]]:
+def get_image_properties(
+    image_data: npt.NDArray[Any],
+    affine: Optional[npt.NDArray[Any]],
+    spacing_override: Optional[Tuple[float, float, float]],
+) -> Tuple[Tuple[int, int, int], Tuple[float, float, float]]:
     """Extract image dimensions and voxel spacing."""
     image_dims = (image_data.shape[0], image_data.shape[1], image_data.shape[2])
 
@@ -150,12 +143,18 @@ def get_image_properties(image_data: npt.NDArray[Any], affine: Optional[npt.NDAr
         voxel_spacing = spacing_override
         logging.info(f"Using provided voxel spacing: {voxel_spacing} mm")
     elif affine is not None:
-        voxel_spacing = (float(np.abs(affine[0, 0])), float(np.abs(affine[1, 1])), float(np.abs(affine[2, 2])))
+        voxel_spacing = (
+            float(np.abs(affine[0, 0])),
+            float(np.abs(affine[1, 1])),
+            float(np.abs(affine[2, 2])),
+        )
         logging.info(f"Extracted voxel spacing from image: {voxel_spacing} mm")
     else:
         # Default spacing
         voxel_spacing = (1.0, 1.0, 1.0)
-        logging.warning("No voxel spacing information available. Using default: (1.0, 1.0, 1.0) mm")
+        logging.warning(
+            "No voxel spacing information available. Using default: (1.0, 1.0, 1.0) mm"
+        )
 
     logging.info(f"Image dimensions: {image_dims}")
 
@@ -179,8 +178,10 @@ def run_analysis(args: argparse.Namespace) -> int:
             print(f"ERROR: {error_msg}")
             return 1
 
-        if not input_path.suffix.lower() in ['.nii', '.gz']:
-            error_msg = f"Input file must be a NIfTI file (.nii or .nii.gz): {args.input_image}"
+        if not input_path.suffix.lower() in [".nii", ".gz"]:
+            error_msg = (
+                f"Input file must be a NIfTI file (.nii or .nii.gz): {args.input_image}"
+            )
             logging.error(error_msg)
             print(f"ERROR: {error_msg}")
             return 1
@@ -191,6 +192,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.error(f"Failed to load configuration: {e}")
             if args.verbose:
                 import traceback
+
                 logging.error(traceback.format_exc())
             print(f"ERROR: Failed to load configuration: {e}")
             return 1
@@ -203,6 +205,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.error(f"Failed to load image: {e}")
             if args.verbose:
                 import traceback
+
                 logging.error(traceback.format_exc())
             print(f"ERROR: Failed to load image: {e}")
             return 1
@@ -215,6 +218,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.error(f"Failed to extract image properties: {e}")
             if args.verbose:
                 import traceback
+
                 logging.error(traceback.format_exc())
             print(f"ERROR: Failed to extract image properties: {e}")
             return 1
@@ -227,6 +231,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.error(f"Failed to initialize phantom: {e}")
             if args.verbose:
                 import traceback
+
                 logging.error(traceback.format_exc())
             print(f"ERROR: Failed to initialize phantom: {e}")
             return 1
@@ -235,39 +240,41 @@ def run_analysis(args: argparse.Namespace) -> int:
         logging.info("Performing NEMA analysis...")
         try:
             results, lung_results = calculate_nema_metrics(
-                image_data, phantom, cfg,
+                image_data,
+                phantom,
+                cfg,
                 save_visualizations=args.save_visualizations,
-                visualizations_dir=args.visualizations_dir
+                visualizations_dir=args.visualizations_dir,
             )
             values = list(lung_results.values())
             average = float(np.mean(values))
             logging.info(f"Average of Accuracy Corrections: {average:.3f} %")
-            logging.info(f"Analysis completed. Found {len(results)} sphere measurements")
+            logging.info(
+                f"Analysis completed. Found {len(results)} sphere measurements"
+            )
 
         except Exception as e:
             logging.error(f"Failed to perform analysis: {e}")
             if args.verbose:
                 import traceback
+
                 logging.error(traceback.format_exc())
             print(f"ERROR: Failed to perform analysis: {e}")
             return 1
 
         logging.info("Saving analysis plots...")
         try:
-            generate_plots(results=results,
-                           output_dir=Path(args.output),
-                           cfg=cfg)
-            generate_rois_plots(image=image_data,
-                                output_dir=Path(args.output),
-                                cfg=cfg)
-            generate_boxplot_with_mean_std(data_dict=lung_results,
-                                           output_dir=Path(args.output),
-                                           cfg=cfg)
+            generate_plots(results=results, output_dir=Path(args.output), cfg=cfg)
+            generate_rois_plots(image=image_data, output_dir=Path(args.output), cfg=cfg)
+            generate_boxplot_with_mean_std(
+                data_dict=lung_results, output_dir=Path(args.output), cfg=cfg
+            )
             logging.info("Plots generated successfully")
         except Exception as e:
             logging.error(f"Failed to generated plots: {e}")
             if args.verbose:
                 import traceback
+
                 logging.error(traceback.format_exc())
             print(f"ERROR: Failed to generate plots: {e}")
             return 1
@@ -278,24 +285,32 @@ def run_analysis(args: argparse.Namespace) -> int:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             plot_path = output_path.parent / f"analysis_plot_{output_path.stem}.png"
             rois_loc_path = output_path.parent / f"rois_location_{output_path.stem}.png"
-            boxplot_path = output_path.parent / f'{output_path.stem}_boxplot_with_mean_std.png'
+            boxplot_path = (
+                output_path.parent / f"{output_path.stem}_boxplot_with_mean_std.png"
+            )
 
-            # Save text results
             save_results_to_txt(results, output_path, cfg, input_path, voxel_spacing)
 
-            # Convert lung_results to match expected type
             lung_results_any = {str(k): v for k, v in lung_results.items()}
 
-            # Generate PDF report
-            pdf_output_path = output_path.with_suffix('.pdf')
+            pdf_output_path = output_path.with_suffix(".pdf")
             generate_reportlab_report(
-                results, pdf_output_path, cfg, input_path, voxel_spacing,
-                lung_results_any, plot_path, rois_loc_path, boxplot_path)
+                results,
+                pdf_output_path,
+                cfg,
+                input_path,
+                voxel_spacing,
+                lung_results_any,
+                plot_path,
+                rois_loc_path,
+                boxplot_path,
+            )
             logging.info("Results saved successfully")
         except Exception as e:
             logging.error(f"Failed to save results: {e}")
             if args.verbose:
                 import traceback
+
                 logging.error(traceback.format_exc())
             print(f"ERROR: Failed to save results: {e}")
             return 1
@@ -321,8 +336,9 @@ def run_analysis(args: argparse.Namespace) -> int:
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
         print(f"ERROR: Unexpected error: {e}")
-        if hasattr(args, 'verbose') and args.verbose:
+        if hasattr(args, "verbose") and args.verbose:
             import traceback
+
             logging.error(traceback.format_exc())
             print("\nFull traceback:")
             traceback.print_exc()

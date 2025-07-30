@@ -10,8 +10,8 @@ Date: 2025-07-16
 """
 
 import sys
-from src.nema_quant.cli import main as cli_main
 
+from src.nema_quant.cli import main as cli_main
 
 if __name__ == "__main__":
     sys.exit(cli_main())
