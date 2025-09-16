@@ -153,8 +153,8 @@ config/secret_*.yaml
 
 # Coverage reports
 .coveragerc
-<<<<<<< HEAD
 
 .gitmessage
-=======
->>>>>>> 319027d740ad6b39313f8858ef2fd4dc4b313c80
+.auto-changelog
+.auto-changelog-setup.js
+CHANGELOG.md
