@@ -95,12 +95,21 @@ def test_extract_circular_mask_2d():
     mask = analysis.extract_circular_mask_2d(
         slice_dims=(10, 10), roi_center_vox=(5.0, 5.0), roi_radius_vox=2.0
     )
-    assert isinstance(mask, np.ndarray)
-    assert mask.dtype == bool
-    assert mask.shape == (10, 10)
-    # Fix the boolean comparison
-    assert mask[5, 5]
-    assert 10 <= np.sum(mask) <= 15
+
+    if not isinstance(mask, np.ndarray):
+        pytest.fail(f"Expected mask to be np.ndarray, got {type(mask)}")
+
+    if mask.dtype != bool:
+        pytest.fail(f"Expected mask dtype to be bool, got {mask.dtype}")
+
+    if mask.shape != (10, 10):
+        pytest.fail(f"Expected mask shape to be (10, 10), got {mask.shape}")
+
+    if not mask[5, 5]:
+        pytest.fail("Expected center pixel (5,5) to be True")
+
+    if not (10 <= np.sum(mask) <= 15):
+        pytest.fail(f"Expected mask sum between 10-15, got {np.sum(mask)}")
 
 
 @patch("src.nema_quant.analysis.find_phantom_center")
@@ -119,8 +128,11 @@ def test_calculate_nema_metrics(
         test_image_data, mock_phantom, mock_cfg
     )
 
-    assert isinstance(results, list)
-    assert len(results) >= 1
+    if not isinstance(results, list):
+        pytest.fail(f"Expected results to be list, got {type(results)}")
+
+    if len(results) < 1:
+        pytest.fail(f"Expected at least 1 result, got {len(results)}")
 
     # Check the first result
     result = results[0]
@@ -135,17 +147,34 @@ def test_calculate_nema_metrics(
         "bkg_std_dev_SD",
     ]
     for key in expected_keys:
-        assert key in result
+        if key not in result:
+            pytest.fail(f"Expected key '{key}' not found in result")
 
     # Check that values are reasonable
-    assert result["avg_hot_counts_CH"] > result["avg_bkg_counts_CB"]
-    assert result["diameter_mm"] in [10.0, 37.0]  # Should be one of our test spheres
-    assert result["percentaje_constrast_QH"] > 0
-    assert result["background_variability_N"] >= 0
+    if not (result["avg_hot_counts_CH"] > result["avg_bkg_counts_CB"]):
+        pytest.fail("Expected hot counts to be greater than background counts")
+
+    if result["diameter_mm"] not in [10.0, 37.0]:
+        pytest.fail(
+            f"Expected diameter to be 10.0 or 37.0, got {result['diameter_mm']}"
+        )
+
+    if not (result["percentaje_constrast_QH"] > 0):
+        pytest.fail(
+            f"Expected positive contrast, got {result['percentaje_constrast_QH']}"
+        )
+
+    if not (result["background_variability_N"] >= 0):
+        pytest.fail(
+            f"Expected non-negative variability, got {result['background_variability_N']}"
+        )
 
     # Check lung results
-    assert isinstance(lung_results, dict)
-    assert len(lung_results) > 0
+    if not isinstance(lung_results, dict):
+        pytest.fail(f"Expected lung_results to be dict, got {type(lung_results)}")
+
+    if len(lung_results) == 0:
+        pytest.fail("Expected lung_results to have at least one entry")
 
 
 def test_calculate_nema_metrics_bad_activity_ratio(
@@ -187,9 +216,14 @@ def test_background_stats_calculation(
     result = results[0]
 
     # Background should be around 100 (our test data value)
-    assert 90 <= result["avg_bkg_counts_CB"] <= 110
+    if not (90 <= result["avg_bkg_counts_CB"] <= 110):
+        pytest.fail(
+            f"Expected background counts 90-110, got {result['avg_bkg_counts_CB']}"
+        )
+
     # Standard deviation should be low for our uniform background
-    assert result["bkg_std_dev_SD"] >= 0
+    if not (result["bkg_std_dev_SD"] >= 0):
+        pytest.fail(f"Expected non-negative std dev, got {result['bkg_std_dev_SD']}")
 
 
 @patch("src.nema_quant.analysis.find_phantom_center")
@@ -209,7 +243,8 @@ def test_hot_sphere_counts_calculation(
     result = results[0]
 
     # Hot sphere should be around 800 (our test data value)
-    assert 700 <= result["avg_hot_counts_CH"] <= 900
+    if not (700 <= result["avg_hot_counts_CH"] <= 900):
+        pytest.fail(f"Expected hot counts 700-900, got {result['avg_hot_counts_CH']}")
 
 
 def test_calculate_background_stats():
@@ -248,11 +283,20 @@ def test_calculate_background_stats():
         image, phantom, slices_indices, centers_offset
     )
 
-    assert isinstance(stats, dict)
-    assert 10 in stats  # Should have stats for 10mm sphere
-    assert "C_B" in stats[10]
-    assert "SD_B" in stats[10]
-    assert stats[10]["C_B"] > 0
+    if not isinstance(stats, dict):
+        pytest.fail(f"Expected stats to be dict, got {type(stats)}")
+
+    if 10 not in stats:
+        pytest.fail("Expected stats to contain key '10'")
+
+    if "C_B" not in stats[10]:
+        pytest.fail("Expected stats[10] to contain 'C_B' key")
+
+    if "SD_B" not in stats[10]:
+        pytest.fail("Expected stats[10] to contain 'SD_B' key")
+
+    if not (stats[10]["C_B"] > 0):
+        pytest.fail(f"Expected positive C_B, got {stats[10]['C_B']}")
 
 
 def test_calculate_hot_sphere_counts():
@@ -291,11 +335,16 @@ def test_calculate_hot_sphere_counts():
     phantom.get_roi.side_effect = get_roi_side_effect
 
     # Test the hot sphere counts calculation
-    counts = analysis._calculate_hot_sphere_counts(image, phantom, 10)
+    counts = analysis._calculate_hot_sphere_counts_offset_zxy(image, phantom, 10)
 
-    assert isinstance(counts, dict)
-    assert "hot_sphere_10mm" in counts
-    assert counts["hot_sphere_10mm"] > 700  # Should be close to 800
+    if not isinstance(counts, dict):
+        pytest.fail(f"Expected counts to be dict, got {type(counts)}")
+
+    if "hot_sphere_10mm" not in counts:
+        pytest.fail("Expected 'hot_sphere_10mm' in counts")
+
+    if not (counts["hot_sphere_10mm"] > 700):
+        pytest.fail(f"Expected counts > 700, got {counts['hot_sphere_10mm']}")
 
 
 def test_calculate_lung_insert_counts():
@@ -314,13 +363,23 @@ def test_calculate_lung_insert_counts():
         image, lung_centers, CB_37, voxel_size
     )
 
-    assert isinstance(lung_counts, dict)
-    assert len(lung_counts) == 2  # Should have 2 slices
-    assert 10 in lung_counts
-    assert 11 in lung_counts
+    if not isinstance(lung_counts, dict):
+        pytest.fail(f"Expected lung_counts to be dict, got {type(lung_counts)}")
+
+    if len(lung_counts) != 2:
+        pytest.fail(f"Expected 2 slices, got {len(lung_counts)}")
+
+    if 10 not in lung_counts:
+        pytest.fail("Expected slice 10 in lung_counts")
+
+    if 11 not in lung_counts:
+        pytest.fail("Expected slice 11 in lung_counts")
 
     # Values should be numeric types
     for count in lung_counts.values():
         # Accept both Python float and NumPy float types (float32, float64, etc.)
-        assert isinstance(count, (float, np.float32, np.float64))
-        assert float(count) > 0  # Convert to Python float for comparison
+        if not isinstance(count, (float, np.float32, np.float64)):
+            pytest.fail(f"Expected count to be float type, got {type(count)}")
+
+        if not (float(count) > 0):
+            pytest.fail(f"Expected count to be positive, got {float(count)}")

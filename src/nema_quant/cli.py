@@ -345,10 +345,10 @@ def run_analysis(args: argparse.Namespace) -> int:
         return 1
 
 
-def main() -> int:
+def main(cli_args: Optional[list[str]] = None) -> int:
     """Main entry point for the CLI."""
     parser = create_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(cli_args)
     return run_analysis(args)
 
 
