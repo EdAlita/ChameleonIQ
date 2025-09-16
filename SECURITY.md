@@ -8,7 +8,7 @@ Only the latest non-prerelease version is supported
 
 If you discover a security vulnerability in this project, please contact me **directly** at:
 
-**Email:** eulinbriseo@gmail.com  
+**Email:** eulinbriseo@gmail.com
 **Subject line:** [SECURITY ALERT]
 
 ---
