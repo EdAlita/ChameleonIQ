@@ -17,9 +17,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-import seaborn as sns
 import yacs.config
-from matplotlib import patheffects
 from matplotlib.patches import Circle
 from PIL import Image as pilimage
 from reportlab.lib import colors
@@ -459,37 +457,66 @@ def generate_plots(
     """
     df = pd.DataFrame(results)
 
-    sns.set_theme(style="whitegrid", context="talk", font_scale=1.3)
+    csv_path = output_dir.parent / f"{output_dir.stem}_results.csv"
+    df.to_csv(csv_path, index=False)
+    logging.info(f"Results saved to CSV at: {csv_path}")
+
+    plt.style.use("default")
 
     fig, axes = plt.subplots(1, 2, figsize=(22, 10), sharex=True)
-    # fig.suptitle(f"{(output_dir.stem).capitalize()} NEMA Analysis", fontsize=25, weight="bold", y=1.03)
 
-    for ax, yvar, title in zip(
+    for ax, yvar, title, ylabel in zip(
         axes,
         ["percentaje_constrast_QH", "background_variability_N"],
         ["Percent Contrast by Diameter", "Percent Background Variability by Diameter"],
+        ["Percent Contrast (Hot sphere) [%]", "Percent Background Variability [%]"],
     ):
         ax.plot(
             df["diameter_mm"],
             df[yvar],
             marker="o",
-            color="#377eb8",
+            color="#1B9E77FF",
             linestyle="-",
-            markersize=12,
-            linewidth=2.5,
+            alpha=1.0,
+            linewidth=4.0,
+            markersize=10,
+            markeredgecolor="white",
+            markeredgewidth=2.0,
         )
-        ax.set_title(title)
-        ax.set_xlabel("Diameter (mm)")
-        ax.set_xticks(sorted(df["diameter_mm"].unique()))
-        ax.grid(True, axis="y")
-        ax.tick_params(axis="x", rotation=0)
-    axes[0].set_ylabel("Percent Contrast (Hot sphere) [%]")
-    axes[1].set_ylabel("Percent Background Variability [%]")
 
-    plt.tight_layout(rect=(0, 0, 1, 0.97))
-    plt.subplots_adjust(right=0.92, top=0.90)
+        ax.set_title(title, fontsize=16, weight="bold", pad=15)
+        ax.set_ylabel(ylabel, fontsize=14, weight="bold")
+        ax.tick_params(axis="both", labelsize=20, width=1.2)
+        ax.tick_params(axis="x", rotation=0)
+
+        ax.grid(True, linestyle="-", alpha=0.2, color="gray", linewidth=0.8)
+        ax.set_axisbelow(True)
+
+        ax.set_xticks(sorted(df["diameter_mm"].unique()))
+
+        ax.set_facecolor("#fafafa")
+
+    fig.text(
+        0.5,
+        0.04,
+        "Sphere Diameter [mm]",
+        ha="center",
+        va="bottom",
+        fontsize=14,
+        fontweight="bold",
+    )
+
+    plt.tight_layout(rect=(0, 0.1, 1, 0.92))
+
     output_path = output_dir.parent / f"analysis_plot_{output_dir.stem}.png"
-    plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.savefig(
+        str(output_path),
+        dpi=600,
+        bbox_inches="tight",
+        facecolor="white",
+        edgecolor="none",
+        format="png",
+    )
     plt.close()
 
 
@@ -517,68 +544,91 @@ def generate_boxplot_with_mean_std(
     None
         This function does not return a value; the plot is saved to disk.
     """
-    sns.set_theme(style="whitegrid", context="talk", font_scale=1.3)
+    plt.style.use("default")
 
     data = list(data_dict.values())
-    mean = float(np.mean(data))
     std_dev = float(np.std(data))
 
-    label = [f"{(output_dir.stem).capitalize()}"]
+    csv_path = output_dir.parent / f"{output_dir.stem}_lung_results.csv"
+    df = pd.DataFrame({"data": data})
+    df.to_csv(csv_path, index=False)
+    logging.info(f"Lung Results saved to CSV at: {csv_path}")
 
-    box_color = sns.color_palette("colorblind", n_colors=1)[0]
+    label = f"{(output_dir.stem).capitalize()}"
+
     plt.figure(figsize=(10, 8))
-    bp = plt.boxplot(
-        [data],
-        patch_artist=True,
-        label=label,
-        medianprops={"color": "black", "linewidth": 2},
+    bp = plt.violinplot(
+        data,
+        positions=[1],
+        showmeans=True,
+        showmedians=False,
+        showextrema=False,
     )
 
-    for patch in bp["boxes"]:
-        patch.set_facecolor(box_color)
-        patch.set_alpha(0.8)
-        patch.set_linewidth(2)
+    for patch in bp["bodies"]:
+        patch.set_facecolor("#1B9E77")
+        patch.set_alpha(0.7)
+        patch.set_linewidth(1)
         patch.set_edgecolor("black")
 
-    ax = plt.gca()
-    for spine in ["top", "right"]:
-        ax.spines[spine].set_visible(False)
+    bp["cmeans"].set_color("white")
+    bp["cmeans"].set_linewidth(3)
 
-    plt.plot(
-        1, mean, "o", color="#d62728", markersize=14, markeredgecolor="black", zorder=10
-    )
-    plt.errorbar(
-        1,
-        mean,
-        yerr=std_dev,
-        fmt="none",
-        ecolor="#d62728",
-        elinewidth=4,
-        capsize=10,
-        zorder=9,
+    exp_values = df["data"].values
+    color = "#1B9E77"
+
+    jitter = np.random.normal(0, 0.04, size=len(exp_values))
+    positions = np.full(len(exp_values), 1) + jitter
+
+    plt.scatter(
+        positions,
+        exp_values,
+        color=color,
+        s=40,
+        alpha=0.8,
+        edgecolor="white",
+        linewidth=1,
+        zorder=10,
     )
 
-    plt.text(
+    mean_val = np.mean(exp_values)
+
+    plt.gca().text(
         1,
-        mean + std_dev + 1.0,
-        f"{mean:.2f}",
+        max(exp_values) + std_dev / 4,
+        f"μ={mean_val:.2f}",
         ha="center",
         va="bottom",
-        color="#d62728",
-        fontsize=16,
-        weight="bold",
-        path_effects=[patheffects.withStroke(linewidth=3, foreground="white")],
+        fontsize=10,
+        bbox=dict(
+            boxstyle="round,pad=0.3", facecolor="white", alpha=0.9, edgecolor="gray"
+        ),
     )
 
-    plt.xlabel("Lung Insert", fontsize=18, weight="bold")
-    plt.ylabel("Residual Error in Corrections", fontsize=18, weight="bold")
-    plt.xticks(fontsize=15, weight="bold")
-    plt.yticks(fontsize=15, weight="bold")
-    plt.grid(True, axis="y", linestyle="--", alpha=0.6, linewidth=1.1)
+    plt.xticks([1], [label])
+    plt.xlabel("Lung Insert Accuracy Distribution", fontsize=14, fontweight="bold")
+    plt.ylabel(
+        "Accuracy of Correction in Lung Insert (%)", fontsize=14, fontweight="bold"
+    )
+
+    plt.tick_params(axis="both", labelsize=12, width=1.2)
+    plt.tick_params(axis="x", rotation=0)
+
+    plt.grid(True, axis="y", alpha=0.3)
+    plt.gca().set_axisbelow(True)
+
+    plt.gca().set_facecolor("#fafafa")
+
     plt.tight_layout()
 
     output_path = output_dir.parent / f"{output_dir.stem}_boxplot_with_mean_std.png"
-    plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.savefig(
+        str(output_path),
+        dpi=600,
+        bbox_inches="tight",
+        facecolor="white",
+        edgecolor="none",
+    )
     plt.close()
 
 

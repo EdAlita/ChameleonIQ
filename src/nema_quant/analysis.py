@@ -58,7 +58,6 @@ def _calculate_background_stats(
     """
     Internal function to calculate background mean (C_B) and std dev (SD_B)
     """
-
     reference_sphere = None
 
     for name, sphere_def in phantom.rois.items():
