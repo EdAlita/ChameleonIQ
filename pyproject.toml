@@ -36,6 +36,7 @@ dependencies = [
 [project.scripts]
 nema_quant = "nema_quant.__main__:main"
 nema_quant_iter = "nema_quant_iter.__main__:main"
+nema_merge = "nema_merge.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
