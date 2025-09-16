@@ -153,3 +153,5 @@ config/secret_*.yaml
 
 # Coverage reports
 .coveragerc
+
+.gitmessage
