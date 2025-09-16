@@ -334,6 +334,49 @@ def extract_canny_mask(
     return np.array(complete_centers)
 
 
+def calculate_weighted_cbr_fom(results):
+    """
+    Calcula el CBR y FOM ponderados para una lista de resultados tipo:
+    {
+        "diameter_mm": float,
+        "percentaje_constrast_QH": float,
+        "background_variability_N": float,
+        "avg_hot_counts_CH": float,
+        "avg_bkg_counts_CB": float,
+        "bkg_std_dev_SD": float,
+    }
+    Devuelve un diccionario con CBR y FOM ponderados y listas individuales.
+    """
+    if not results:
+        return {"weighted_CBR": None, "weighted_FOM": None}
+
+    # Extrae valores
+    diameters = [r["diameter_mm"] for r in results]
+    contrasts = [r["percentaje_constrast_QH"] for r in results]
+    variabilities = [r["background_variability_N"] for r in results]
+
+    # Pesos: inverso del diámetro, normalizado
+    weights = [1 / d for d in diameters]
+    total_weight = sum(weights)
+    weights = [w / total_weight for w in weights]
+
+    # Cálculo de CBR y FOM por diámetro
+    CBRs = [c / v if v != 0 else 0 for c, v in zip(contrasts, variabilities)]
+    FOMs = [(c**2) / v if v != 0 else 0 for c, v in zip(contrasts, variabilities)]
+
+    weighted_CBR = sum(w * cbr for w, cbr in zip(weights, CBRs))
+    weighted_FOM = sum(w * fom for w, fom in zip(weights, FOMs))
+
+    return {
+        "weighted_CBR": weighted_CBR,
+        "weighted_FOM": weighted_FOM,
+        "CBRs": CBRs,
+        "FOMs": FOMs,
+        "weights": weights,
+        "diameters": diameters,
+    }
+
+
 if __name__ == "__main__":
     # --- Ejemplo de Uso y Verificación con los valores del usuario ---
     dims = (391, 391, 346)
@@ -372,7 +415,10 @@ if __name__ == "__main__":
         f"  {test_mm} -> {voxel_result} -> "
         f"({mm_result[0]:.2f}, {mm_result[1]:.2f}, {mm_result[2]:.2f})"
     )
-    assert np.allclose(test_mm, mm_result, atol=1.1), "Conversión inv. falló!"
+    if not np.allclose(test_mm, mm_result, atol=1.1):
+        raise ValueError(
+            "Conversión inversa falló: los valores no coinciden dentro de la tolerancia"
+        )
     print("  -> Verificación exitosa!")
 
     test_voxel = (169, 211, 171)
@@ -380,7 +426,10 @@ if __name__ == "__main__":
     mm_result_2 = voxel_to_mm(test_voxel, dims, spacing)
     voxel_result_2 = mm_to_voxel(mm_result_2, dims, spacing)
     print(f"  {test_voxel} -> {mm_result_2} -> {voxel_result_2}")
-    assert test_voxel == voxel_result_2, "Conversión inv. falló!"
+    if test_voxel != voxel_result_2:
+        raise ValueError(
+            f"Conversión inversa falló: esperado {test_voxel}, obtenido {voxel_result_2}"
+        )
     print("  -> Verificación exitosa!")
 
     print(mm_to_voxel((-22.68, -16.50, 0.00), dims, spacing))

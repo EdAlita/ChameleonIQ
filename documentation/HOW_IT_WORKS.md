@@ -84,7 +84,7 @@ Think of the NEMA phantom as a "test dummy" for your medical scanner. It's a cyl
 The tool's default configuration knows exactly where each sphere should be located, but you can adjust these positions if your phantom differs:
 
 - **37mm sphere**: The "reference" sphere at the phantom center [144, 112] mm
-- **28mm sphere**: Upper right position [144, 178] mm  
+- **28mm sphere**: Upper right position [144, 178] mm
 - **22mm sphere**: Left side [95, 144] mm
 - **17mm sphere**: Right side [161, 144] mm
 - **13mm sphere**: Upper left [128, 127] mm
@@ -139,7 +139,7 @@ For each sphere, it calculates:
 - Radius in voxel units (accounting for your image's resolution)
 - Expected volume for validation
 
-**📍 Background Region Planning** 
+**📍 Background Region Planning**
 The tool strategically places 12 background measurement circles using `cfg.ROIS.BACKGROUND_OFFSET_YX`:
 
 **Primary Ring (60mm from center):**
@@ -192,7 +192,7 @@ For each sphere, the tool tests **130 different positions** in a 3D grid:
 **XY-Plane Search Pattern (25 positions per slice):**
 The tool creates a 5×5 grid of test positions around each sphere's expected center:
 - **Row 1**: (-2,+2), (-1,+2), (0,+2), (+1,+2), (+2,+2)
-- **Row 2**: (-2,+1), (-1,+1), (0,+1), (+1,+1), (+2,+1)  
+- **Row 2**: (-2,+1), (-1,+1), (0,+1), (+1,+1), (+2,+1)
 - **Row 3**: (-2,0), (-1,0), **(0,0)**, (+1,0), (+2,0)
 - **Row 4**: (-2,-1), (-1,-1), (0,-1), (+1,-1), (+2,-1)
 - **Row 5**: (-2,-2), (-1,-2), (0,-2), (+1,-2), (+2,-2)
@@ -207,7 +207,7 @@ The search explores different axial levels:
 - **-2 slices**: Two slices below the expected position
 - **-1 slice**: One slice below
 - **0 slice**: The expected central slice
-- **+1 slice**: One slice above  
+- **+1 slice**: One slice above
 - **+2 slices**: Two slices above the expected position
 
 **🏆 The Optimization Process**
@@ -279,7 +279,7 @@ The lung insert analysis uses your configuration for:
 
 **What the Numbers Mean:**
 - **100%** = Perfect! Scanner shows exact 4:1 ratio
-- **80%** = Good performance, slight underestimation  
+- **80%** = Good performance, slight underestimation
 - **60%** = Moderate performance, noticeable blurring
 - **<50%** = Poor performance, significant resolution loss
 
@@ -391,7 +391,7 @@ ACTIVITY:
   HOT: 80000    # Higher activity for better statistics
   BACKGROUND: 10000
 
-# Clinical scanner  
+# Clinical scanner
 ROIS:
   SPACING: 2.0644  # Standard clinical voxels
   CENTRAL_SLICE: 89   # Standard positioning
@@ -475,7 +475,7 @@ Smaller voxels (higher resolution) will:
 
 **🔍 Common Configuration Issues**
 1. **Wrong voxel spacing**: Results in incorrect ROI sizes and positions
-2. **Incorrect activity ratio**: Leads to misleading contrast percentages  
+2. **Incorrect activity ratio**: Leads to misleading contrast percentages
 3. **Poor central slice selection**: Affects all measurements systematically
 4. **Background regions too close**: Contaminates background with hot sphere activity
 
@@ -504,7 +504,7 @@ Smaller voxels (higher resolution) will:
    ROIS:
      SPACING: 2.0644  # Your scanner's voxel spacing
      CENTRAL_SLICE: 89  # Adjust for your setup
-   
+
    ACTIVITY:
      HOT: 40000      # Your hot sphere activity
      BACKGROUND: 10000  # Your background activity

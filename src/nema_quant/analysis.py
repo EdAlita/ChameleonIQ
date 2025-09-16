@@ -229,136 +229,6 @@ def _calculate_hot_sphere_counts_offset_zxy(
     return hot_sphere_counts
 
 
-def _calculate_hot_sphere_counts_offset_xy(
-    image_data: npt.NDArray[Any],
-    phantom: NemaPhantom,
-    central_slice_idx: int,
-    save_visualizations: bool = False,
-    viz_dir: Optional[Path] = None,
-) -> Dict[str, float]:
-    """Internal function to calculate the mean counts (C_H) for each hot sphere."""
-
-    offsets = [
-        (-2, 2),
-        (-1, 2),
-        (0, 2),
-        (1, 2),
-        (2, 2),
-        (-2, 1),
-        (-1, 1),
-        (0, 1),
-        (1, 1),
-        (2, 1),
-        (-2, 0),
-        (-1, 0),
-        (0, 0),
-        (1, 0),
-        (2, 0),
-        (-2, -1),
-        (-1, -1),
-        (0, -1),
-        (1, -1),
-        (2, -1),
-        (-2, -2),
-        (-1, -2),
-        (0, -2),
-        (1, -2),
-        (2, -2),
-    ]
-
-    hot_sphere_counts = {}
-    central_slice = image_data[central_slice_idx, :, :]
-    slice_dims_yx = central_slice.shape
-
-    for name, _ in phantom.rois.items():
-        if "sphere" not in name:
-            continue
-
-        sphere_roi = phantom.get_roi(name)
-        if sphere_roi is None:
-            continue
-
-        center_yx = sphere_roi["center_vox"]
-        max_mean = -np.inf
-
-        for offset in offsets:
-            offset_center = (center_yx[0] + offset[0], center_yx[1] + offset[1])
-            roi_mask = extract_circular_mask_2d(
-                (slice_dims_yx[0], slice_dims_yx[1]),
-                offset_center,
-                sphere_roi["radius_vox"],
-            )
-            mean_count = np.mean(central_slice[roi_mask])
-            if mean_count > max_mean:
-                max_mean = mean_count
-                best_offset = offset
-
-        logger.info(
-            f"Found the best average counts for {name} with offset {best_offset}: {max_mean:.2f}"
-        )
-        hot_sphere_counts[name] = max_mean
-
-        if save_visualizations and viz_dir:
-            roi_mask = extract_circular_mask_2d(
-                (slice_dims_yx[0], slice_dims_yx[1]),
-                best_offset,
-                sphere_roi["radius_vox"],
-            )
-            save_sphere_visualization(
-                central_slice,
-                name,
-                best_offset,
-                sphere_roi["radius_vox"],
-                roi_mask,
-                viz_dir,
-                central_slice_idx,
-            )
-
-    return hot_sphere_counts
-
-
-def _calculate_hot_sphere_counts(
-    image_data: npt.NDArray[Any],
-    phantom: NemaPhantom,
-    central_slice_idx: int,
-    save_visualizations: bool = False,
-    viz_dir: Optional[Path] = None,
-) -> Dict[str, float]:
-    """Internal function to calculate the mean counts (C_H) for each hot sphere."""
-
-    hot_sphere_counts = {}
-    central_slice = image_data[central_slice_idx, :, :]
-    slice_dims_yx = central_slice.shape
-
-    for name, _ in phantom.rois.items():
-        if "sphere" not in name:
-            continue
-
-        sphere_roi = phantom.get_roi(name)
-        if sphere_roi is None:
-            continue
-
-        center_yx = sphere_roi["center_vox"]
-        roi_mask = extract_circular_mask_2d(
-            (slice_dims_yx[0], slice_dims_yx[1]), center_yx, sphere_roi["radius_vox"]
-        )
-
-        hot_sphere_counts[name] = np.mean(central_slice[roi_mask])
-
-        if save_visualizations and viz_dir:
-            save_sphere_visualization(
-                central_slice,
-                name,
-                center_yx,
-                sphere_roi["radius_vox"],
-                roi_mask,
-                viz_dir,
-                central_slice_idx,
-            )
-
-    return hot_sphere_counts
-
-
 def _calculate_lung_insert_counts(
     image_data: npt.NDArray[Any],
     lung_inserts_centers: npt.NDArray[Any],
@@ -378,6 +248,60 @@ def _calculate_lung_insert_counts(
         lung_insert[z] = (np.mean(axial_cut[roi_mask]) / CB_37) * 100
 
     return lung_insert
+
+
+def calculate_weighted_cbr_from(results):
+    """
+    Calculates weighted Contrast-to-Background Ratio (CBR) and Figure of Merit (FOM) from sphere results.
+
+    Orchestrates weighted metric calculation by processing individual sphere measurements and computing
+    diameter-weighted averages as defined in the NEMA NU 2-2018 standard for overall image quality assessment.
+
+    Parameters
+    ----------
+    results : list of dict
+        List of calculated metrics for each sphere containing diameter_mm, percentaje_constrast_QH,
+        and background_variability_N keys.
+
+    Returns
+    -------
+    dict
+        Dictionary containing weighted_CBR, weighted_FOM, individual CBRs, FOMs, weights, and diameters.
+        Returns None values for weighted metrics if results list is empty.
+
+    Notes
+    -----
+    Author: EdAlita
+    Date: 2025-01-08 16:15:00
+
+    The weighting scheme uses inverse diameter weighting (1/d) normalized to sum to 1.0.
+    CBR is calculated as contrast/variability, FOM as contrast²/variability.
+    """
+    if not results:
+        return {"weighted_CBR": None, "weighted_FOM": None}
+
+    diameters = [r["diameter_mm"] for r in results]
+    contrasts = [r["percentaje_constrast_QH"] for r in results]
+    variabilities = [r["background_variability_N"] for r in results]
+
+    weights = [1 / (d**2) for d in diameters]
+    total_weight = sum(weights)
+    weights = [w / total_weight for w in weights]
+
+    CBRs = [c / v if v != 0 else 0 for c, v in zip(contrasts, variabilities)]
+    FOMs = [(c**2) / v if v != 0 else 0 for c, v in zip(contrasts, variabilities)]
+
+    weighted_CBR = sum(w * cbr for w, cbr in zip(weights, CBRs))
+    weighted_FOM = sum(w * fom for w, fom in zip(weights, FOMs))
+
+    return {
+        "weighted_CBR": weighted_CBR,
+        "weighted_FOM": weighted_FOM,
+        "CBRs": CBRs,
+        "FOMs": FOMs,
+        "weigths": weights,
+        "diameters": diameters,
+    }
 
 
 def calculate_nema_metrics(
@@ -477,6 +401,7 @@ def calculate_nema_metrics(
 
         if sphere_diam_mm == 37:
             CB_37 = C_B
+
         logging.info(
             f" Diameter Sphere {sphere_diam_mm}: Percentaje Contrast {percent_contrast:.1f}% Background Variability {percent_variability:.1f}%"
         )

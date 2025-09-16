@@ -50,7 +50,7 @@ ACTIVITY:
   HOT: 0.79          # Hot sphere activity
   BACKGROUND: 0.079  # Background activity
 
-# ROI parameters  
+# ROI parameters
 ROIS:
   CENTRAL_SLICE: 172              # Central slice for analysis
   BACKGROUND_OFFSET_YX: [...]     # Background ROI positions
@@ -90,11 +90,11 @@ ANALYSIS RESULTS:
 ----------------------------------------
 Sphere Analysis Results (NEMA NU 2-2018 Section 7.4.1)
 
-Diameter   Q_H (%)    N (%)      C_H          C_B          SD_B        
-(mm)                             (counts)     (counts)     (counts)    
+Diameter   Q_H (%)    N (%)      C_H          C_B          SD_B
+(mm)                             (counts)     (counts)     (counts)
 ----------------------------------------------------------------------------
-37         85.23      2.45       1234.56      678.90       16.72       
-28         82.15      2.58       1198.43      672.11       17.34       
+37         85.23      2.45       1234.56      678.90       16.72
+28         82.15      2.58       1198.43      672.11       17.34
 ...
 ```
 

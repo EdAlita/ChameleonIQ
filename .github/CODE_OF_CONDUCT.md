@@ -6,7 +6,7 @@ Everyone participating in the *nema_analysis_tool* project — whether in issues
 pull requests, discussions, or social media — is expected to treat others with
 respect and kindness. Please follow the spirit of the [Python Community Code of Conduct](https://www.python.org/psf/codeofconduct/).
 
-At the same time, humor is encouraged! Basic familiarity 
+At the same time, humor is encouraged! Basic familiarity
 with *Monty Python's Flying Circus* is appreciated here — we are not savages.
 
 And if you really feel like slapping somebody, do it with a fish while dancing.
