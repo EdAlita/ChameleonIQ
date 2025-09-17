@@ -41,17 +41,17 @@ class TestReportingMissingLines:
 
             reporting.generate_reportlab_report(
                 results=test_results,
-                output_path=tmp_path,
+                output_path=Path(tmp_path),
                 cfg=mock_cfg,  # Add the missing cfg parameter
                 voxel_spacing=(2.0, 2.0, 2.0),
-                lung_results={10: 95.0},
-                input_image_path="test.nii",
+                lung_results={"0": 99.0, "10": 95.0},
+                input_image_path=Path("test.nii"),
             )
             assert True
         except Exception:
             # Try simpler signature
             try:
-                reporting.generate_reportlab_report(test_results, tmp_path, mock_cfg)
+                reporting.generate_reportlab_report(test_results, Path(tmp_path), mock_cfg)  # type: ignore
                 assert True
             except Exception:
                 # Function exists but may need different args
@@ -61,7 +61,7 @@ class TestReportingMissingLines:
             try:
                 if Path(tmp_path).exists():
                     Path(tmp_path).unlink()
-            except (PermissionError, OSError):
+            except OSError:
                 # On Windows, sometimes files are still locked
                 # Try again after a short delay
                 import time
@@ -70,7 +70,7 @@ class TestReportingMissingLines:
                 try:
                     if Path(tmp_path).exists():
                         Path(tmp_path).unlink()
-                except (PermissionError, OSError):
+                except OSError:
                     # If still can't delete, just ignore
                     # This is acceptable in test environments
                     pass
