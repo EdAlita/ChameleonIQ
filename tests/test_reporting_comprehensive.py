@@ -64,14 +64,14 @@ class TestReportingFunctions:
                     # Function expects: results, output_path, cfg, input_image_path, voxel_spacing
                     reporting.save_results_to_txt(
                         sample_results,
-                        tmp_path,  # Correct order: output_path as second argument
+                        Path(tmp_path),  # Correct order: output_path as second argument
                         mock_cfg,  # cfg as third argument
-                        input_image_path="test_input.nii",
+                        input_image_path=Path("test_input.nii"),
                         voxel_spacing=(2.0, 2.0, 2.0),
                     )
                 else:
                     # Try original signature
-                    reporting.save_results_to_txt(sample_results, tmp_path, mock_cfg)
+                    reporting.save_results_to_txt(sample_results, tmp_path, mock_cfg)  # type: ignore
 
                 # Verify file was created and has content
                 with open(tmp_path, "r") as f:
@@ -88,7 +88,7 @@ class TestReportingFunctions:
                 try:
                     if Path(tmp_path).exists():
                         Path(tmp_path).unlink()
-                except (PermissionError, OSError):
+                except OSError:
                     # On Windows, sometimes files are still locked
                     import time
 
@@ -96,7 +96,7 @@ class TestReportingFunctions:
                     try:
                         if Path(tmp_path).exists():
                             Path(tmp_path).unlink()
-                    except (PermissionError, OSError):
+                    except OSError:
                         # If still can't delete, just ignore
                         pass
         else:
@@ -113,12 +113,10 @@ class TestReportingFunctions:
                 param_names = list(func_signature.parameters.keys())
 
                 if "save_plots" in param_names:
-                    reporting.generate_plots(
-                        sample_results, "test_output_dir", save_plots=True
-                    )
+                    reporting.generate_plots(sample_results, "test_output_dir")  # type: ignore
                 else:
                     # Try without save_plots parameter
-                    reporting.generate_plots(sample_results, "test_output_dir")
+                    reporting.generate_plots(sample_results, "test_output_dir")  # type: ignore
 
                 # Should call savefig if plots are being saved
                 if mock_savefig.called:
@@ -155,8 +153,7 @@ class TestReportingFunctions:
                 if "save_plots" in param_names:
                     kwargs["save_plots"] = True
 
-                reporting.generate_rois_plots(**kwargs)
-
+                reporting.generate_rois_plots(**kwargs)  # type: ignore
                 # Check if savefig was called
                 if mock_savefig.called:
                     assert mock_savefig.called
@@ -249,7 +246,7 @@ class TestReportingFunctions:
                 try:
                     if Path(tmp_path).exists():
                         Path(tmp_path).unlink()
-                except (PermissionError, OSError):
+                except OSError:
                     # On Windows, sometimes files are still locked
                     import time
 
@@ -257,7 +254,7 @@ class TestReportingFunctions:
                     try:
                         if Path(tmp_path).exists():
                             Path(tmp_path).unlink()
-                    except (PermissionError, OSError):
+                    except OSError:
                         # If still can't delete, just ignore
                         pass
         else:
@@ -345,10 +342,10 @@ class TestReportingFunctions:
                 ) as tmp_file:
                     # This should handle None data gracefully or raise appropriate error
                     reporting.save_results_to_txt(
-                        invalid_results,
-                        invalid_lung_results,
+                        invalid_results,  # type: ignore
+                        invalid_lung_results,  # type: ignore
                         tmp_file.name,
-                        input_image_path="test.nii",
+                        input_image_path=Path("test.nii"),  # type: ignore
                         voxel_spacing=(2.0, 2.0, 2.0),
                     )
             except (TypeError, ValueError, AttributeError):
@@ -361,7 +358,7 @@ class TestReportingFunctions:
     def test_reporting_edge_cases(self):
         """Test reporting functions with edge case data."""
         # Empty results
-        empty_results = []
+        empty_results: list[dict[str, object]] = []
 
         if hasattr(reporting, "save_results_to_txt"):
             # Create temporary file with proper Windows handling
@@ -377,9 +374,9 @@ class TestReportingFunctions:
 
                 reporting.save_results_to_txt(
                     empty_results,
-                    tmp_path,  # output_path as second argument
+                    Path(tmp_path),  # output_path as second argument
                     mock_cfg,
-                    input_image_path="test.nii",
+                    input_image_path=Path("test.nii"),
                     voxel_spacing=(2.0, 2.0, 2.0),
                 )
 
@@ -396,14 +393,14 @@ class TestReportingFunctions:
                 try:
                     if Path(tmp_path).exists():
                         Path(tmp_path).unlink()
-                except (PermissionError, OSError):
+                except OSError:
                     import time
 
                     time.sleep(0.1)
                     try:
                         if Path(tmp_path).exists():
                             Path(tmp_path).unlink()
-                    except (PermissionError, OSError):
+                    except OSError:
                         pass
 
     @patch("matplotlib.pyplot.savefig")
@@ -418,7 +415,7 @@ class TestReportingFunctions:
                 mock_fig = MagicMock()
                 mock_figure.return_value = mock_fig
 
-                reporting.generate_plots(sample_results, "test_output")
+                reporting.generate_plots(sample_results, "test_output")  # type: ignore
 
                 # Should work without raising display errors
                 assert True  # If we get here, no display errors occurred
@@ -457,17 +454,17 @@ class TestReportingFunctions:
 
             reporting.generate_reportlab_report(
                 results=test_results,
-                output_path=tmp_path,
+                output_path=Path(tmp_path),
                 cfg=mock_cfg,  # Add the missing cfg parameter
                 voxel_spacing=(2.0, 2.0, 2.0),
-                lung_results={10: 95.0},
-                input_image_path="test.nii",
+                lung_results={"0": 0.5, "1": 0.75},
+                input_image_path=Path("test.nii"),
             )
             assert True
         except Exception:
             # Try simpler signature
             try:
-                reporting.generate_reportlab_report(test_results, tmp_path, mock_cfg)
+                reporting.generate_reportlab_report(test_results, tmp_path, mock_cfg)  # type: ignore
                 assert True
             except Exception:
                 # Function exists but may need different args
@@ -477,12 +474,12 @@ class TestReportingFunctions:
             try:
                 if Path(tmp_path).exists():
                     Path(tmp_path).unlink()
-            except (PermissionError, OSError):
+            except OSError:
                 import time
 
                 time.sleep(0.1)
                 try:
                     if Path(tmp_path).exists():
                         Path(tmp_path).unlink()
-                except (PermissionError, OSError):
+                except OSError:
                     pass
