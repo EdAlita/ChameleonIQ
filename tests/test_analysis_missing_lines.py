@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from yacs.config import CfgNode
 
-from src.nema_quant import analysis
+from src.nema_quant import analysis, utils
 
 
 class TestAnalysisMissingLines:
@@ -24,7 +24,7 @@ class TestAnalysisMissingLines:
         image_slice += np.random.normal(100, 20, image_slice.shape)
 
         try:
-            _ = analysis.extract_canny_mask(image_slice)
+            _ = utils.extract_canny_mask(image_slice)
 
             if hasattr(analysis, "extract_canny_mask"):
                 noisy_image = np.random.normal(100, 50, (100, 100))
@@ -50,7 +50,7 @@ class TestAnalysisMissingLines:
 
         for _, test_image in enumerate(edge_case_images):
             try:
-                center = analysis.find_phantom_center(test_image.astype(np.float32))
+                center = utils.find_phantom_center(test_image.astype(np.float32))
                 if center is not None:
                     assert len(center) == 3
                     assert all(
@@ -260,9 +260,7 @@ class TestAnalysisMissingLines:
                 if phantom is not None:
                     phantom.list_hot_spheres.return_value = []
 
-                results, lung_results = analysis.calculate_nema_metrics(
-                    image, phantom, cfg
-                )
+                results, lung_results = analysis.calculate_nema_metrics(image, phantom, cfg)  # type: ignore
 
                 # Should handle gracefully or raise appropriate errors
                 assert isinstance(results, list)
@@ -273,41 +271,3 @@ class TestAnalysisMissingLines:
                 pass
             except Exception as e:
                 pytest.skip(f"Unexpected error handling: {e}")
-
-    def test_array_operations_edge_cases(self):
-        """Test array operations edge cases."""
-        # Test with arrays containing special values
-        special_arrays = [
-            np.array([np.inf, 1.0, 2.0]),  # Contains infinity
-            np.array([np.nan, 1.0, 2.0]),  # Contains NaN
-            np.array([]),  # Empty array
-            np.array([1e-10, 1e-10, 1e-10]),  # Very small values
-            np.array([1e10, 1e10, 1e10]),  # Very large values
-        ]
-
-        for arr in special_arrays:
-            try:
-                # Test various array operations that might be in the missing lines
-                if len(arr) > 0:
-                    # Suppress warnings for operations with special values
-                    with np.warnings.catch_warnings():
-                        np.warnings.simplefilter("ignore", RuntimeWarning)
-
-                        mean_val = np.mean(arr)
-                        std_val = np.std(arr)
-
-                        # These operations should handle special values gracefully
-                        assert (
-                            np.isfinite(mean_val)
-                            or np.isnan(mean_val)
-                            or np.isinf(mean_val)
-                        )
-                        assert (
-                            np.isfinite(std_val)
-                            or np.isnan(std_val)
-                            or np.isinf(std_val)
-                        )
-
-            except Exception:
-                # Some operations may legitimately fail with special values
-                pass
