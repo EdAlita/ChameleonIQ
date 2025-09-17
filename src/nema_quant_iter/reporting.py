@@ -11,7 +11,7 @@ import logging
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -286,7 +286,7 @@ def generate_plots(
             columnspacing=2.0,
         )
 
-    plt.tight_layout(rect=[0, 0.1, 1, 0.92])
+    plt.tight_layout(rect=(0, 0.1, 1, 0.92))
 
     output_path = output_dir.parent / f"{output_dir.stem}_analysis_plot_iterations.png"
     plt.savefig(
@@ -457,12 +457,12 @@ def generate_pc_vs_bg_plot(
                             fontsize=9,
                             fontweight="bold",
                             color="black",
-                            bbox=dict(
-                                boxstyle="round,pad=0.2",
-                                facecolor="white",
-                                edgecolor=color,
-                                alpha=0.8,
-                            ),
+                            bbox={
+                                "boxstyle": "round,pad=0.2",
+                                "facecolor": "white",
+                                "edgecolor": color,
+                                "alpha": 0.8,
+                            },
                             zorder=20,
                         )
 
@@ -600,7 +600,7 @@ def generate_wcbr_convergence_plot(
     first_iter = min(iterations)
     final_iter = max(iterations)
 
-    convergence_iter = None
+    convergence_iter: Optional[int] = None
     if len(iterations) >= 5:
         for i in range(len(cbr_stats) - 4):
             next_window = i + 5
@@ -683,14 +683,14 @@ def generate_wcbr_convergence_plot(
                 fontsize=18,
                 fontweight="bold",
                 color=color,
-                bbox=dict(
-                    boxstyle="round,pad=0.4",
-                    facecolor="white",
-                    edgecolor=color,
-                    alpha=0.9,
-                    linewidth=2,
-                ),
-                arrowprops=dict(arrowstyle="->", color=color, linewidth=2),
+                bbox={
+                    "boxstyle": "round,pad=0.4",
+                    "facecolor": "white",
+                    "edgecolor": color,
+                    "alpha": 0.9,
+                    "linewidth": 2,
+                },
+                arrowprops={"arrowstyle": "->", "color": color, "linewidth": 2},
                 zorder=20,
             )
 
@@ -796,7 +796,6 @@ def generate_cbr_convergence_plot(
     - Error bars showing CBR variability across spheres
     - Trend analysis with convergence assessment
     """
-    global BEST_CBR_ITERATION
 
     df = pd.DataFrame(results)
     df_filtered = df[~df["iteration"].isin([1, 2])]
@@ -1179,7 +1178,7 @@ def generate_cbr_convergence_plot(
         spine.set_linewidth(1.2)
         spine.set_color("#333333")
 
-    plt.tight_layout(rect=[0, 0, 0.85, 1])
+    plt.tight_layout(rect=(0.0, 0.0, 0.85, 1.0))
 
     output_path = output_dir.parent / f"{output_dir.stem}_cbr_convergence_analysis.png"
     plt.savefig(
@@ -1235,7 +1234,6 @@ def generate_boxplot_with_mean_std(
     - Reduced visual clutter and improved readability
     - Statistical indicators positioned to avoid overlap
     """
-    global BEST_CBR_ITERATION
     filtered_results = {k: v for k, v in all_lung_results.items() if k not in [1, 2]}
     if not filtered_results:
         logger.warning("No data to plot after filtering out iterations 1 and 2")
@@ -1248,9 +1246,9 @@ def generate_boxplot_with_mean_std(
         lung_data = list(filtered_results[iteration].values())
         iteration_means[iteration] = float(np.mean(np.abs(lung_data)))
 
-    best_cbr_iter = BEST_CBR_ITERATION
-    first_iter = min(iterations)
-    final_iter = max(iterations)
+    best_cbr_iter: Optional[int] = BEST_CBR_ITERATION
+    first_iter: Optional[int] = min(iterations) if iterations else None
+    final_iter: Optional[int] = max(iterations) if iterations else None
 
     key_iterations = [first_iter, best_cbr_iter, final_iter]
     key_iterations = list(dict.fromkeys(key_iterations))
@@ -1286,30 +1284,30 @@ def generate_boxplot_with_mean_std(
     means = []
     std_devs = []
 
-    for iteration in key_iterations:
+    for _iteration in key_iterations:
         lung_data = list(filtered_results[iteration].values())
         box_data.append(lung_data)
 
         if (
-            iteration == first_iter
-            and iteration == best_cbr_iter
-            and iteration == final_iter
+            _iteration == first_iter
+            and _iteration == best_cbr_iter
+            and _iteration == final_iter
         ):
-            label = f"Iter {iteration}\n(Only)"
-        elif iteration == first_iter and iteration == best_cbr_iter:
-            label = f"Iter {iteration}\n(First/Best CBR)"
-        elif iteration == best_cbr_iter and iteration == final_iter:
-            label = f"Iter {iteration}\n(Best CBR/Final)"
-        elif iteration == first_iter and iteration == final_iter:
-            label = f"Iter {iteration}\n(First/Final)"
-        elif iteration == first_iter:
-            label = f"Iter {iteration}\n(First)"
-        elif iteration == best_cbr_iter:
-            label = f"Iter {iteration}\n(Best CBR)"
-        elif iteration == final_iter:
-            label = f"Iter {iteration}\n(Final)"
+            label = f"Iter {_iteration}\n(Only)"
+        elif _iteration == first_iter and _iteration == best_cbr_iter:
+            label = f"Iter {_iteration}\n(First/Best CBR)"
+        elif _iteration == best_cbr_iter and _iteration == final_iter:
+            label = f"Iter {_iteration}\n(Best CBR/Final)"
+        elif _iteration == first_iter and _iteration == final_iter:
+            label = f"Iter {_iteration}\n(First/Final)"
+        elif _iteration == first_iter:
+            label = f"Iter {_iteration}\n(First)"
+        elif _iteration == best_cbr_iter:
+            label = f"Iter {_iteration}\n(Best CBR)"
+        elif _iteration == final_iter:
+            label = f"Iter {_iteration}\n(Final)"
         else:
-            label = f"Iter {iteration}"
+            label = f"Iter {_iteration}"
 
         box_labels.append(label)
         colors.append(publication_colors[iteration])
@@ -1324,7 +1322,8 @@ def generate_boxplot_with_mean_std(
         showextrema=False,
     )
 
-    for patch, color in zip(bp["bodies"], colors):
+    violin_bodies = cast(List[Any], bp["bodies"])
+    for patch, color in zip(violin_bodies, colors):
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
         patch.set_linewidth(1)
@@ -1333,7 +1332,7 @@ def generate_boxplot_with_mean_std(
     bp["cmeans"].set_color("white")
     bp["cmeans"].set_linewidth(3)
 
-    for idx, experiment in enumerate(box_labels):
+    for idx, _experiment in enumerate(box_labels):
         exp_values = box_data[idx]
         color = publication_colors[key_iterations[idx]]
 
@@ -1358,7 +1357,7 @@ def generate_boxplot_with_mean_std(
         ax.spines[spine].set_linewidth(1.2)
         ax.spines[spine].set_color("#333333")
 
-    for i, (mean, std_dev, iteration) in enumerate(
+    for i, (mean, std_dev, _iteration) in enumerate(
         zip(means, std_devs, key_iterations), 1
     ):
         y_max = np.max(box_data[i - 1])
@@ -1371,9 +1370,12 @@ def generate_boxplot_with_mean_std(
             ha="center",
             va="bottom",
             fontsize=10,
-            bbox=dict(
-                boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray", alpha=0.9
-            ),
+            bbox={
+                "boxstyle": "round,pad=0.3",
+                "facecolor": "white",
+                "edgecolor": "gray",
+                "alpha": 0.9,
+            },
         )
 
     ax.set_xticks(range(1, len(box_labels) + 1))
@@ -1406,22 +1408,22 @@ def generate_boxplot_with_mean_std(
 
     logger.info("Publication-quality lung correction boxplot saved:")
     logger.info(f"  Total iterations available: {len(iterations)} (excluded 1, 2)")
-    logger.info(f"  Key iterations shown: {[int(i) for i in key_iterations]}")
+    logger.info(f"  Key iterations shown: {[int(i) for i in key_iterations]}")  # type: ignore[arg-type]
     logger.info(
-        f"    - First: Iter {first_iter} (Mean: {iteration_means[first_iter]:.2f}%)"
+        f"    - First: Iter {first_iter} (Mean: {iteration_means[first_iter]:.2f}%)"  # type: ignore[index]
     )
     logger.info(
-        f"    - Best CBR: Iter {best_cbr_iter} (Mean: {iteration_means[best_cbr_iter]:.2f}%)"
+        f"    - Best CBR: Iter {best_cbr_iter} (Mean: {iteration_means[best_cbr_iter]:.2f}%)"  # type: ignore[index]
     )
     logger.info(
-        f"    - Final: Iter {final_iter} (Mean: {iteration_means[final_iter]:.2f}%)"
+        f"    - Final: Iter {final_iter} (Mean: {iteration_means[final_iter]:.2f}%)"  # type: ignore[index]
     )
 
     logger.info("  Lung correction statistics for key iterations:")
-    for iteration in key_iterations:
-        values = list(filtered_results[iteration].values())
+    for __iteration in key_iterations:
+        values = list(filtered_results[__iteration].values())  # type: ignore[index]
         logger.info(
-            f"    Iteration {int(iteration)}: "
+            f"    Iteration {int(__iteration)}: "  # type: ignore[arg-type]
             f"Mean={float(np.mean(values)):.2f}%, "
             f"Std={float(np.std(values)):.2f}%, "
             f"N={len(values)} slices"
