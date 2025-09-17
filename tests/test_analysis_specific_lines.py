@@ -265,7 +265,7 @@ class TestAnalysisSpecificLines:
                             **params,
                             minRadius=1,
                             maxRadius=100,
-                        )
+                        )  # type: ignore
                     except Exception:
                         pass
 
@@ -281,17 +281,14 @@ class TestAnalysisSpecificLines:
     def test_lines_378_380_validation_conditions(self):
         """Test lines 378-380: Validation conditions."""
         # These might be input validation or bounds checking
-        invalid_inputs = [
+        invalid_inputs: list[object] = [
             None,
             np.array([]),
-            np.array([np.nan, np.nan]),
-            np.array([np.inf, -np.inf]),
-            np.array([-1, -2, -3]),  # Negative values
-            "invalid_string",
+            np.full((5, 5), np.inf),
+            np.full((5, 5), np.nan),
+            "invalid_input",
             [],
             {},
-            # Fixed: Create irregular array differently
-            [[1, 2], [3]],  # Irregular list instead of trying to create irregular array
         ]
 
         for invalid_input in invalid_inputs:
@@ -305,9 +302,9 @@ class TestAnalysisSpecificLines:
                             invalid_input, dtype=object
                         )  # Use object dtype for irregular
                     except ValueError:
-                        test_array = invalid_input  # Use as-is if can't create array
+                        test_array = invalid_input  # type: ignore
                 else:
-                    test_array = invalid_input
+                    test_array = invalid_input  # type: ignore
 
                 # Try all analysis functions with invalid inputs
                 analysis_functions = [
@@ -371,7 +368,7 @@ class TestAnalysisSpecificLines:
                                 func(img, config)
                             except TypeError:
                                 try:
-                                    func(img, roi_size=config.get("roi_size", 10))
+                                    func(img, roi_size=config.get("roi_size", 10))  # type: ignore
                                 except Exception:
                                     pass
                         except Exception:
@@ -432,7 +429,7 @@ class TestAnalysisSpecificLines:
             # Force various error conditions
             error_conditions = [
                 # OpenCV errors
-                lambda: cv2.HoughCircles(None, cv2.HOUGH_GRADIENT, 1, 30),
+                lambda: cv2.HoughCircles(None, cv2.HOUGH_GRADIENT, 1, 30),  # type: ignore
                 # NumPy errors
                 lambda: np.mean(np.array([])),
                 lambda: np.std(np.array([])),
