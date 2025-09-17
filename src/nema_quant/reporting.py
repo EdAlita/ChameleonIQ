@@ -11,7 +11,7 @@ import logging
 import warnings
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -565,7 +565,8 @@ def generate_boxplot_with_mean_std(
         showextrema=False,
     )
 
-    for patch in bp["bodies"]:
+    violin_bodies = cast(List[Any], bp["bodies"])
+    for patch in violin_bodies:
         patch.set_facecolor("#1B9E77")
         patch.set_alpha(0.7)
         patch.set_linewidth(1)
@@ -600,9 +601,12 @@ def generate_boxplot_with_mean_std(
         ha="center",
         va="bottom",
         fontsize=10,
-        bbox=dict(
-            boxstyle="round,pad=0.3", facecolor="white", alpha=0.9, edgecolor="gray"
-        ),
+        bbox={
+            "boxstyle": "round,pad=0.3",
+            "facecolor": "white",
+            "alpha": 0.9,
+            "edgecolor": "gray",
+        },
     )
 
     plt.xticks([1], [label])
