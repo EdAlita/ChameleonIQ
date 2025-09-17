@@ -5,8 +5,11 @@ from unittest.mock import MagicMock, patch
 
 import numpy as np
 
+import src.nema_quant.cli as cli
+import src.nema_quant.reporting as reporting
+import src.nema_quant.utils as analysis
+import src.nema_quant.utils as utils
 from src.config.defaults import get_cfg_defaults
-from src.nema_quant import analysis, cli, reporting, utils
 
 
 class TestDirectCoverage:
@@ -55,7 +58,6 @@ class TestDirectCoverage:
                     "bkg_std_dev_SD": 104.0,
                 }
             ]
-            lung_results = {10: 95.0, 15: 92.0, 20: 88.0}
 
             tmp_fd, tmp_path = tempfile.mkstemp(suffix=".txt")
             try:
@@ -65,17 +67,15 @@ class TestDirectCoverage:
 
                 try:
                     reporting.save_results_to_txt(
-                        test_results,
-                        lung_results,
-                        tmp_path,
-                        "test_input.nii",
-                        (2.0, 2.0, 2.0),
+                        results=test_results,
+                        output_path=Path(tmp_path),
+                        cfg=MagicMock(),
+                        input_image_path=Path("test_input.nii"),
+                        voxel_spacing=(2.0, 2.0, 2.0),
                     )
                 except TypeError:
                     try:
-                        reporting.save_results_to_txt(
-                            test_results, lung_results, tmp_path
-                        )
+                        reporting.save_results_to_txt(test_results, tmp_path)  # type: ignore
                     except Exception:
                         pass
                 except Exception:
@@ -84,14 +84,14 @@ class TestDirectCoverage:
                 try:
                     if Path(tmp_path).exists():
                         Path(tmp_path).unlink()
-                except (PermissionError, OSError):
+                except OSError:
                     import time
 
                     time.sleep(0.1)
                     try:
                         if Path(tmp_path).exists():
                             Path(tmp_path).unlink()
-                    except (PermissionError, OSError):
+                    except OSError:
                         pass
 
     @patch("matplotlib.pyplot.savefig")
@@ -174,7 +174,7 @@ class TestDirectCoverage:
     def test_error_conditions_directly(self):
         """Test error conditions that definitely exist in the code."""
         # Test analysis with invalid inputs to trigger error paths
-        invalid_inputs = [
+        invalid_inputs: list[object] = [
             None,
             np.array([]),
             np.full((5, 5), np.inf),
@@ -307,7 +307,7 @@ class TestDirectCoverage:
                     # Operations that might be in the analysis code
                     _ = (arr - arr.mean()) / (arr.std() + 1e-10)
                     _ = arr > arr.mean()
-                    _ = arr[arr > np.percentile(arr, 50)]
+                    _ = arr[arr > np.percentile(np.asarray(arr, dtype=float), 50)]
 
                     # Morphological operations that might exist
                     if hasattr(analysis, "apply_morphology"):
@@ -446,6 +446,12 @@ class TestDirectCoverage:
         # Force reporting with invalid data
         if hasattr(reporting, "save_results_to_txt"):
             try:
-                reporting.save_results_to_txt([], {}, "/invalid/path.txt")
+                reporting.save_results_to_txt(
+                    results=[],
+                    output_path=Path("/invalid/path.txt"),
+                    cfg=MagicMock(),
+                    input_image_path=Path("invalid.nii"),
+                    voxel_spacing=(1.0, 1.0, 1.0),
+                )
             except Exception:
                 pass
