@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -96,7 +96,7 @@ def generate_merged_plots(
         fontweight="bold",
         y=0.98,
     )
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.96))
 
     output_path = output_dir / "merge_analysis_plot.png"
     plt.savefig(
@@ -147,7 +147,9 @@ def generate_merged_boxplot(
             showextrema=False,
         )
 
-        for idx, (pc, exp) in enumerate(zip(violin_parts["bodies"], experiment_names)):
+        for idx, (pc, _exp) in enumerate(
+            zip(cast(List[Any], violin_parts["bodies"]), experiment_names)
+        ):
             color = COLORS[idx % len(COLORS)]
             pc.set_facecolor(color)
             pc.set_alpha(0.7)
@@ -185,12 +187,12 @@ def generate_merged_boxplot(
                 ha="center",
                 va="bottom",
                 fontsize=10,
-                bbox=dict(
-                    boxstyle="round,pad=0.3",
-                    facecolor="white",
-                    alpha=0.9,
-                    edgecolor="gray",
-                ),
+                bbox={
+                    "boxstyle": "round,pad=0.3",
+                    "facecolor": "white",
+                    "alpha": 0.9,
+                    "edgecolor": "gray",
+                },
             )
 
     ax.set_title("Lung Insert Accuracy Distribution", fontsize=16, fontweight="bold")
