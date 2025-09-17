@@ -44,12 +44,11 @@ class TestDirectCoverage:
 
     def test_reporting_functions_that_exist(self):
         """Test reporting functions that exist (we saw them in error messages)."""
-        # We know save_results_to_txt exists because CLI calls it
         if hasattr(reporting, "save_results_to_txt"):
             test_results = [
                 {
                     "diameter_mm": 10.0,
-                    "percentaje_constrast_QH": 85.0,  # Using the typo that exists in code
+                    "percentaje_constrast_QH": 85.0,
                     "background_variability_N": 5.2,
                     "avg_hot_counts_CH": 15000.0,
                     "avg_bkg_counts_CB": 2000.0,
@@ -58,30 +57,42 @@ class TestDirectCoverage:
             ]
             lung_results = {10: 95.0, 15: 92.0, 20: 88.0}
 
-            with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".txt", delete=False
-            ) as tmp:
+            tmp_fd, tmp_path = tempfile.mkstemp(suffix=".txt")
+            try:
+                import os
+
+                os.close(tmp_fd)
+
                 try:
-                    # Try different argument combinations until one works
                     reporting.save_results_to_txt(
                         test_results,
                         lung_results,
-                        tmp.name,
+                        tmp_path,
                         "test_input.nii",
                         (2.0, 2.0, 2.0),
                     )
                 except TypeError:
                     try:
                         reporting.save_results_to_txt(
-                            test_results, lung_results, tmp.name
+                            test_results, lung_results, tmp_path
                         )
                     except Exception:
                         pass
                 except Exception:
                     pass
-                finally:
-                    if Path(tmp.name).exists():
-                        Path(tmp.name).unlink()
+            finally:
+                try:
+                    if Path(tmp_path).exists():
+                        Path(tmp_path).unlink()
+                except (PermissionError, OSError):
+                    import time
+
+                    time.sleep(0.1)
+                    try:
+                        if Path(tmp_path).exists():
+                            Path(tmp_path).unlink()
+                    except (PermissionError, OSError):
+                        pass
 
     @patch("matplotlib.pyplot.savefig")
     @patch("matplotlib.pyplot.figure")
