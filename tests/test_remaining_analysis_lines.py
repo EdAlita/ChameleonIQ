@@ -4,11 +4,8 @@ import cv2
 import numpy as np
 from yacs.config import CfgNode
 
-from src.nema_quant.analysis import (
-    calculate_nema_metrics,
-    extract_canny_mask,
-    find_phantom_center,
-)
+from src.nema_quant.analysis import calculate_nema_metrics
+from src.nema_quant.utils import extract_canny_mask, find_phantom_center
 
 
 class TestRemainingAnalysisLines:
@@ -62,10 +59,10 @@ class TestRemainingAnalysisLines:
                     f"Testing Canny case {i+1}: voxel_size={case['voxel_size']}, z_center={case['z_center']}"
                 )
                 result = extract_canny_mask(
-                    case["image"],
-                    voxel_size=case["voxel_size"],
-                    fantoma_z_center=case["z_center"],
-                    phantom_center_yx=case["phantom_center"],
+                    case["image"],  # type: ignore
+                    voxel_size=case["voxel_size"],  # type: ignore
+                    fantoma_z_center=case["z_center"],  # type: ignore
+                    phantom_center_yx=case["phantom_center"],  # type: ignore
                 )
                 print(f"  Success: mask shape {result.shape}")
             except Exception as e:
@@ -233,7 +230,7 @@ class TestRemainingAnalysisLines:
                             minRadius=1,
                             maxRadius=50,
                             **params,
-                        )
+                        )  # type: ignore
                         if circles is not None:
                             print(
                                 f"    Found {circles.shape[1]} circles with params {params}"
