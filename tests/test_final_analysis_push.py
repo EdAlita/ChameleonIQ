@@ -6,12 +6,11 @@ from yacs.config import CfgNode
 
 from src.nema_quant.analysis import (
     calculate_nema_metrics,
-    extract_canny_mask,
     extract_circular_mask_2d,
-    find_phantom_center,
     save_background_visualization,
     save_sphere_visualization,
 )
+from src.nema_quant.utils import extract_canny_mask, find_phantom_center
 
 
 class TestFinalAnalysisPush:
@@ -74,10 +73,10 @@ class TestFinalAnalysisPush:
             try:
                 print(f"Testing Canny mask: {case['description']}")
                 result = extract_canny_mask(
-                    case["image"],
-                    voxel_size=case["voxel_size"],
-                    fantoma_z_center=case["z_center"],
-                    phantom_center_yx=case["phantom_center"],
+                    case["image"],  # type: ignore
+                    voxel_size=case["voxel_size"],  # type: ignore
+                    fantoma_z_center=case["z_center"],  # type: ignore
+                    phantom_center_yx=case["phantom_center"],  # type: ignore
                 )
                 print(f"  Success: {result.shape}")
 
@@ -244,7 +243,7 @@ class TestFinalAnalysisPush:
                     f"Testing circular mask case {i+1}: dims={case['dims']}, center={case['center']}, radius={case['radius']}"
                 )
                 result = extract_circular_mask_2d(
-                    case["dims"], case["center"], case["radius"]
+                    case["dims"], case["center"], case["radius"]  # type: ignore
                 )
                 print(
                     f"  Success: mask shape {result.shape}, total True: {np.sum(result)}"
@@ -374,8 +373,8 @@ class TestFinalAnalysisPush:
                 print(f"Testing mathematical precision: {case['description']}")
 
                 # Simulate the mathematical operations that might be in the missing lines
-                hot_mean = np.mean(case["hot_values"])
-                bkg_mean = np.mean(case["bkg_values"])
+                hot_mean = np.mean(case["hot_values"])  # type: ignore
+                bkg_mean = np.mean(case["bkg_values"])  # type: ignore
 
                 # Different contrast formulas that might trigger edge cases
                 if bkg_mean != 0:
@@ -387,7 +386,7 @@ class TestFinalAnalysisPush:
                     print(f"  Contrast2: {contrast2}")
 
                 # Background variability with edge cases
-                bkg_std = np.std(case["bkg_values"])
+                bkg_std = np.std(case["bkg_values"])  # type: ignore
                 if abs(bkg_mean) > 1e-15:
                     variability = (bkg_std / abs(bkg_mean)) * 100
                     print(f"  Variability: {variability}")
