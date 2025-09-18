@@ -159,8 +159,8 @@ def test_circular_mask_edge_cases():
         pytest.fail(f"Expected shape (20, 20), got {mask_large.shape}")
 
 
-@patch("src.nema_quant.find_phantom_center")
-@patch("src.nema_quant.extract_canny_mask")
+@patch("src.nema_quant.utils.find_phantom_center")
+@patch("src.nema_quant.utils.extract_canny_mask")
 def test_calculate_nema_metrics_error_handling(
     mock_extract_canny, mock_find_center, mock_cfg, mock_phantom
 ):
