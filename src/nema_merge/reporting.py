@@ -164,7 +164,7 @@ def generate_merged_boxplot(
             color = COLORS[idx % len(COLORS)]
 
             jitter = np.random.normal(0, 0.04, len(exp_values))
-            positions = np.full(len(exp_values), 1) + jitter
+            positions = np.full(len(exp_values), idx + 1) + jitter
 
             ax.scatter(
                 positions,
