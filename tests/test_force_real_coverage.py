@@ -9,12 +9,11 @@ from yacs.config import CfgNode
 from src.nema_quant import analysis
 from src.nema_quant.analysis import (
     calculate_nema_metrics,
-    extract_canny_mask,
     extract_circular_mask_2d,
-    find_phantom_center,
     save_background_visualization,
     save_sphere_visualization,
 )
+from src.nema_quant.utils import extract_canny_mask, find_phantom_center
 
 
 class TestAnalysisModuleComprehensive:
@@ -211,11 +210,11 @@ class TestAnalysisModuleComprehensive:
                     )
                     save_background_visualization(
                         test_slice,
-                        case["centers_offset"],
-                        case["pivot_point_yx"],
-                        case["radius_vox"],
+                        case["centers_offset"],  # type: ignore
+                        case["pivot_point_yx"],  # type: ignore
+                        case["radius_vox"],  # type: ignore
                         output_dir,
-                        case["slice_idx"],
+                        case["slice_idx"],  # type: ignore
                     )
                     print("  Success: background visualization saved")
                 except Exception as e:
@@ -338,8 +337,8 @@ class TestAnalysisModuleComprehensive:
 
             # Test extract_canny_mask
             try:
-                result = extract_canny_mask(image)
-                print(f"  extract_canny_mask: Success {result.shape}")
+                result = extract_canny_mask(image)  # type: ignore
+                print(f"  extract_canny_mask: Success {result.shape}")  # type: ignore
             except Exception as e:
                 print(f"  extract_canny_mask: {type(e).__name__}")
 
@@ -347,7 +346,7 @@ class TestAnalysisModuleComprehensive:
             try:
                 phantom = self._create_phantom_mock(small=True)
                 cfg = CfgNode({})
-                result = calculate_nema_metrics(image, phantom, cfg)
+                result = calculate_nema_metrics(image, phantom, cfg)  # type: ignore
                 print("  calculate_nema_metrics: Success")
             except Exception as e:
                 print(f"  calculate_nema_metrics: {type(e).__name__}")
@@ -589,7 +588,7 @@ class TestAnalysisModuleComprehensive:
 
             for image, phantom in error_conditions:
                 try:
-                    _ = calculate_nema_metrics(image, phantom, cfg)  # Add cfg parameter
+                    _ = calculate_nema_metrics(image, phantom, cfg)  # type: ignore
                     print(f"Unexpected success with {type(image)}, {type(phantom)}")
                 except Exception as e:
                     print(f"Expected error: {type(e).__name__}: {e}")
@@ -662,7 +661,7 @@ class TestAnalysisModuleComprehensive:
             phantom.rois = config
 
             try:
-                print(f"Testing phantom with {len(config)} ROIs")
+                print(f"Testing phantom with {len(config)} ROIs")  # type: ignore
                 result = calculate_nema_metrics(
                     image, phantom, cfg
                 )  # Add cfg parameter
