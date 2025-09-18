@@ -24,7 +24,7 @@ def test_reporting_function_signatures():
                     "parameters": list(sig.parameters.keys()),
                 }
             except Exception as e:
-                signatures[func_name] = f"Error: {e}"
+                signatures[func_name] = f"Error: {e}"  # type: ignore
 
     print(f"\nReporting function signatures: {signatures}")
     assert len(signatures) > 0
@@ -51,7 +51,7 @@ def test_cli_function_signatures():
                     "parameters": list(sig.parameters.keys()),
                 }
             except Exception as e:
-                signatures[func_name] = f"Error: {e}"
+                signatures[func_name] = f"Error: {e}"  # type: ignore
 
     print(f"\nCLI function signatures: {signatures}")
     assert len(signatures) > 0
