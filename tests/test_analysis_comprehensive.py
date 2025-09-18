@@ -5,6 +5,7 @@ import pytest
 from yacs.config import CfgNode
 
 from src.nema_quant import analysis
+from src.nema_quant.utils import extract_canny_mask, find_phantom_center
 
 
 @pytest.fixture
@@ -55,7 +56,7 @@ def test_find_phantom_center():
                     image[z, y, x] = 1000.0
 
     try:
-        center = analysis.find_phantom_center(image)
+        center = find_phantom_center(image)
 
         if not isinstance(center, tuple):
             pytest.fail(f"Expected center to be tuple, got {type(center)}")
@@ -63,7 +64,7 @@ def test_find_phantom_center():
         if len(center) != 3:
             pytest.fail(f"Expected 3D center, got {len(center)} dimensions")
 
-        z, y, x = center
+        z, y, x = center  # type: ignore
         if not (0 <= z < 50 and 0 <= y < 100 and 0 <= x < 100):
             pytest.fail(f"Center {center} is outside image bounds")
 
@@ -87,7 +88,7 @@ def test_extract_canny_mask():
     image_slice += noise
 
     try:
-        lung_centers = analysis.extract_canny_mask(image_slice)
+        lung_centers = extract_canny_mask(image_slice)
 
         if not isinstance(lung_centers, np.ndarray):
             pytest.fail(f"Expected numpy array, got {type(lung_centers)}")
@@ -158,8 +159,8 @@ def test_circular_mask_edge_cases():
         pytest.fail(f"Expected shape (20, 20), got {mask_large.shape}")
 
 
-@patch("src.nema_quant.analysis.find_phantom_center")
-@patch("src.nema_quant.analysis.extract_canny_mask")
+@patch("src.nema_quant.find_phantom_center")
+@patch("src.nema_quant.extract_canny_mask")
 def test_calculate_nema_metrics_error_handling(
     mock_extract_canny, mock_find_center, mock_cfg, mock_phantom
 ):
