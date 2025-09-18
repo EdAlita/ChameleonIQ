@@ -4,6 +4,8 @@ from pathlib import Path
 import nibabel as nib
 import numpy as np
 import pytest
+from nibabel.loadsave import save
+from nibabel.nifti1 import Nifti1Image
 
 from src.nema_quant.io import load_nii_image
 
@@ -95,14 +97,14 @@ def test_load_nii_image_created_test_file():
     test_affine = np.eye(4)
 
     # Create NIfTI image
-    nii_img = nib.Nifti1Image(test_data, test_affine)
+    nii_img = Nifti1Image(test_data, test_affine)
 
     # Save to temporary file
     with tempfile.NamedTemporaryFile(suffix=".nii", delete=False) as tmp_file:
         tmp_path = Path(tmp_file.name)
 
     try:
-        nib.save(nii_img, str(tmp_path))
+        save(nii_img, str(tmp_path))
 
         # Test loading with return_affine=True
         loaded_data, loaded_affine = load_nii_image(tmp_path, return_affine=True)
@@ -159,13 +161,13 @@ def test_load_nii_image_data_types():
     test_data_int = np.ones((5, 5, 5), dtype=np.int16) * 500
     test_affine = np.eye(4)
 
-    nii_img = nib.Nifti1Image(test_data_int, test_affine)
+    nii_img = Nifti1Image(test_data_int, test_affine)
 
     with tempfile.NamedTemporaryFile(suffix=".nii", delete=False) as tmp_file:
         tmp_path = Path(tmp_file.name)
 
     try:
-        nib.save(nii_img, str(tmp_path))
+        save(nii_img, str(tmp_path))
 
         loaded_data, _ = load_nii_image(tmp_path, return_affine=False)
 
@@ -197,15 +199,18 @@ def test_load_nii_image_edge_cases():
     minimal_data = np.array([[[1.0]]], dtype=np.float32)
     minimal_affine = np.eye(4)
 
-    nii_img = nib.Nifti1Image(minimal_data, minimal_affine)
+    nii_img = Nifti1Image(minimal_data, minimal_affine)
 
     with tempfile.NamedTemporaryFile(suffix=".nii", delete=False) as tmp_file:
         tmp_path = Path(tmp_file.name)
 
     try:
-        nib.save(nii_img, str(tmp_path))
+        save(nii_img, str(tmp_path))
 
         loaded_data, loaded_affine = load_nii_image(tmp_path, return_affine=True)
+
+        assert loaded_data is not None
+        assert loaded_affine is not None
 
         if loaded_data.shape != (1, 1, 1):
             pytest.fail(f"Expected shape (1, 1, 1), got {loaded_data.shape}")
@@ -229,13 +234,13 @@ def test_load_nii_image_path_types():
     # Create test data
     test_data = np.ones((3, 3, 3), dtype=np.float32)
     test_affine = np.eye(4)
-    nii_img = nib.Nifti1Image(test_data, test_affine)
+    nii_img = Nifti1Image(test_data, test_affine)
 
     with tempfile.NamedTemporaryFile(suffix=".nii", delete=False) as tmp_file:
         tmp_path = Path(tmp_file.name)
 
     try:
-        nib.save(nii_img, str(tmp_path))
+        save(nii_img, str(tmp_path))
 
         # Test with Path object
         loaded_data_path, _ = load_nii_image(tmp_path, return_affine=False)
@@ -260,16 +265,19 @@ def test_load_nii_image_function_signature():
     # Create minimal test data
     test_data = np.array([[[42.0]]], dtype=np.float32)
     test_affine = np.eye(4)
-    nii_img = nib.Nifti1Image(test_data, test_affine)
+    nii_img = Nifti1Image(test_data, test_affine)
 
     with tempfile.NamedTemporaryFile(suffix=".nii", delete=False) as tmp_file:
         tmp_path = Path(tmp_file.name)
 
     try:
-        nib.save(nii_img, str(tmp_path))
+        save(nii_img, str(tmp_path))
 
         # Test explicit parameter names
         loaded_data, affine = load_nii_image(filepath=tmp_path, return_affine=True)
+
+        assert loaded_data is not None
+        assert affine is not None
 
         if not isinstance(loaded_data, np.ndarray):
             pytest.fail(f"Expected np.ndarray, got {type(loaded_data)}")
@@ -279,6 +287,9 @@ def test_load_nii_image_function_signature():
 
         # Test positional arguments
         loaded_data_pos, affine_pos = load_nii_image(tmp_path, True)
+
+        assert loaded_data_pos is not None
+        assert affine_pos is not None
 
         if not np.array_equal(loaded_data, loaded_data_pos):
             pytest.fail("Positional args produced different result than named args")
