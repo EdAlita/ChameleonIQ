@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -343,11 +344,11 @@ class TestErrorHandlingPaths:
         if hasattr(analysis, "_calculate_background_stats"):
             try:
                 # Suppress the expected warnings
-                with np.warnings.catch_warnings():
-                    np.warnings.simplefilter("ignore", RuntimeWarning)
-                    stats = analysis._calculate_background_stats(
-                        image, phantom, [10], challenging_offsets
-                    )
+                warnings.filterwarnings("ignore")
+                warnings.filterwarnings("ignore", category=RuntimeWarning)
+                stats = analysis._calculate_background_stats(
+                    image, phantom, [10], challenging_offsets
+                )
 
                 # Should handle challenging offsets gracefully
                 if not isinstance(stats, dict):
