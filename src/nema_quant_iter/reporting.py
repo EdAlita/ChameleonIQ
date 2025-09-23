@@ -1395,7 +1395,7 @@ def generate_boxplot_with_mean_std(
 
     plt.tight_layout()
 
-    output_path = output_dir.parent / f"{output_dir.stem}_boxplot_with_mean_std.png"
+    output_path = output_dir.parent / f"{output_dir.stem}_lung_boxplot_iterations.png"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -1470,6 +1470,8 @@ def generate_reportlab_report(
     pc_vs_bg_path: Optional[Path] = None,
     rois_loc_path: Optional[Path] = None,
     boxplot_path: Optional[Path] = None,
+    cbr_conv_path: Optional[Path] = None,
+    wcbr_conv_path: Optional[Path] = None,
 ) -> None:
     """
     Generates a PDF report for NEMA quality analysis results across iterations using ReportLab.
@@ -1552,11 +1554,32 @@ def generate_reportlab_report(
     elements.append(Paragraph(summary, body_style))
     elements.append(Spacer(1, 0.18 * inch))
 
+    background_val = getattr(cfg.ACTIVITY, "BACKGROUND", None)
+    hot_val = getattr(cfg.ACTIVITY, "HOT", None)
+    total_val = getattr(cfg.ACTIVITY, "ACTIVITY_TOTAL", None)
+    units_val = getattr(cfg.ACTIVITY, "UNITS", "N/A")
+
+    if background_val is None or background_val == 0.0:
+        background_text = "not reported"
+    else:
+        background_text = f"{background_val:.7f} {units_val}"
+
+    if hot_val is None or hot_val == 0.0:
+        hot_text = "not reported"
+    else:
+        hot_text = f"{hot_val:.7f} {units_val}"
+
+    if total_val is None or total_val == "0.0 mCi" or total_val == "0.0 MBq":
+        total_text = "not reported"
+    else:
+        total_text = f"{total_val}"
+
     bg_text = (
         "<b>Activity Concentrations</b><br/>"
-        f"\u2022 Background: {getattr(cfg.ACTIVITY, 'BACKGROUND', 'N/A')} MBq<br/>"
-        f"\u2022 Hot Spheres: {getattr(cfg.ACTIVITY, 'HOT', 'N/A')} MBq<br/>"
+        f"\u2022 Background: {background_text}<br/>"
+        f"\u2022 Hot Spheres: {hot_text}<br/>"
         f"\u2022 Activity Ratio (Hot/Background): {getattr(cfg.ACTIVITY, 'RATIO', 'N/A')}"
+        f"<br/>\u2022 Total Activity: {total_text}"
     )
     elements.append(Paragraph(bg_text, body_style))
     elements.append(Spacer(1, 0.18 * inch))
@@ -1759,6 +1782,14 @@ def generate_reportlab_report(
             )
         )
         elements.append(lung_table)
+
+    elements.append(PageBreak())
+
+    if cbr_conv_path and Path(cbr_conv_path).exists():
+        elements.append(Image(str(cbr_conv_path), width=6 * inch, height=4 * inch))
+
+    if wcbr_conv_path and Path(wcbr_conv_path).exists():
+        elements.append(Image(str(wcbr_conv_path), width=6 * inch, height=4 * inch))
 
     elements.append(PageBreak())
 
