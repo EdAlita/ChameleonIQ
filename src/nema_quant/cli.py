@@ -90,7 +90,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--version", action="version", version="NEMA Analysis Tool v0.1.0"
+        "--version", action="version", version="NEMA Analysis Tool v0.2.0"
     )
 
     return parser
