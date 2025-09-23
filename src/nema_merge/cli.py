@@ -142,6 +142,9 @@ def create_parser() -> argparse.ArgumentParser:
         default=20,
         help="Logging level (10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR)",
     )
+    parser.add_argument(
+        "--version", action="version", version="NEMA Analysis Tool v0.2.0"
+    )
 
     return parser
 
