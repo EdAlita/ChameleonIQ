@@ -158,3 +158,9 @@ config/secret_*.yaml
 .auto-changelog
 .auto-changelog-setup.js
 CHANGELOG.md
+
+order.py
+run_nema_quant_sweep.sh
+xml_generator.py
+run_torso_202409.sh
+*/*/nema_phantom_config_202409.yaml
