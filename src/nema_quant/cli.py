@@ -262,12 +262,18 @@ def run_analysis(args: argparse.Namespace) -> int:
             print(f"ERROR: Failed to perform analysis: {e}")
             return 1
 
+        output_path = Path(args.output)
+        png_dir = output_path.parent / "png"
+        png_dir.mkdir(parents=True, exist_ok=True)
+        csv_dir = output_path.parent / "csv"
+        csv_dir.mkdir(parents=True, exist_ok=True)
+
         logging.info("Saving analysis plots...")
         try:
-            generate_plots(results=results, output_dir=Path(args.output), cfg=cfg)
-            generate_rois_plots(image=image_data, output_dir=Path(args.output), cfg=cfg)
+            generate_plots(results=results, output_dir=png_dir, cfg=cfg)
+            generate_rois_plots(image=image_data, output_dir=png_dir, cfg=cfg)
             generate_boxplot_with_mean_std(
-                data_dict=lung_results, output_dir=Path(args.output), cfg=cfg
+                data_dict=lung_results, output_dir=png_dir, cfg=cfg
             )
             logging.info("Plots generated successfully")
         except Exception as e:
@@ -283,11 +289,9 @@ def run_analysis(args: argparse.Namespace) -> int:
         try:
             output_path = Path(args.output)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            plot_path = output_path.parent / f"analysis_plot_{output_path.stem}.png"
-            rois_loc_path = output_path.parent / f"rois_location_{output_path.stem}.png"
-            boxplot_path = (
-                output_path.parent / f"{output_path.stem}_boxplot_with_mean_std.png"
-            )
+            plot_path = output_path.parent / "png" / "analysis_plot.png"
+            rois_loc_path = output_path.parent / "png" / "rois_location.png"
+            boxplot_path = output_path.parent / "png" / "boxplot_with_mean_std.png"
 
             save_results_to_txt(results, output_path, cfg, input_path, voxel_spacing)
 
