@@ -145,34 +145,9 @@ def _calculate_hot_sphere_counts_offset_zxy(
 ) -> Dict[str, float]:
     """Internal function to calculate the mean counts (C_H) for each hot sphere."""
 
-    offsets = [
-        (-2, 2),
-        (-1, 2),
-        (0, 2),
-        (1, 2),
-        (2, 2),
-        (-2, 1),
-        (-1, 1),
-        (0, 1),
-        (1, 1),
-        (2, 1),
-        (-2, 0),
-        (-1, 0),
-        (0, 0),
-        (1, 0),
-        (2, 0),
-        (-2, -1),
-        (-1, -1),
-        (0, -1),
-        (1, -1),
-        (2, -1),
-        (-2, -2),
-        (-1, -2),
-        (0, -2),
-        (1, -2),
-        (2, -2),
-    ]
-    offsets_z = [-2, -1, 0, 1, 2]
+    offsets = [(x, y) for x in range(-10, 11) for y in range(-10, 11)]
+
+    offsets_z = list(range(-10, 11))
 
     hot_sphere_counts = {}
 
@@ -345,10 +320,9 @@ def calculate_nema_metrics(
         viz_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f" Saving visualizations to: {viz_dir}")
 
-    activity_hot = cfg.ACTIVITY.HOT
-    activity_bkg = cfg.ACTIVITY.BACKGROUND
+    activity_ratio = cfg.ACTIVITY.RATIO
 
-    if activity_bkg <= 0 or (activity_hot / activity_bkg) <= 1:
+    if activity_ratio <= 0 or activity_ratio <= 1:
         raise ValueError(
             "Activity ratio (a_H / a_B) must be greater than 1 and"
             "background activity must be positive."
@@ -370,7 +344,10 @@ def calculate_nema_metrics(
         image_data,
         phantom,
         slices_indices,
-        cfg.ROIS.BACKGROUND_OFFSET_YX,
+        [
+            (y * cfg.ROIS.ORIENTATION_YX[0], x * cfg.ROIS.ORIENTATION_YX[1])
+            for y, x in cfg.ROIS.BACKGROUND_OFFSET_YX
+        ],
         save_visualizations=save_visualizations,
         viz_dir=viz_dir,
     )
@@ -384,7 +361,7 @@ def calculate_nema_metrics(
     )
 
     results = []
-    activity_ratio_term = (activity_hot / activity_bkg) - 1.0
+    activity_ratio_term = activity_ratio - 1.0
     CB_37 = 0.0
 
     for name, C_H in hot_sphere_counts.items():
