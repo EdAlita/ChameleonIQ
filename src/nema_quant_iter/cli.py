@@ -99,7 +99,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--version", action="version", version="NEMA Analysis Tool v0.1.0"
+        "--version", action="version", version="NEMA Analysis Tool v0.2.0"
     )
 
     return parser
@@ -491,6 +491,13 @@ def run_analysis(args: argparse.Namespace) -> int:
             boxplot_path = (
                 output_path.parent / f"{output_path.stem}_lung_boxplot_iterations.png"
             )
+            wcbr_conv_path = (
+                output_path.parent
+                / f"{output_path.stem}_weighted_cbr_convergence_analysis.png"
+            )
+            cbr_conv_path = (
+                output_path.parent / f"{output_path.stem}_cbr_convergence_analysis.png"
+            )
 
             save_results_to_txt(
                 all_results,
@@ -516,6 +523,8 @@ def run_analysis(args: argparse.Namespace) -> int:
                     pc_vs_bg_path,
                     rois_loc_path,
                     boxplot_path,
+                    cbr_conv_path,
+                    wcbr_conv_path,
                 )
                 logging.info("PDF report saved successfully")
             except Exception as e:
