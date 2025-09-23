@@ -15,9 +15,12 @@ def mock_cfg():
     cfg.ACTIVITY = CfgNode()
     cfg.ACTIVITY.HOT = 8000.0
     cfg.ACTIVITY.BACKGROUND = 2000.0
+    cfg.ACTIVITY.RATIO = cfg.ACTIVITY.HOT / cfg.ACTIVITY.BACKGROUND
+    cfg.ACTIVITY.UNITS = "mCi/mL"
     cfg.ROIS = CfgNode()
     cfg.ROIS.CENTRAL_SLICE = 25
     cfg.ROIS.BACKGROUND_OFFSET_YX = [(-10, -10), (10, 10)]
+    cfg.ROIS.ORIENTATION_YX = [1, 1]
     return cfg
 
 
