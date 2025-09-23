@@ -17,11 +17,14 @@ def mock_cfg_with_viz():
     cfg.ACTIVITY = CfgNode()
     cfg.ACTIVITY.HOT = 8000.0
     cfg.ACTIVITY.BACKGROUND = 2000.0
+    cfg.ACTIVITY.RATIO = cfg.ACTIVITY.HOT / cfg.ACTIVITY.BACKGROUND
+    cfg.ACTIVITY.UNITS = "mCi/mL"
 
     cfg.ROIS = CfgNode()
     cfg.ROIS.CENTRAL_SLICE = 20
     cfg.ROIS.BACKGROUND_OFFSET_YX = [(-10, -10), (10, 10)]
     cfg.ROIS.SPACING = 2.0644
+    cfg.ROIS.ORIENTATION_YX = [1, 1]
 
     # Add visualization settings if they exist in your config
     cfg.VISUALIZATION = CfgNode()
@@ -34,7 +37,7 @@ def mock_cfg_with_viz():
 @pytest.fixture
 def test_image_with_features():
     """Create test image with clear features for visualization."""
-    image = np.full((40, 100, 100), 100.0, dtype=np.float32)
+    image = np.full((100, 100, 100), 100.0, dtype=np.float32)
 
     # Add hot spheres at different locations
     centers = [(50, 30), (50, 70), (30, 50), (70, 50)]
