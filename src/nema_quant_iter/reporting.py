@@ -87,7 +87,7 @@ def generate_plots(
     df = pd.DataFrame(results)
     df_filtered = df[~df["iteration"].isin([1, 2])]
 
-    csv_path = output_dir.parent / f"{output_dir.stem}_results_data.csv"
+    csv_path = output_dir.parent / "csv" / "results_data.csv"
     df_filtered.to_csv(csv_path, index=False)
     logger.info(f"Results data saved as CSV: {csv_path}")
 
@@ -288,7 +288,7 @@ def generate_plots(
 
     plt.tight_layout(rect=(0, 0.1, 1, 0.92))
 
-    output_path = output_dir.parent / f"{output_dir.stem}_analysis_plot_iterations.png"
+    output_path = output_dir / "analysis_plot_iterations.png"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -514,7 +514,7 @@ def generate_pc_vs_bg_plot(
 
     plt.tight_layout()
 
-    output_path = output_dir.parent / f"{output_dir.stem}_bg_vs_pc_plot.png"
+    output_path = output_dir / "bg_vs_pc_plot.png"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -717,9 +717,8 @@ def generate_wcbr_convergence_plot(
 
     plt.tight_layout()
 
-    output_path = (
-        output_dir.parent / f"{output_dir.stem}_weighted_cbr_convergence_analysis.png"
-    )
+    output_path = output_dir / "weighted_cbr_convergence_analysis.png"
+
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -1180,7 +1179,7 @@ def generate_cbr_convergence_plot(
 
     plt.tight_layout(rect=(0.0, 0.0, 0.85, 1.0))
 
-    output_path = output_dir.parent / f"{output_dir.stem}_cbr_convergence_analysis.png"
+    output_path = output_dir / "cbr_convergence_analysis.png"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -1395,7 +1394,7 @@ def generate_boxplot_with_mean_std(
 
     plt.tight_layout()
 
-    output_path = output_dir.parent / f"{output_dir.stem}_lung_boxplot_iterations.png"
+    output_path = output_dir / "lung_boxplot_iterations.png"
     plt.savefig(
         str(output_path),
         dpi=600,
