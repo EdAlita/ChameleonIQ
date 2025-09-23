@@ -86,9 +86,24 @@ def save_results_to_txt(
 
         f.write("ANALYSIS CONFIGURATION:\n")
         f.write("-" * 40 + "\n")
-        f.write(f"Hot activity: {cfg.ACTIVITY.HOT:.3f}\n")
-        f.write(f"Background activity: {cfg.ACTIVITY.BACKGROUND:.3f}\n")
-        f.write(f"Activity ratio: {cfg.ACTIVITY.HOT/cfg.ACTIVITY.BACKGROUND:.2f}\n")
+        if cfg.ACTIVITY.HOT == 0.0:
+            f.write("Hot activity: not reported\n")
+        else:
+            f.write(f"Hot activity: {cfg.ACTIVITY.HOT:.7f} {cfg.ACTIVITY.UNITS}\n")
+        if cfg.ACTIVITY.BACKGROUND == 0.0:
+            f.write("Background activity: not reported\n")
+        else:
+            f.write(
+                f"Background activity: {cfg.ACTIVITY.BACKGROUND:.7f} {cfg.ACTIVITY.UNITS}\n"
+            )
+        f.write(f"Activity ratio: {cfg.ACTIVITY.RATIO:.3f}\n")
+        if (
+            cfg.ACTIVITY.ACTIVITY_TOTAL == "0.0 mCi"
+            or cfg.ACTIVITY.ACTIVITY_TOTAL == "0.0 MBq"
+        ):
+            f.write("Total activity: not reported\n")
+        else:
+            f.write(f"Total activity: {cfg.ACTIVITY.ACTIVITY_TOTAL}\n")
         f.write(f"Central slice: {cfg.ROIS.CENTRAL_SLICE}\n")
         f.write("\n")
 
@@ -262,11 +277,32 @@ def generate_reportlab_report(
     elements.append(Paragraph(summary, body_style))
     elements.append(Spacer(1, 0.18 * inch))
 
+    background_val = getattr(cfg.ACTIVITY, "BACKGROUND", None)
+    hot_val = getattr(cfg.ACTIVITY, "HOT", None)
+    total_val = getattr(cfg.ACTIVITY, "ACTIVITY_TOTAL", None)
+    units_val = getattr(cfg.ACTIVITY, "UNITS", "N/A")
+
+    if background_val is None or background_val == 0.0:
+        background_text = "not reported"
+    else:
+        background_text = f"{background_val:.7f} {units_val}"
+
+    if hot_val is None or hot_val == 0.0:
+        hot_text = "not reported"
+    else:
+        hot_text = f"{hot_val:.7f} {units_val}"
+
+    if total_val is None or total_val == "0.0 mCi" or total_val == "0.0 MBq":
+        total_text = "not reported"
+    else:
+        total_text = f"{total_val}"
+
     bg_text = (
         "<b>Activity Concentrations</b><br/>"
-        f"\u2022 Background: {getattr(cfg.ACTIVITY, 'BACKGROUND', 'N/A')} MBq<br/>"
-        f"\u2022 Hot Spheres: {getattr(cfg.ACTIVITY, 'HOT', 'N/A')} MBq<br/>"
+        f"\u2022 Background: {background_text}<br/>"
+        f"\u2022 Hot Spheres: {hot_text}<br/>"
         f"\u2022 Activity Ratio (Hot/Background): {getattr(cfg.ACTIVITY, 'RATIO', 'N/A')}"
+        f"<br/>\u2022 Total Activity: {total_text}"
     )
     elements.append(Paragraph(bg_text, body_style))
     elements.append(Spacer(1, 0.18 * inch))
@@ -457,7 +493,7 @@ def generate_plots(
     """
     df = pd.DataFrame(results)
 
-    csv_path = output_dir.parent / f"{output_dir.stem}_results.csv"
+    csv_path = output_dir.parent / "csv" / "analysis_results.csv"
     df.to_csv(csv_path, index=False)
     logging.info(f"Results saved to CSV at: {csv_path}")
 
@@ -508,7 +544,7 @@ def generate_plots(
 
     plt.tight_layout(rect=(0, 0.1, 1, 0.92))
 
-    output_path = output_dir.parent / f"analysis_plot_{output_dir.stem}.png"
+    output_path = output_dir / "analysis_plot.png"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -549,7 +585,7 @@ def generate_boxplot_with_mean_std(
     data = list(data_dict.values())
     std_dev = float(np.std(data))
 
-    csv_path = output_dir.parent / f"{output_dir.stem}_lung_results.csv"
+    csv_path = output_dir.parent / "csv" / "lung_results.csv"
     df = pd.DataFrame({"data": data})
     df.to_csv(csv_path, index=False)
     logging.info(f"Lung Results saved to CSV at: {csv_path}")
@@ -625,7 +661,7 @@ def generate_boxplot_with_mean_std(
 
     plt.tight_layout()
 
-    output_path = output_dir.parent / f"{output_dir.stem}_boxplot_with_mean_std.png"
+    output_path = output_dir / "boxplot_with_mean_std.png"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -659,7 +695,10 @@ def generate_rois_plots(
         This function does not return a value; the plot is saved to disk.
     """
     rois = cfg.PHANTHOM.ROI_DEFINITIONS_MM
-    background_offset = cfg.ROIS.BACKGROUND_OFFSET_YX
+    background_offset = [
+        (y * cfg.ROIS.ORIENTATION_YX[0], x * cfg.ROIS.ORIENTATION_YX[1])
+        for y, x in cfg.ROIS.BACKGROUND_OFFSET_YX
+    ]
     pixel_spacing = cfg.ROIS.SPACING
 
     fig, ax2 = plt.subplots(figsize=(10, 10))
@@ -711,6 +750,6 @@ def generate_rois_plots(
     ax2.grid(False)
     plt.tight_layout()
 
-    output_path = output_dir.parent / f"rois_location_{output_dir.stem}.png"
+    output_path = output_dir / "rois_location.png"
     plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
     plt.close()
