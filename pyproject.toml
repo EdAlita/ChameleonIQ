@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nema-quant"
-version = "0.1.0"
+version = "0.2.0"
 authors = [
-  { name="EdAlita", email="your-email@example.com" },
+  { name="EdAlita", email="eyulibri@i3m.upv.es" },
 ]
 description = "A tool for NEMA NU 2-2018 Image Quality analysis."
 readme = "README.md"
