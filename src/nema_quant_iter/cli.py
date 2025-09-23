@@ -463,12 +463,17 @@ def run_analysis(args: argparse.Namespace) -> int:
 
         try:
             output_path = Path(args.output)
+            png_dir = output_path.parent / "png"
+            png_dir.mkdir(parents=True, exist_ok=True)
+            csv_dir = output_path.parent / "csv"
+            csv_dir.mkdir(parents=True, exist_ok=True)
+
             logging.info("Generating plots...")
-            generate_plots(all_results, output_path, cfg)
-            generate_pc_vs_bg_plot(all_results, output_path, cfg)
-            generate_boxplot_with_mean_std(all_lung_results, output_path, cfg)
-            generate_wcbr_convergence_plot(all_results, output_path, cfg)
-            generate_cbr_convergence_plot(all_results, output_path, cfg)
+            generate_plots(all_results, png_dir, cfg)
+            generate_pc_vs_bg_plot(all_results, png_dir, cfg)
+            generate_boxplot_with_mean_std(all_lung_results, png_dir, cfg)
+            generate_wcbr_convergence_plot(all_results, png_dir, cfg)
+            generate_cbr_convergence_plot(all_results, png_dir, cfg)
             logging.info("Plots generated successfully")
         except Exception as e:
             logging.error(f"Failed to generate plots: {e}")
@@ -483,21 +488,14 @@ def run_analysis(args: argparse.Namespace) -> int:
             output_path = Path(args.output)
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            plot_path = (
-                output_path.parent / f"{output_path.stem}_analysis_plot_iterations.png"
-            )
-            rois_loc_path = output_path.parent / f"{output_path.stem}_rois_location.png"
-            pc_vs_bg_path = output_path.parent / f"{output_path.stem}_bg_vs_pc_plot.png"
-            boxplot_path = (
-                output_path.parent / f"{output_path.stem}_lung_boxplot_iterations.png"
-            )
+            plot_path = output_path.parent / "png" / "analysis_plot_iterations.png"
+            rois_loc_path = output_path.parent / "png" / "rois_location.png"
+            pc_vs_bg_path = output_path.parent / "png" / "bg_vs_pc_plot.png"
+            boxplot_path = output_path.parent / "png" / "lung_boxplot_iterations.png"
             wcbr_conv_path = (
-                output_path.parent
-                / f"{output_path.stem}_weighted_cbr_convergence_analysis.png"
+                output_path.parent / "png" / "weighted_cbr_convergence_analysis.png"
             )
-            cbr_conv_path = (
-                output_path.parent / f"{output_path.stem}_cbr_convergence_analysis.png"
-            )
+            cbr_conv_path = output_path.parent / "png" / "cbr_convergence_analysis.png"
 
             save_results_to_txt(
                 all_results,
