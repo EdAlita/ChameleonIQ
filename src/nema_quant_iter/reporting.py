@@ -1898,9 +1898,24 @@ def save_results_to_txt(
 
         f.write("ANALYSIS CONFIGURATION:\n")
         f.write("-" * 50 + "\n")
-        f.write(f"Hot activity: {cfg.ACTIVITY.HOT:.3f} MBq\n")
-        f.write(f"Background activity: {cfg.ACTIVITY.BACKGROUND:.3f} MBq\n")
-        f.write(f"Activity ratio: {cfg.ACTIVITY.HOT/cfg.ACTIVITY.BACKGROUND:.2f}\n")
+        if cfg.ACTIVITY.HOT == 0.0:
+            f.write("Hot activity: not reported\n")
+        else:
+            f.write(f"Hot activity: {cfg.ACTIVITY.HOT:.7f} {cfg.ACTIVITY.UNITS}\n")
+        if cfg.ACTIVITY.BACKGROUND == 0.0:
+            f.write("Background activity: not reported\n")
+        else:
+            f.write(
+                f"Background activity: {cfg.ACTIVITY.BACKGROUND:.7f} {cfg.ACTIVITY.UNITS}\n"
+            )
+        f.write(f"Activity ratio: {cfg.ACTIVITY.RATIO:.3f}\n")
+        if (
+            cfg.ACTIVITY.ACTIVITY_TOTAL == "0.0 mCi"
+            or cfg.ACTIVITY.ACTIVITY_TOTAL == "0.0 MBq"
+        ):
+            f.write("Total activity: not reported\n")
+        else:
+            f.write(f"Total activity: {cfg.ACTIVITY.ACTIVITY_TOTAL}\n")
         f.write(f"Central slice: {cfg.ROIS.CENTRAL_SLICE}\n")
         f.write(f"Case name: {getattr(cfg.FILE, 'CASE', 'N/A')}\n")
         f.write("\n")
