@@ -42,7 +42,7 @@ def generate_merged_plots(
         exp: COLORS[i % len(COLORS)] for i, exp in enumerate(enhanced_experiments)
     }
 
-    for exp_idx, experiment in enumerate(experiments):
+    for _exp_idx, experiment in enumerate(experiments):
         exp_data = df[df["experiment"] == experiment]
         plot_status = plots_status.get(experiment)
 
