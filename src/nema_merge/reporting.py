@@ -22,7 +22,10 @@ COLORS = [
 
 
 def generate_merged_plots(
-    data: List[Dict[str, Any]], output_dir: Path, experiment_order: List[str]
+    data: List[Dict[str, Any]],
+    output_dir: Path,
+    experiment_order: List[str],
+    plots_status: Dict[str, str],
 ) -> None:
     logger.info("Generating merged analysis plots")
 
@@ -32,11 +35,16 @@ def generate_merged_plots(
     plt.style.use("default")
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 
-    _ = sorted(df["diameter_mm"].unique())
+    enhanced_experiments = [
+        exp for exp in experiments if plots_status.get(exp) == "enhanced"
+    ]
+    enhanced_color_map = {
+        exp: COLORS[i % len(COLORS)] for i, exp in enumerate(enhanced_experiments)
+    }
 
     for exp_idx, experiment in enumerate(experiments):
         exp_data = df[df["experiment"] == experiment]
-        color = COLORS[exp_idx % len(COLORS)]
+        plot_status = plots_status.get(experiment)
 
         exp_diameters = sorted(exp_data["diameter_mm"])
         contrast_values = [
@@ -48,30 +56,53 @@ def generate_merged_plots(
             for d in exp_diameters
         ]
 
+        if plot_status == "enhanced":
+            _color = enhanced_color_map[experiment]
+            _linewidth = 4.0
+            _alpha = 1.0
+            _zorder = 30
+            _linestyle = "-"
+            _markersize = 10
+            _markeredgewidth = 2.0
+        else:
+            _color = "#666666FF"
+            _linewidth = 1.0
+            _alpha = 0.3
+            _zorder = 5
+            _linestyle = "--"
+            _markersize = 4
+            _markeredgewidth = 0.5
+
         ax1.plot(
             exp_diameters,
             contrast_values,
-            color=color,
-            linewidth=3,
+            color=_color,
+            linewidth=_linewidth,
+            linestyle=_linestyle,
+            alpha=_alpha,
+            zorder=_zorder,
             marker="o",
-            markersize=8,
-            markerfacecolor=color,
+            markersize=_markersize,
+            markerfacecolor=_color,
             markeredgecolor="white",
-            markeredgewidth=2,
-            label=experiment,
+            markeredgewidth=_markeredgewidth,
+            label=experiment if plot_status == "enhanced" else None,
         )
 
         ax2.plot(
             exp_diameters,
             variability_values,
-            color=color,
-            linewidth=3,
+            color=_color,
+            linewidth=_linewidth,
+            linestyle=_linestyle,
+            alpha=_alpha,
+            zorder=_zorder,
             marker="o",
-            markersize=8,
-            markerfacecolor=color,
+            markersize=_markersize,
+            markerfacecolor=_color,
             markeredgecolor="white",
-            markeredgewidth=2,
-            label=experiment,
+            markeredgewidth=_markeredgewidth,
+            label=experiment if plot_status == "enhanced" else None,
         )
 
     ax1.set_title(
