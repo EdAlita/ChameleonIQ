@@ -36,10 +36,13 @@ def parse_xml_config(
     for experiment in root.findall("experiment"):
         name = experiment.get("name")
         file_path = experiment.get("path")
+        plot_status = experiment.get("plot_status")
         lung_path = experiment.get("lung_path")
 
         if name and file_path:
-            experiments.append({"name": name, "path": file_path})
+            experiments.append(
+                {"name": name, "path": file_path, "plot_status": plot_status}
+            )
             logging.info(f"Found experiment: {name} -> {file_path}")
 
             if lung_path:
@@ -53,14 +56,17 @@ def parse_xml_config(
 
 def load_experiment_data(
     experiments: List[Dict[str, str]]
-) -> tuple[List[Dict[str, Any]], List[str]]:
+) -> tuple[List[Dict[str, Any]], List[str], Dict[str, str]]:
     all_data = []
     experiment_order = []
+    experiment_plot_status = {}
 
     for exp in experiments:
         exp_name = exp["name"]
+        exp_plot_status = exp["plot_status"]
         file_path = Path(exp["path"])
         experiment_order.append(exp_name)
+        experiment_plot_status[exp_name] = exp_plot_status
 
         logging.info(f"Loading data for experiment: {exp_name}")
 
@@ -83,7 +89,7 @@ def load_experiment_data(
             continue
 
     logging.info(f"Total records loaded: {len(all_data)}")
-    return all_data, experiment_order
+    return all_data, experiment_order, experiment_plot_status
 
 
 def load_lung_data(lung_experiments: List[Dict[str, str]]) -> List[Dict[str, Any]]:
@@ -171,13 +177,13 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
             logging.error("No experiments found in XML configuration")
             return 1
 
-        all_data, experiment_order = load_experiment_data(experiments)
+        all_data, experiment_order, plots_status = load_experiment_data(experiments)
         if not all_data:
             logging.error("No data loaded from experiments")
             return 1
 
         logging.info("Generating merged plots...")
-        generate_merged_plots(all_data, output_dir, experiment_order)
+        generate_merged_plots(all_data, output_dir, experiment_order, plots_status)
 
         if lung_experiments:
             lung_data = load_lung_data(lung_experiments)
