@@ -24,7 +24,7 @@ def setup_logging(log_level: int = 20) -> None:
 
 def parse_xml_config(
     xml_path: Path,
-) -> tuple[List[Dict[str, str]], List[Dict[str, str]]]:
+) -> tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
     logging.info(f"Parsing XML configuration: {xml_path}")
 
     tree = ET.parse(xml_path)
@@ -55,7 +55,7 @@ def parse_xml_config(
 
 
 def load_experiment_data(
-    experiments: List[Dict[str, str]]
+    experiments: List[Dict[str, Any]],
 ) -> tuple[List[Dict[str, Any]], List[str], Dict[str, str]]:
     all_data = []
     experiment_order = []
