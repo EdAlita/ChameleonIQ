@@ -1,4 +1,6 @@
+import argparse
 import logging
+import sys
 from typing import Any, Optional, Tuple
 
 import cv2
@@ -377,70 +379,87 @@ def calculate_weighted_cbr_fom(results):
     }
 
 
+def main() -> None:
+    """Command-line interface for coordinate conversion utilities."""
+    parser = argparse.ArgumentParser(
+        description="Convert between mm coordinates and voxel indices.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python -m nema_quant.utils mm2vox 58.84 23.74 -30.97 --dims 391 391 346 --spacing 2.0644 2.0644 2.0644
+  python -m nema_quant.utils vox2mm 158 207 158 --dims 391 391 346 --spacing 2.0644 2.0644 2.0644
+        """,
+    )
+
+    subparsers = parser.add_subparsers(dest="command", help="Conversion command")
+
+    mm2vox_parser = subparsers.add_parser("mm2vox", help="Convert mm to voxel indices")
+    mm2vox_parser.add_argument("x", type=float, help="X coordinate in mm")
+    mm2vox_parser.add_argument("y", type=float, help="Y coordinate in mm")
+    mm2vox_parser.add_argument("z", type=float, help="Z coordinate in mm")
+    mm2vox_parser.add_argument(
+        "--dims",
+        type=int,
+        nargs=3,
+        required=True,
+        metavar=("X", "Y", "Z"),
+        help="Image dimensions (x, y, z)",
+        default=(391, 391, 346),
+    )
+    mm2vox_parser.add_argument(
+        "--spacing",
+        type=float,
+        nargs=3,
+        required=True,
+        metavar=("X", "Y", "Z"),
+        help="Voxel spacing in mm (x, y, z)",
+        default=(2.0644, 2.0644, 2.0644),
+    )
+
+    vox2mm_parser = subparsers.add_parser("vox2mm", help="Convert voxel indices to mm")
+    vox2mm_parser.add_argument("x", type=int, help="X coordinate in voxel indices")
+    vox2mm_parser.add_argument("y", type=int, help="Y coordinate in voxel indices")
+    vox2mm_parser.add_argument("z", type=int, help="Z coordinate in voxel indices")
+    vox2mm_parser.add_argument(
+        "--dims",
+        type=int,
+        nargs=3,
+        required=True,
+        metavar=("X", "Y", "Z"),
+        help="Image dimensions (x, y, z)",
+        default=(391, 391, 346),
+    )
+    vox2mm_parser.add_argument(
+        "--spacing",
+        type=float,
+        nargs=3,
+        required=True,
+        metavar=("X", "Y", "Z"),
+        help="Voxel spacing in mm (x, y, z)",
+        default=(2.0644, 2.0644, 2.0644),
+    )
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    if args.command == "mm2vox":
+        voxel_indices = mm_to_voxel(
+            (args.x, args.y, args.z), tuple(args.dims), tuple(args.spacing)
+        )
+        print(
+            f"mm coordinates ({args.x}, {args.y}, {args.z}) -> voxel indices (z,y,x): {voxel_indices}"
+        )
+    elif args.command == "vox2mm":
+        mm_coords = voxel_to_mm(
+            (args.z, args.y, args.x), tuple(args.dims), tuple(args.spacing)
+        )
+        print(
+            f"voxel indices ({args.z}, {args.y}, {args.x}) -> mm coordinates (x,y,z): ({mm_coords[0]:.2f}, {mm_coords[1]:.2f}, {mm_coords[2]:.2f})"
+        )
+
+
 if __name__ == "__main__":
-    # --- Ejemplo de Uso y Verificación con los valores del usuario ---
-    dims = (391, 391, 346)
-    spacing = (2.0644, 2.0644, 2.0644)
-
-    center_voxel_indices = mm_to_voxel((0.0, 0.0, 0.0), dims, spacing)
-
-    print(f"Dimensiones de la imagen (x,y,z): {dims}")
-    print(f"Espaciado de vóxel (x,y,z): {spacing}")
-    print("-" * 30)
-
-    # --- Prueba de conversión: mm -> vóxel ---
-    print(
-        f"El vóxel más cercano al centro físico (0,0,0) es:"
-        f" {center_voxel_indices} (z,y,x)"
-    )
-
-    # --- Prueba de conversión inversa: vóxel -> mm ---
-    print(
-        f"\nConvirtiendo los índices del vóxel central"
-        f"{center_voxel_indices} de vuelta a mm..."
-    )
-    calculated_mm = voxel_to_mm(center_voxel_indices, dims, spacing)
-    print(
-        f"  -> Coordenada calculada: ({calculated_mm[0]:.2f}, "
-        f"{calculated_mm[1]:.2f}, {calculated_mm[2]:.2f}) (x,y,z)"
-    )
-
-    # --- Verificación de simetría ---
-    print("\nVerificando que las conversiones" " son inversas la una de la otra...")
-    test_mm = (-50.00, 34.00, 0.00)
-    print(f"Test 1: {test_mm} -> Vóxel (z,y,x) -> mm (x,y,z)")
-    voxel_result = mm_to_voxel(test_mm, dims, spacing)
-    mm_result = voxel_to_mm(voxel_result, dims, spacing)
-    print(
-        f"  {test_mm} -> {voxel_result} -> "
-        f"({mm_result[0]:.2f}, {mm_result[1]:.2f}, {mm_result[2]:.2f})"
-    )
-    if not np.allclose(test_mm, mm_result, atol=1.1):
-        raise ValueError(
-            "Conversión inversa falló: los valores no coinciden dentro de la tolerancia"
-        )
-    print("  -> Verificación exitosa!")
-
-    test_voxel = (169, 211, 171)
-    print(f"Test 2: {test_voxel} -> mm -> Vóxel")
-    mm_result_2 = voxel_to_mm(test_voxel, dims, spacing)
-    voxel_result_2 = mm_to_voxel(mm_result_2, dims, spacing)
-    print(f"  {test_voxel} -> {mm_result_2} -> {voxel_result_2}")
-    if test_voxel != voxel_result_2:
-        raise ValueError(
-            f"Conversión inversa falló: esperado {test_voxel}, obtenido {voxel_result_2}"
-        )
-    print("  -> Verificación exitosa!")
-
-    print("37 mm")
-    print(mm_to_voxel((58.84, 23.74, -30.97), dims, spacing))
-    print("28 mm")
-    print(mm_to_voxel((29.93, -25.80, 30.97), dims, spacing))
-    print("22 mm")
-    print(mm_to_voxel((-25.80, -25.80, 30.97), dims, spacing))
-    print("17 mm")
-    print(mm_to_voxel((-56.77, 25.80, 30.97), dims, spacing))
-    print("13 mm")
-    print(mm_to_voxel((-25.80, 75.35, 30.97), dims, spacing))
-    print("10 mm")
-    print(mm_to_voxel((29.93, 77.41, 30.97), dims, spacing))
+    main()
