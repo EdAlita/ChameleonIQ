@@ -24,9 +24,12 @@ from .io import load_nii_image
 from .phantom import NemaPhantom
 from .reporting import (
     generate_boxplot_with_mean_std,
+    generate_coronal_sphere_plots,
     generate_plots,
     generate_reportlab_report,
     generate_rois_plots,
+    generate_torso_plot,
+    generate_transverse_sphere_plots,
     save_results_to_txt,
 )
 
@@ -272,9 +275,14 @@ def run_analysis(args: argparse.Namespace) -> int:
         try:
             generate_plots(results=results, output_dir=png_dir, cfg=cfg)
             generate_rois_plots(image=image_data, output_dir=png_dir, cfg=cfg)
+            generate_transverse_sphere_plots(
+                image=image_data, output_dir=png_dir, cfg=cfg
+            )
             generate_boxplot_with_mean_std(
                 data_dict=lung_results, output_dir=png_dir, cfg=cfg
             )
+            generate_coronal_sphere_plots(image=image_data, output_dir=png_dir, cfg=cfg)
+            generate_torso_plot(image=image_data, output_dir=png_dir, cfg=cfg)
             logging.info("Plots generated successfully")
         except Exception as e:
             logging.error(f"Failed to generated plots: {e}")
