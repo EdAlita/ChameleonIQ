@@ -1284,7 +1284,7 @@ def generate_boxplot_with_mean_std(
     std_devs = []
 
     for _iteration in key_iterations:
-        lung_data = list(filtered_results[iteration].values())
+        lung_data = list(filtered_results[_iteration].values())
         box_data.append(lung_data)
 
         if (
@@ -1309,7 +1309,7 @@ def generate_boxplot_with_mean_std(
             label = f"Iter {_iteration}"
 
         box_labels.append(label)
-        colors.append(publication_colors[iteration])
+        colors.append(publication_colors[_iteration])
         means.append(float(np.mean(lung_data)))
         std_devs.append(float(np.std(lung_data)))
 
