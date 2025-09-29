@@ -188,7 +188,9 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
         if lung_experiments:
             lung_data = load_lung_data(lung_experiments)
             if lung_data:
-                generate_merged_boxplot(lung_data, output_dir, experiment_order)
+                generate_merged_boxplot(
+                    lung_data, output_dir, experiment_order, plots_status
+                )
             else:
                 logging.warning("No lung data loaded, skipping lung analysis")
         else:
