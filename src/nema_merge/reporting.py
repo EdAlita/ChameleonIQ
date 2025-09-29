@@ -144,7 +144,10 @@ def generate_merged_plots(
 
 
 def generate_merged_boxplot(
-    lung_data: List[Dict[str, Any]], output_dir: Path, experiment_order: List[str]
+    lung_data: List[Dict[str, Any]],
+    output_dir: Path,
+    experiment_order: List[str],
+    plots_status: Dict[str, str],
 ) -> None:
     logger.info("Generating merged lung insert violin plot analysis")
 
@@ -159,7 +162,7 @@ def generate_merged_boxplot(
 
     for experiment in experiments:
         exp_data = df[df["experiment"] == experiment]
-        if len(exp_data) > 0:
+        if len(exp_data) > 0 and plots_status.get(experiment) == "enhanced":
             for _, row in exp_data.iterrows():
                 plot_data.append({"experiment": experiment, "value": row["data"]})
             experiment_names.append(experiment)
@@ -243,10 +246,16 @@ def generate_merged_boxplot(
 
     legend_elements = [
         Line2D([0], [0], color=COLORS[i % len(COLORS)], linewidth=4, label=exp)
-        for i, exp in enumerate(experiments)
+        for i, exp in enumerate(experiment_names)
     ]
 
-    ax.legend(handles=legend_elements, loc="upper right", fontsize=12)
+    ax.legend(
+        handles=legend_elements,
+        bbox_to_anchor=(1.05, 1),
+        loc="upper left",
+        borderaxespad=0,
+        fontsize=12,
+    )
 
     plt.tight_layout()
 
