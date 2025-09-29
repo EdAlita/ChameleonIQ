@@ -753,3 +753,131 @@ def generate_rois_plots(
     output_path = output_dir / "rois_location.png"
     plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
     plt.close()
+
+
+def generate_transverse_sphere_plots(
+    image: npt.NDArray[Any], output_dir: Path, cfg: yacs.config.CfgNode
+) -> None:
+    """
+    Generates a plot of the transverse view of all the spheres.
+
+    Parameters
+    ----------
+    image : numpy.ndarray
+        The image loaded for analysis.
+    output_dir : Path
+        Directory path for saving the resulting plot.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+
+    Returns
+    -------
+    None
+        This function does not return a value; the plot is saved to disk.
+    """
+    rois = cfg.PHANTHOM.ROI_DEFINITIONS_MM
+
+    _, axs = plt.subplots(1, len(rois), figsize=(3 * len(rois), 3))
+    if len(rois) == 1:
+        axs = [axs]
+
+    for ax, roi in zip(axs, rois):
+        y, x = roi["center_yx"]
+
+        crop = image[
+            cfg.ROIS.CENTRAL_SLICE, y - 10 : y + 10, x - 10 : x + 10  # noqa: E203
+        ]
+        ax.imshow(crop, cmap="binary", origin="lower")
+        ax.axis("off")
+        ax.set_title(roi["name"], y=-0.15)
+
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
+    plt.margins(0, 0)
+    plt.tight_layout(pad=0)
+
+    output_path = output_dir / "transverse_sphere.png"
+    plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def generate_coronal_sphere_plots(
+    image: npt.NDArray[Any], output_dir: Path, cfg: yacs.config.CfgNode
+) -> None:
+    """
+    Generates a plot of the coronal view of all the spheres.
+
+    Parameters
+    ----------
+    image : numpy.ndarray
+        The image loaded for analysis.
+    output_dir : Path
+        Directory path for saving the resulting plot.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+
+    Returns
+    -------
+    None
+        This function does not return a value; the plot is saved to disk.
+    """
+    rois = cfg.PHANTHOM.ROI_DEFINITIONS_MM
+
+    fig, axs = plt.subplots(1, len(rois), figsize=(3 * len(rois), 3))
+    if len(rois) == 1:
+        axs = [axs]
+
+    for ax, roi in zip(axs, rois):
+        y, x = roi["center_yx"]
+
+        # Coronal cut: fix Y, vary Z and X
+        crop = image[
+            cfg.ROIS.CENTRAL_SLICE - 10 : cfg.ROIS.CENTRAL_SLICE + 10,  # noqa: E203
+            y,
+            x - 10 : x + 10,  # noqa: E203
+        ]
+
+        ax.imshow(crop, cmap="binary", origin="lower")
+        ax.axis("off")
+        ax.set_title(roi["name"], y=-0.15)
+
+    # Remove spacing between plots
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
+    plt.margins(0, 0)
+    plt.tight_layout(pad=0)
+
+    output_path = output_dir / "coronal_sphere.png"
+    plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def generate_torso_plot(
+    image: npt.NDArray[Any], output_dir: Path, cfg: yacs.config.CfgNode
+) -> None:
+    """
+    Generates a plot of the input image.
+
+    Parameters
+    ----------
+    image : numpy.ndarray
+        The image loaded for analysis.
+    output_dir : Path
+        Directory path for saving the resulting plot.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+
+    Returns
+    -------
+    None
+        This function does not return a value; the plot is saved to disk.
+    """
+    fig, ax2 = plt.subplots(figsize=(10, 10))
+    ax2.imshow(image[cfg.ROIS.CENTRAL_SLICE], cmap="binary", origin="lower")
+
+    ax2.set_aspect("equal")
+    ax2.axis("off")
+    ax2.grid(False)
+    plt.tight_layout()
+
+    output_path = output_dir / "torso.png"
+    plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.close()
