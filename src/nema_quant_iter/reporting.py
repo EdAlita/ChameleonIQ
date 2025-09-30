@@ -1284,6 +1284,8 @@ def generate_boxplot_with_mean_std(
     std_devs = []
 
     for _iteration in key_iterations:
+        if _iteration is None:
+            continue
         lung_data = list(filtered_results[_iteration].values())
         box_data.append(lung_data)
 
