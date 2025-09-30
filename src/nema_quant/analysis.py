@@ -8,6 +8,7 @@ import numpy as np
 import numpy.typing as npt
 import yacs.config
 
+from .metrics import get_values
 from .phantom import NemaPhantom
 from .utils import extract_canny_mask, find_phantom_center
 
@@ -579,3 +580,24 @@ def save_background_visualization(
     plt.close()
 
     print(f"Saved background visualization: {output_file}")
+
+
+def calculate_advanced_metrics(
+    image_data: npt.NDArray[Any],
+    gt_data: npt.NDArray[Any],
+    measures: Tuple[str, ...],
+    cfg: yacs.config.CfgNode,
+) -> Dict[str, Any]:
+
+    values = dict(
+        get_values(
+            image_data,
+            gt_data,
+            measures=measures,
+            voxelspacing=(cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
+        )
+    )
+    logger.info("Advanced Metrics:")
+    for k, v in values.items():
+        logger.info(f" {k}: {v:.7f}")
+    return values

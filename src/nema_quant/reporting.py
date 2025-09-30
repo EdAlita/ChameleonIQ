@@ -787,6 +787,8 @@ def generate_transverse_sphere_plots(
         crop = image[
             cfg.ROIS.CENTRAL_SLICE, y - 10 : y + 10, x - 10 : x + 10  # noqa: E203
         ]
+        crop = crop >= 0.41 * np.max(crop)
+        print(f"Unique values in crop for {roi['name']}: {np.unique(crop)}")
         ax.imshow(crop, cmap="binary", origin="lower")
         ax.axis("off")
         ax.set_title(roi["name"], y=-0.15)

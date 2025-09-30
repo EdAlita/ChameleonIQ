@@ -89,6 +89,19 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--advanced-metrics",
+        "-a",
+        action="store_true",
+        help="Calculate advanced segmentation metrics",
+    )
+
+    parser.add_argument(
+        "--gt-image",
+        type=str,
+        help="Path to ground truth NIfTI image file for advanced metrics",
+    )
+
+    parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose output"
     )
 
@@ -327,6 +340,74 @@ def run_analysis(args: argparse.Namespace) -> int:
             print(f"ERROR: Failed to save results: {e}")
             return 1
 
+        if args.advanced_metrics:
+            if not args.gt_image:
+                error_msg = "Ground truth image path must be provided with --gt-image for advanced metrics"
+                logging.error(error_msg)
+                print(f"ERROR: {error_msg}")
+                return 1
+
+            gt_path = Path(args.gt_image)
+            if not gt_path.exists():
+                error_msg = f"Ground truth image file not found: {args.gt_image}"
+                logging.error(error_msg)
+                print(f"ERROR: {error_msg}")
+                return 1
+
+            try:
+                logging.info("Loading ground truth image...")
+                gt_data, _ = load_nii_image(gt_path, return_affine=True)
+                logging.info("Ground truth image loaded successfully")
+            except Exception as e:
+                logging.error(f"Failed to load ground truth image: {e}")
+                if args.verbose:
+                    import traceback
+
+                    logging.error(traceback.format_exc())
+                print(f"ERROR: Failed to load ground truth image: {e}")
+                return 1
+
+            try:
+                logging.info("Calculating advanced segmentation metrics...")
+                from .analysis import calculate_advanced_metrics
+
+                mask_data = image_data > 0.41 * np.max(image_data)
+                mask_gt = gt_data > 0.41 * np.max(gt_data)
+                advanced_metrics = calculate_advanced_metrics(
+                    mask_data,
+                    mask_gt,
+                    (
+                        "Dice",
+                        "Jaccard",
+                        "VS",
+                        "1-VOI",
+                        "HD",
+                        "ASSD",
+                        "1-GCE",
+                        "Kappa",
+                        "MI",
+                        "RI",
+                        "ASSD",
+                        "Recall",
+                        "F1",
+                    ),
+                    cfg,
+                )
+                import pandas as pd
+
+                advanced_metrics_df = pd.DataFrame([advanced_metrics])
+                advanced_metrics_path = csv_dir / "advanced_metrics.csv"
+                advanced_metrics_df.to_csv(advanced_metrics_path, index=False)
+                logging.info(f"Saving advanced metrics in: {advanced_metrics_path}")
+                logging.info("Advanced metrics calculated successfully")
+            except Exception as e:
+                logging.error(f"Failed to calculate advanced metrics: {e}")
+                if args.verbose:
+                    import traceback
+
+                    logging.error(traceback.format_exc())
+                print(f"ERROR: Failed to calculate advanced metrics: {e}")
+                return 1
         # Print summary
         logging.info("Analysis completed successfully!")
         logging.info("Summary:")
