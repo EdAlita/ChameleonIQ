@@ -7,7 +7,12 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
-from .reporting import generate_merged_boxplot, generate_merged_plots
+from .reporting import (
+    generate_dose_merged_plot,
+    generate_dose_merged_plot_any_sphere,
+    generate_merged_boxplot,
+    generate_merged_plots,
+)
 
 
 def setup_logging(log_level: int = 20) -> None:
@@ -36,12 +41,18 @@ def parse_xml_config(
     for experiment in root.findall("experiment"):
         name = experiment.get("name")
         file_path = experiment.get("path")
-        plot_status = experiment.get("plot_status")
+        plot_status = experiment.get("plot_status", "enhanced")
         lung_path = experiment.get("lung_path")
+        dose = experiment.get("dose")
 
         if name and file_path:
             experiments.append(
-                {"name": name, "path": file_path, "plot_status": plot_status}
+                {
+                    "name": name,
+                    "path": file_path,
+                    "plot_status": plot_status,
+                    "dose": dose,
+                }
             )
             logging.info(f"Found experiment: {name} -> {file_path}")
 
@@ -56,10 +67,11 @@ def parse_xml_config(
 
 def load_experiment_data(
     experiments: List[Dict[str, Any]],
-) -> tuple[List[Dict[str, Any]], List[str], Dict[str, str]]:
+) -> tuple[List[Dict[str, Any]], List[str], Dict[str, str], Dict[str, Any]]:
     all_data = []
     experiment_order = []
     experiment_plot_status = {}
+    experiment_dose = {}
 
     for exp in experiments:
         exp_name = exp["name"]
@@ -67,6 +79,7 @@ def load_experiment_data(
         file_path = Path(exp["path"])
         experiment_order.append(exp_name)
         experiment_plot_status[exp_name] = exp_plot_status
+        experiment_dose[exp_name] = exp["dose"] if "dose" in exp else None
 
         logging.info(f"Loading data for experiment: {exp_name}")
 
@@ -89,7 +102,7 @@ def load_experiment_data(
             continue
 
     logging.info(f"Total records loaded: {len(all_data)}")
-    return all_data, experiment_order, experiment_plot_status
+    return all_data, experiment_order, experiment_plot_status, experiment_dose
 
 
 def load_lung_data(lung_experiments: List[Dict[str, str]]) -> List[Dict[str, Any]]:
@@ -177,13 +190,28 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
             logging.error("No experiments found in XML configuration")
             return 1
 
-        all_data, experiment_order, plots_status = load_experiment_data(experiments)
+        all_data, experiment_order, plots_status, experiment_dose = (
+            load_experiment_data(experiments)
+        )
         if not all_data:
             logging.error("No data loaded from experiments")
             return 1
 
         logging.info("Generating merged plots...")
         generate_merged_plots(all_data, output_dir, experiment_order, plots_status)
+        # Only generate dose plots if there is any numeric value in experiment_dose
+        if any(
+            dose is not None and str(dose).replace(".", "", 1).isdigit()
+            for dose in experiment_dose.values()
+        ):
+            print("Generating dose merged plots...")
+            generate_dose_merged_plot(all_data, output_dir, experiment_dose)
+            generate_dose_merged_plot_any_sphere(
+                all_data, output_dir, experiment_dose, 10.0
+            )
+            generate_dose_merged_plot_any_sphere(
+                all_data, output_dir, experiment_dose, 17.0
+            )
 
         if lung_experiments:
             lung_data = load_lung_data(lung_experiments)
