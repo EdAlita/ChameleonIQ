@@ -21,7 +21,9 @@ from collections import OrderedDict
 
 import numpy as np
 import skimage.measure as skm
-from scipy.ndimage._lib import _ni_support
+from scipy.ndimage import (
+    _ni_support,  # type: ignore[attr-defined]  # mypy: scipy's private _ni_support can trigger attr-defined
+)
 from scipy.ndimage.morphology import (
     binary_erosion,
     distance_transform_edt,

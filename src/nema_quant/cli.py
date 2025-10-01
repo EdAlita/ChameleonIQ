@@ -408,10 +408,6 @@ def run_analysis(args: argparse.Namespace) -> int:
                     logging.error(traceback.format_exc())
                 print(f"ERROR: Failed to calculate advanced metrics: {e}")
                 return 1
-        # Print summary
-        logging.info("Analysis completed successfully!")
-        logging.info("Summary:")
-        logging.info(f"  Input image: {args.input_image}")
         logging.info(f"  Image dimensions: {image_dims}")
         logging.info(f"  Voxel spacing: {voxel_spacing} mm")
         logging.info(f"  Number of spheres analyzed: {len(results)}")
