@@ -8,7 +8,6 @@ import numpy as np
 import src.nema_quant.cli as cli
 import src.nema_quant.reporting as reporting
 import src.nema_quant.utils as analysis
-import src.nema_quant.utils as utils
 from src.config.defaults import get_cfg_defaults
 
 
@@ -139,37 +138,6 @@ class TestDirectCoverage:
                             func(test_results, "test_output", MagicMock())
                     except Exception:
                         pass
-
-    def test_utils_functions_comprehensive(self):
-        """Test utils functions comprehensively."""
-        # Test any existing utils functions
-        utils_functions = [
-            name
-            for name in dir(utils)
-            if not name.startswith("_") and callable(getattr(utils, name))
-        ]
-
-        for func_name in utils_functions:
-            func = getattr(utils, func_name)
-
-            # Try with different argument patterns
-            test_args = [
-                (),
-                (np.array([1, 2, 3]),),
-                (np.random.rand(10, 10),),
-                ("test_string",),
-                (10, 20),
-                ({"key": "value"},),
-            ]
-
-            for args in test_args:
-                try:
-                    _ = func(*args)
-                    break  # If successful, move to next function
-                except TypeError:
-                    continue  # Try next argument pattern
-                except Exception:
-                    break  # Other exceptions count as "tested"
 
     def test_error_conditions_directly(self):
         """Test error conditions that definitely exist in the code."""

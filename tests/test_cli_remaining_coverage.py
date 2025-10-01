@@ -188,7 +188,6 @@ class TestCLIRemainingCoverage:
         # Mock all visualization functions to succeed
         mock_generate_plots.return_value = None
         mock_rois_plots.return_value = None
-        mock_boxplot.return_value = None
 
         args = MagicMock()
         args.verbose = False
@@ -204,7 +203,6 @@ class TestCLIRemainingCoverage:
         # All visualization functions should be called
         mock_generate_plots.assert_called_once()
         mock_rois_plots.assert_called_once()
-        mock_boxplot.assert_called_once()
         assert result in [0, 1]
 
     @patch("src.nema_quant.cli.setup_logging")

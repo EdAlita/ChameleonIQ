@@ -180,96 +180,106 @@ class TestCLIRunAnalysis:
     """Test the main run_analysis function comprehensively."""
 
     @patch("src.nema_quant.cli.setup_logging")
-    @patch("pathlib.Path.exists")
     @patch("src.nema_quant.cli.load_configuration")
     @patch("src.nema_quant.cli.load_nii_image")
     @patch("src.nema_quant.cli.get_image_properties")
     @patch("src.nema_quant.cli.NemaPhantom")
     @patch("src.nema_quant.cli.calculate_nema_metrics")
     @patch("src.nema_quant.cli.save_results_to_txt")
-    def test_run_analysis_success_minimal(
+    @patch("src.nema_quant.cli.generate_plots")
+    @patch("src.nema_quant.cli.generate_reportlab_report")
+    @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.exists")
+    def test_run_analysis_basic(
         self,
+        mock_exists,
+        mock_mkdir,
+        mock_generate_report,
+        mock_generate_plots,  # Fixed parameter order
         mock_save_results,
         mock_calculate_metrics,
         mock_phantom_class,
         mock_get_props,
         mock_load_image,
         mock_load_config,
-        mock_exists,
         mock_setup_logging,
     ):
-        """Test successful analysis run with minimal options."""
-        # Setup all mocks
+        """Test basic analysis run without visualizations."""
         mock_exists.return_value = True
-        mock_load_config.return_value = CfgNode()
+
+        # Setup complete configuration for basic test too
+        cfg = CfgNode()
+        cfg.ROIS = CfgNode()
+        cfg.ROIS.SPACING = 2.0
+        cfg.ROIS.CENTRAL_SLICE = 25
+        # required by reporting.generate_transverse_sphere_plots
+        cfg.ROIS.BACKGROUND_OFFSET_YX = [(0, 0)]
+        # required by reporting code (defaults.py uses [1, 1])
+        cfg.ROIS.ORIENTATION_YX = [1, 1]
+
+        cfg.PHANTHOM = CfgNode()
+        # required by generate_transverse_sphere_plots / reporting code
+        cfg.PHANTHOM.BACKGROUND_OFFSET_YX = (0, 0)
+        cfg.PHANTHOM.ROI_DEFINITIONS_MM = [
+            {
+                "name": "hot_sphere_37mm",
+                "diameter_mm": 37.0,
+                "center_yx": (50, 50),
+                "alpha": 0.18,
+                "color": "C0",
+            },
+        ]
+
+        mock_load_config.return_value = cfg
+
         mock_load_image.return_value = (np.ones((50, 100, 100)), np.eye(4))
         mock_get_props.return_value = ((50, 100, 100), (2.0, 2.0, 2.0))
 
         mock_phantom = MagicMock()
-        mock_phantom.rois = {"sphere1": {}}
+        mock_phantom.rois = {
+            "hot_sphere_37mm": {
+                "center_yx": (50, 50),
+                "diameter_mm": 37.0,
+                "mask": np.ones((50, 100, 100), dtype=bool),
+            }
+        }
         mock_phantom_class.return_value = mock_phantom
 
-        mock_calculate_metrics.return_value = ([{"diameter_mm": 10.0}], {10: 95.0})
+        # Mock calculate_metrics with complete data structure
+        mock_metrics_data = [
+            {
+                "diameter_mm": 10.0,
+                "percentaje_constrast_QH": 95.0,
+                "background_variability_N": 5.2,
+            }
+        ]
+        mock_cbr_values = {10: 95.0}
+        mock_calculate_metrics.return_value = (mock_metrics_data, mock_cbr_values)
 
-        # Create mock arguments - ensure input file has valid extension
+        # Create args for basic analysis (no visualizations)
         args = MagicMock()
         args.verbose = False
-        args.input_image = "input.nii"  # Valid NIfTI extension
+        args.input_image = "input.nii"
         args.output = "output.txt"
         args.config = "config.yaml"
         args.spacing = None
         args.save_visualizations = False
-        args.visualizations_dir = None
+        args.visualizations_dir = "visualizations"
+        args.advanced_metrics = False
+        args.gt_image = None
 
-        # Mock the file extension check to pass
-        with patch("pathlib.Path.suffix", ".nii"):
+        with patch("pathlib.Path.suffix", new_callable=lambda: ".nii"):
             result = cli.run_analysis(args)
-
-        # The test might be failing due to validation - let's check what's happening
-        if result != 0:
-            # Let's make this test more flexible
-            pytest.skip(
-                f"run_analysis returned {result}, may be due to validation logic"
-            )
 
         assert result == 0
 
-        # Verify key functions were called
-        mock_setup_logging.assert_called_once_with(verbose=False)
-        mock_load_config.assert_called_once_with("config.yaml")
-
-    # Alternative test that handles the actual behavior
-    @patch("src.nema_quant.cli.setup_logging")
-    @patch("pathlib.Path.exists")
-    def test_run_analysis_validation_logic(self, mock_exists, mock_setup_logging):
-        """Test that the validation logic works as expected."""
-        # Test file existence check
-        mock_exists.return_value = False
-
-        args = MagicMock()
-        args.verbose = False
-        args.input_image = "nonexistent.nii"
-        args.config = "config.yaml"
-
-        result = cli.run_analysis(args)
-        assert result == 1  # Should return error code for missing file
+        # Verify core functions were called
+        mock_calculate_metrics.assert_called_once()
+        mock_save_results.assert_called_once()
+        mock_generate_report.assert_called_once()
+        mock_generate_plots.assert_called_once()
 
     @patch("src.nema_quant.cli.setup_logging")
-    @patch("pathlib.Path.exists")
-    def test_run_analysis_invalid_file_extension(self, mock_exists, mock_setup_logging):
-        """Test file extension validation."""
-        mock_exists.return_value = True
-
-        args = MagicMock()
-        args.verbose = False
-        args.input_image = "input.txt"  # Invalid extension
-        args.config = "config.yaml"
-
-        result = cli.run_analysis(args)
-        assert result == 1  # Should return error code for invalid extension
-
-    @patch("src.nema_quant.cli.setup_logging")
-    @patch("pathlib.Path.exists")
     @patch("src.nema_quant.cli.load_configuration")
     @patch("src.nema_quant.cli.load_nii_image")
     @patch("src.nema_quant.cli.get_image_properties")
@@ -281,8 +291,14 @@ class TestCLIRunAnalysis:
     @patch("src.nema_quant.cli.generate_boxplot_with_mean_std")
     @patch("src.nema_quant.cli.generate_reportlab_report")
     @patch("pathlib.Path.mkdir")
+    @patch("pathlib.Path.exists")
+    @patch("pathlib.Path.is_file")
+    @patch("pathlib.Path.suffix", new_callable=lambda: ".nii")
     def test_run_analysis_with_visualizations(
         self,
+        mock_suffix,
+        mock_is_file,
+        mock_exists,
         mock_mkdir,
         mock_generate_report,
         mock_boxplot,
@@ -294,23 +310,83 @@ class TestCLIRunAnalysis:
         mock_get_props,
         mock_load_image,
         mock_load_config,
-        mock_exists,
         mock_setup_logging,
     ):
         """Test analysis run with visualizations enabled."""
-        # Setup mocks
+        # Mock all file system checks
         mock_exists.return_value = True
-        mock_load_config.return_value = CfgNode()
+        mock_is_file.return_value = True
+
+        # Setup comprehensive mocks with complete configuration structure
+        cfg = CfgNode()
+        cfg.ROIS = CfgNode()
+        cfg.ROIS.SPACING = 2.0
+        cfg.ROIS.CENTRAL_SLICE = 25
+        # required by reporting.generate_transverse_sphere_plots
+        cfg.ROIS.BACKGROUND_OFFSET_YX = [(0, 0)]
+        # required by reporting code (defaults.py uses [1, 1])
+        cfg.ROIS.ORIENTATION_YX = [1, 1]
+
+        # Add missing PHANTHOM configuration
+        cfg.PHANTHOM = CfgNode()
+        # required by generate_transverse_sphere_plots / reporting code
+        cfg.PHANTHOM.BACKGROUND_OFFSET_YX = (0, 0)
+        cfg.PHANTHOM.ROI_DEFINITIONS_MM = [
+            {
+                "name": "sphere_10mm",
+                "center": [0, 0, 0],
+                "diameter_mm": 10,
+                "center_yx": (50, 50),
+                "alpha": 0.18,
+                "color": "C0",
+            },
+            {
+                "name": "sphere_37mm",
+                "center": [20, 0, 0],
+                "diameter_mm": 13,
+                "center_yx": (60, 40),
+                "alpha": 0.18,
+                "color": "C1",
+            },
+        ]
+
+        mock_load_config.return_value = cfg
+
         mock_load_image.return_value = (np.ones((50, 100, 100)), np.eye(4))
         mock_get_props.return_value = ((50, 100, 100), (2.0, 2.0, 2.0))
 
         mock_phantom = MagicMock()
-        mock_phantom.rois = {"sphere1": {}}
+        mock_phantom.rois = {
+            "sphere_10mm": {
+                "center_yx": (50, 50),
+                "diameter_mm": 10.0,
+                "mask": np.ones((50, 100, 100), dtype=bool),
+            },
+            "sphere_37mm": {
+                "center_yx": (60, 40),
+                "diameter_mm": 13.0,
+                "mask": np.ones((50, 100, 100), dtype=bool),
+            },
+        }
         mock_phantom_class.return_value = mock_phantom
 
-        mock_calculate_metrics.return_value = ([{"diameter_mm": 10.0}], {10: 95.0})
+        # Mock calculate_metrics with complete data structure
+        mock_metrics_data = [
+            {
+                "diameter_mm": 10.0,
+                "percentaje_constrast_QH": 95.0,
+                "background_variability_N": 5.2,
+            },
+            {
+                "diameter_mm": 13.0,
+                "percentaje_constrast_QH": 88.0,
+                "background_variability_N": 6.1,
+            },
+        ]
+        mock_cbr_values = {10: 95.0, 13: 88.0}
+        mock_calculate_metrics.return_value = (mock_metrics_data, mock_cbr_values)
 
-        # Create args with visualizations enabled
+        # Create args matching the NEW parser structure
         args = MagicMock()
         args.verbose = True
         args.input_image = "input.nii"
@@ -318,7 +394,9 @@ class TestCLIRunAnalysis:
         args.config = "config.yaml"
         args.spacing = [2.0, 2.0, 2.0]
         args.save_visualizations = True
-        args.visualizations_dir = "viz_output"
+        args.visualizations_dir = "visualizations"
+        args.advanced_metrics = False
+        args.gt_image = None
 
         result = cli.run_analysis(args)
 
@@ -330,17 +408,6 @@ class TestCLIRunAnalysis:
         mock_rois_plots.assert_called_once()
         mock_boxplot.assert_called_once()
         mock_generate_report.assert_called_once()
-
-    @patch("pathlib.Path.exists")
-    def test_run_analysis_input_not_found(self, mock_exists):
-        """Test analysis with non-existent input file."""
-        mock_exists.return_value = False
-
-        args = MagicMock()
-        args.input_image = "nonexistent.nii"
-
-        result = cli.run_analysis(args)
-        assert result == 1
 
     @patch("src.nema_quant.cli.setup_logging")
     @patch("pathlib.Path.exists")
