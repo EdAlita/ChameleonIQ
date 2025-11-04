@@ -994,7 +994,7 @@ def generate_unified_statistical_heatmaps(
         "Statistical Analysis: Effect Sizes & Significance", fontweight="bold", y=0.98
     )
 
-    plt.tight_layout(rect=[0, 0, 0.95, 0.95])
+    plt.tight_layout(rect=(0, 0, 0.95, 0.95))
 
     output_path = output_dir / f"unified_statistical_heatmaps_{test_name}.png"
     plt.savefig(output_path, dpi=600, bbox_inches="tight", facecolor="white")

@@ -34,7 +34,7 @@ def setup_logging(log_level: int = 20) -> None:
 
 def parse_xml_config(
     xml_path: Path,
-) -> tuple[List[Dict[str, Any]], List[Dict[str, str]]]:
+) -> tuple[List[Dict[str, Any]], List[Dict[str, str]], List[Dict[str, str]]]:
     logging.info(f"Parsing XML configuration: {xml_path}")
 
     tree = ET.parse(xml_path)
@@ -280,11 +280,7 @@ def perform_statistical_analysis(
 
         p_corrected_matrix = np.ones_like(p_matrix)
         p_corrected_matrix[np.triu_indices_from(p_corrected_matrix, k=1)] = p_corrected
-        p_corrected_matrix = (
-            p_corrected_matrix
-            + p_corrected_matrix.T
-            - np.diag(np.diag(p_corrected_matrix))
-        )
+        p_corrected_matrix = p_corrected_matrix + p_corrected_matrix.T - np.diag(np.diag(p_corrected_matrix))  # type: ignore
 
         results[metric] = {
             "p_values": p_matrix,
@@ -379,11 +375,7 @@ def perform_advanced_statistical_analysis(
             p_corrected_flat = np.ones_like(p_values_flat)
             p_corrected_flat[valid_mask] = p_corrected_valid
             p_corrected_matrix[upper_triangle] = p_corrected_flat
-            p_corrected_matrix = (
-                p_corrected_matrix
-                + p_corrected_matrix.T
-                - np.diag(np.diag(p_corrected_matrix))
-            )
+            p_corrected_matrix = p_corrected_matrix + p_corrected_matrix.T - np.diag(np.diag(p_corrected_matrix))  # type: ignore
 
             significant_pairs = rejected
         else:
