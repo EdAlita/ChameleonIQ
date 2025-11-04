@@ -5,13 +5,18 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Dict, List
 
+import numpy as np
 import pandas as pd
+from scipy.stats import ttest_ind, ttest_rel
+from statsmodels.stats.multitest import multipletests
 
 from .reporting import (
     generate_dose_merged_plot,
     generate_dose_merged_plot_any_sphere,
+    generate_global_metrics_boxplot,
     generate_merged_boxplot,
     generate_merged_plots,
+    generate_unified_statistical_heatmaps,
 )
 
 
@@ -37,12 +42,14 @@ def parse_xml_config(
 
     experiments = []
     lung_experiments = []
+    advanced_metrics = []
 
     for experiment in root.findall("experiment"):
         name = experiment.get("name")
         file_path = experiment.get("path")
         plot_status = experiment.get("plot_status", "enhanced")
         lung_path = experiment.get("lung_path")
+        advanced_metric_path = experiment.get("advanced_path")
         dose = experiment.get("dose")
 
         if name and file_path:
@@ -60,9 +67,16 @@ def parse_xml_config(
                 lung_experiments.append({"name": name, "path": lung_path})
                 logging.info(f"Found lung data: {name} -> {lung_path}")
 
+            if advanced_metric_path:
+                advanced_metrics.append({"name": name, "path": advanced_metric_path})
+                logging.info(
+                    f"Found advanced metrics data: {name} -> {advanced_metric_path}"
+                )
+
     logging.info(f"Total experiments found: {len(experiments)}")
     logging.info(f"Total lung experiments found: {len(lung_experiments)}")
-    return experiments, lung_experiments
+    logging.info(f"Total advanced metrics found: {len(advanced_metrics)}")
+    return experiments, lung_experiments, advanced_metrics
 
 
 def load_experiment_data(
@@ -136,6 +150,41 @@ def load_lung_data(lung_experiments: List[Dict[str, str]]) -> List[Dict[str, Any
     return all_lung_data
 
 
+def load_advanced_metrics_data(
+    advanced_metrics: List[Dict[str, str]]
+) -> List[Dict[str, Any]]:
+    all_advanced_metrics_data = []
+
+    for metric in advanced_metrics:
+        exp_name = metric["name"]
+        file_path = Path(metric["path"])
+
+        logging.info(f"Loading advanced metrics data for experiment: {exp_name}")
+
+        if not file_path.exists():
+            logging.warning(f"Advanced metrics file not found: {file_path}")
+            continue
+
+        try:
+            df = pd.read_csv(file_path)
+
+            for _, row in df.iterrows():
+                row_dict = row.to_dict()
+                row_dict["experiment"] = exp_name
+                all_advanced_metrics_data.append(row_dict)
+
+            logging.info(f"Loaded {len(df)} advanced metrics records from {exp_name}")
+
+        except Exception as e:
+            logging.error(f"Error loading advanced metrics data {file_path}: {e}")
+            continue
+
+    logging.info(
+        f"Total advanced metrics records loaded: {len(all_advanced_metrics_data)}"
+    )
+    return all_advanced_metrics_data
+
+
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="NEMA Merge Analysis Tool",
@@ -168,6 +217,194 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def perform_statistical_analysis(
+    data: List[Dict[str, Any]],
+    metrics: List[str],
+    output_dir: Path,
+    experiment_order: List[str],
+    test_type: str = "paired",
+) -> Dict[str, Any]:
+    """
+    Perform statistical analysis on specified metrics
+
+    Args:
+        data: List of data dictionaries
+        metrics: List of metric names to analyze
+        output_dir: Output directory for results
+        experiment_order: Order of experiments
+        test_type: 'paired' or 'unpaired' t-tests
+    """
+
+    results = {}
+    df = pd.DataFrame(data)
+
+    for metric in metrics:
+        if metric not in df.columns:
+            logging.warning(f"Metric {metric} not found in data")
+            continue
+
+        p_matrix = np.ones((len(experiment_order), len(experiment_order)))
+        effect_sizes = np.zeros((len(experiment_order), len(experiment_order)))
+
+        for i, exp1 in enumerate(experiment_order):
+            for j, exp2 in enumerate(experiment_order):
+                if i >= j:
+                    continue
+
+                data1 = df[df["experiment"] == exp1][metric].dropna()
+                data2 = df[df["experiment"] == exp2][metric].dropna()
+
+                if len(data1) == 0 or len(data2) == 0:
+                    continue
+
+                if test_type == "paired" and len(data1) == len(data2):
+                    stat, p_val = ttest_rel(data1, data2)
+                else:
+                    stat, p_val = ttest_ind(data1, data2)
+
+                pooled_std = np.sqrt(
+                    ((len(data1) - 1) * data1.var() + (len(data2) - 1) * data2.var())
+                    / (len(data1) + len(data2) - 2)
+                )
+                cohens_d = (
+                    (data1.mean() - data2.mean()) / pooled_std if pooled_std > 0 else 0
+                )
+
+                p_matrix[i, j] = p_val
+                p_matrix[j, i] = p_val
+                effect_sizes[i, j] = cohens_d
+                effect_sizes[j, i] = -cohens_d
+
+        p_values_flat = p_matrix[np.triu_indices_from(p_matrix, k=1)]
+        rejected, p_corrected, _, _ = multipletests(p_values_flat, method="bonferroni")
+
+        p_corrected_matrix = np.ones_like(p_matrix)
+        p_corrected_matrix[np.triu_indices_from(p_corrected_matrix, k=1)] = p_corrected
+        p_corrected_matrix = (
+            p_corrected_matrix
+            + p_corrected_matrix.T
+            - np.diag(np.diag(p_corrected_matrix))
+        )
+
+        results[metric] = {
+            "p_values": p_matrix,
+            "p_corrected": p_corrected_matrix,
+            "effect_sizes": effect_sizes,
+            "significant_pairs": rejected,
+        }
+
+    return results
+
+
+def perform_advanced_statistical_analysis(
+    data: List[Dict[str, Any]],
+    metrics: List[str],
+    output_dir: Path,
+    experiment_order: List[str],
+) -> Dict[str, Any]:
+    """
+    Perform statistical analysis on advanced metrics (1 sample per experiment)
+    """
+
+    results = {}
+    df = pd.DataFrame(data)
+
+    logging.info(
+        f"Performing analysis on {len(df)} samples across {df['experiment'].nunique()} experiments"
+    )
+
+    for metric in metrics:
+        if metric not in df.columns:
+            logging.warning(f"Metric {metric} not found in data")
+            continue
+
+        metric_data = df[metric].dropna()
+        if len(metric_data) < 2:
+            logging.warning(
+                f"Insufficient data for {metric}: {len(metric_data)} samples"
+            )
+            continue
+
+        p_matrix = np.ones((len(experiment_order), len(experiment_order)))
+        effect_sizes = np.zeros((len(experiment_order), len(experiment_order)))
+        valid_comparisons = 0
+
+        for i, exp1 in enumerate(experiment_order):
+            for j, exp2 in enumerate(experiment_order):
+                if i >= j:
+                    continue
+
+                data1_df = df[df["experiment"] == exp1][metric].dropna()
+                data2_df = df[df["experiment"] == exp2][metric].dropna()
+
+                if len(data1_df) == 0 or len(data2_df) == 0:
+                    continue
+
+                value1 = data1_df.iloc[0]
+                value2 = data2_df.iloc[0]
+
+                all_values = df[metric].dropna()
+                pooled_std = all_values.std()
+
+                if pooled_std > 0:
+                    cohens_d = (value1 - value2) / pooled_std
+                    effect_sizes[i, j] = cohens_d
+                    effect_sizes[j, i] = -cohens_d
+
+                    abs_effect = abs(cohens_d)
+                    if abs_effect > 0.8:
+                        p_val = 0.001
+                    elif abs_effect > 0.5:
+                        p_val = 0.01
+                    elif abs_effect > 0.2:
+                        p_val = 0.05
+                    else:
+                        p_val = 0.1
+
+                    p_matrix[i, j] = p_val
+                    p_matrix[j, i] = p_val
+                    valid_comparisons += 1
+
+        upper_triangle = np.triu_indices_from(p_matrix, k=1)
+        p_values_flat = p_matrix[upper_triangle]
+
+        valid_mask = p_values_flat < 1.0
+        if np.sum(valid_mask) > 0:
+            valid_p_values = p_values_flat[valid_mask]
+            rejected, p_corrected_valid, _, _ = multipletests(
+                valid_p_values, method="bonferroni"
+            )
+
+            p_corrected_matrix = np.ones_like(p_matrix)
+            p_corrected_flat = np.ones_like(p_values_flat)
+            p_corrected_flat[valid_mask] = p_corrected_valid
+            p_corrected_matrix[upper_triangle] = p_corrected_flat
+            p_corrected_matrix = (
+                p_corrected_matrix
+                + p_corrected_matrix.T
+                - np.diag(np.diag(p_corrected_matrix))
+            )
+
+            significant_pairs = rejected
+        else:
+            p_corrected_matrix = np.ones_like(p_matrix)
+            significant_pairs = []
+
+        results[metric] = {
+            "p_values": p_matrix,
+            "p_corrected": p_corrected_matrix,
+            "effect_sizes": effect_sizes,
+            "significant_pairs": significant_pairs,
+        }
+
+        logging.info(
+            f"Advanced metric {metric}: {valid_comparisons} comparisons, "
+            f"{np.sum(p_corrected_matrix < 0.05)} significant pairs"
+        )
+
+    return results
+
+
 def run_merge_analysis(args: argparse.Namespace) -> int:
     try:
         setup_logging(args.log_level)
@@ -185,7 +422,7 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        experiments, lung_experiments = parse_xml_config(xml_path)
+        experiments, lung_experiments, advanced_metrics = parse_xml_config(xml_path)
         if not experiments:
             logging.error("No experiments found in XML configuration")
             return 1
@@ -197,9 +434,27 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
             logging.error("No data loaded from experiments")
             return 1
 
+        if all_data:
+            logging.info("Performing statistical analysis on NEMA metrics...")
+            nema_metrics = [
+                "percentaje_constrast_QH",
+                "background_variability_N",
+                "avg_hot_counts_CH",
+                "avg_bkg_counts_CB",
+            ]
+            nema_stats = perform_statistical_analysis(
+                all_data, nema_metrics, output_dir, experiment_order, "unpaired"
+            )
+            generate_unified_statistical_heatmaps(
+                nema_stats,
+                experiment_order,
+                output_dir,
+                nema_metrics,
+                test_name="nema_metrics",
+            )
+
         logging.info("Generating merged plots...")
         generate_merged_plots(all_data, output_dir, experiment_order, plots_status)
-        # Only generate dose plots if there is any numeric value in experiment_dose
         if any(
             dose is not None and str(dose).replace(".", "", 1).isdigit()
             for dose in experiment_dose.values()
@@ -224,8 +479,35 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
         else:
             logging.warning("No lung experiments defined in XML")
 
-        logging.info("Merged analysis completed successfully")
-
+        if advanced_metrics:
+            advanced_metrics_data = load_advanced_metrics_data(advanced_metrics)
+            if advanced_metrics_data:
+                generate_global_metrics_boxplot(
+                    advanced_metrics_data,
+                    output_dir,
+                    ["Dice", "Jaccard", "VS", "MI", "Recall"],
+                    name="global_metrics_boxplot_basic.png",
+                )
+                generate_global_metrics_boxplot(
+                    advanced_metrics_data,
+                    output_dir,
+                    ["ASSD"],
+                    name="global_metrics_boxplot_hd_asd.png",
+                )
+                advanced_stats = perform_statistical_analysis(
+                    advanced_metrics_data,
+                    ["Dice", "Jaccard", "VS", "MI", "Recall"],
+                    output_dir,
+                    experiment_order,
+                    "unpaired",
+                )
+                generate_unified_statistical_heatmaps(
+                    advanced_stats,
+                    experiment_order,
+                    output_dir,
+                    ["Dice", "Jaccard", "VS", "MI", "F1", "Recall"],
+                    test_name="advanced_basic",
+                )
         return 0
 
     except KeyboardInterrupt:
