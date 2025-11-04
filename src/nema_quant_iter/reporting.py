@@ -16,7 +16,6 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import yacs.config
 from matplotlib.lines import Line2D
 from PIL import Image as pilimage
@@ -139,9 +138,9 @@ def generate_plots(
             markersize = 10
             markeredgewidth = 2.0
         else:
-            color = "#666666FF"
+            color = "#0E0E0EFF"
             linewidth = 1.0
-            alpha = 0.3
+            alpha = 0.4
             zorder = 5
             linestyle = "--"
             markersize = 4
@@ -161,14 +160,32 @@ def generate_plots(
             "is_final": is_final,
         }
 
-    plt.style.use("default")
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 12,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 8), sharex=True)
+    fig, axes = plt.subplots(1, 2, figsize=(25, 10), sharex=True)
 
-    fig.suptitle("NEMA Iteration Comparison", fontsize=20, fontweight="bold", y=0.95)
+    fig.suptitle("NEMA Iteration Comparison", fontweight="bold", y=0.85)
 
     plot_configs = [
-        ("percentaje_constrast_QH", "Contrast (%)", "Contrast by Sphere Diameter"),
+        ("percentaje_constrast_QH", "Contrast  (%)", "Contrast by Sphere Diameter"),
         (
             "background_variability_N",
             "Background Variability (%)",
@@ -194,19 +211,19 @@ def generate_plots(
                 label = None
                 if style["is_key"]:
                     if style["is_best"] and style["is_first"] and style["is_final"]:
-                        label = f"Iteration {int(iteration)} (Best CBR)"
+                        label = f"Iteración {int(iteration)} (Mejor CBR)"
                     elif style["is_best"] and style["is_first"]:
-                        label = f"Iteration {int(iteration)} (Best CBR)"
+                        label = f"Iteración {int(iteration)} (Mejor CBR)"
                     elif style["is_best"] and style["is_final"]:
-                        label = f"Iteration {int(iteration)} (Best CBR)"
+                        label = f"Iteración {int(iteration)} (Mejor CBR)"
                     elif style["is_first"] and style["is_final"]:
-                        label = f"Iteration {int(iteration)}"
+                        label = f"Iteración {int(iteration)}"
                     elif style["is_best"]:
-                        label = f"Iteration {int(iteration)} (Best CBR)"
+                        label = f"Iteración {int(iteration)} (Mejor CBR)"
                     elif style["is_first"]:
-                        label = f"Iteration {int(iteration)}"
+                        label = f"Iteración {int(iteration)}"
                     elif style["is_final"]:
-                        label = f"Iteration {int(iteration)}"
+                        label = f"Iteración {int(iteration)}"
 
                 ax.plot(
                     iteration_data["diameter_mm"],
@@ -229,15 +246,14 @@ def generate_plots(
             1.15,
             f"({panel_labels[i]})",
             transform=ax.transAxes,
-            fontsize=18,
             fontweight="bold",
             verticalalignment="top",
             horizontalalignment="left",
         )
 
-        ax.set_title(title, fontsize=16, fontweight="bold", pad=15)
-        ax.set_ylabel(ylabel, fontsize=14, fontweight="bold")
-        ax.tick_params(axis="both", labelsize=20, width=1.2)
+        ax.set_title(title, fontweight="bold", pad=15)
+        ax.set_ylabel(ylabel, fontweight="bold")
+        ax.tick_params(axis="both", width=1.2)
         ax.tick_params(axis="x", rotation=0)
 
         ax.grid(True, linestyle="-", alpha=0.2, color="gray", linewidth=0.8)
@@ -258,7 +274,6 @@ def generate_plots(
         "Sphere Diameter [mm]",
         ha="center",
         va="bottom",
-        fontsize=14,
         fontweight="bold",
     )
 
@@ -279,7 +294,6 @@ def generate_plots(
             loc="lower center",
             bbox_to_anchor=(0.5, -0.08),
             ncol=ncol,
-            fontsize=12,
             frameon=True,
             fancybox=True,
             shadow=True,
@@ -381,13 +395,29 @@ def generate_pc_vs_bg_plot(
     for i, diameter in enumerate(diameters):
         diameter_color_map[diameter] = diameter_colors[i % len(diameter_colors)]
 
-    plt.style.use("default")
-    sns.set_palette(diameter_colors)
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
 
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    fig, ax = plt.subplots(1, 1, figsize=(15, 10))
     fig.suptitle(
         "NEMA Analysis: Contrast vs Background Variability",
-        fontsize=18,
         fontweight="bold",
         y=0.97,
     )
@@ -466,10 +496,10 @@ def generate_pc_vs_bg_plot(
                             zorder=20,
                         )
 
-    ax.set_ylabel("Contrast (%)", fontsize=16, fontweight="bold")
-    ax.set_xlabel("Background Variability (%)", fontsize=16, fontweight="bold")
+    ax.set_ylabel("Contrast (%)", fontweight="bold")
+    ax.set_xlabel("Background Variability (%)", fontweight="bold")
 
-    ax.tick_params(axis="both", labelsize=20, width=1.2)
+    ax.tick_params(axis="both", width=1.2)
     ax.tick_params(axis="x", rotation=0)
     ax.tick_params(axis="y", rotation=0)
 
@@ -501,9 +531,8 @@ def generate_pc_vs_bg_plot(
     ax.legend(
         handles=legend_elements,
         title="Sphere Diameter",
-        title_fontsize=12,
-        fontsize=11,
         loc="upper right",
+        bbox_to_anchor=(1.55, 1.0),
         frameon=True,
         fancybox=True,
         shadow=True,
@@ -610,13 +639,29 @@ def generate_wcbr_convergence_plot(
                 convergence_iter = window.iloc[0]["iteration"]
                 break
 
-    plt.style.use("default")
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
 
-    fig.suptitle(
-        "Weighted CBR Convergence Analysis", fontsize=20, fontweight="bold", y=0.97
-    )
+    fig.suptitle("Weighted CBR Convergence Analysis", fontweight="bold", y=0.97)
 
     ax.plot(
         cbr_stats["iteration"],
@@ -699,10 +744,10 @@ def generate_wcbr_convergence_plot(
     improvement = ((max_cbr_value - first_cbr) / first_cbr) * 100
     final_vs_peak = ((final_cbr - max_cbr_value) / max_cbr_value) * 100
 
-    ax.set_xlabel("Iterations", fontsize=16, fontweight="bold")
-    ax.set_ylabel("Weighted CBR", fontsize=16, fontweight="bold")
+    ax.set_xlabel("Iterations", fontweight="bold")
+    ax.set_ylabel("Weighted CBR", fontweight="bold")
 
-    ax.tick_params(axis="both", labelsize=20, width=1.2)
+    ax.tick_params(axis="both", width=1.2)
     ax.tick_params(axis="x", rotation=0)
 
     ax.set_xticks(range(int(min(iterations)), int(max(iterations)) + 1, 1))
@@ -847,13 +892,30 @@ def generate_cbr_convergence_plot(
 
     iterations = sorted(cbr37_stats["iteration"].unique())
 
-    plt.style.use("default")
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
 
     fig.suptitle(
         "CBR Convergence Analysis by Sphere Diameter",
-        fontsize=20,
         fontweight="bold",
         y=0.97,
     )
@@ -1055,10 +1117,10 @@ def generate_cbr_convergence_plot(
         linewidths=2,
     )
 
-    ax.set_xlabel("Iterations", fontsize=16, fontweight="bold")
-    ax.set_ylabel("CBR", fontsize=16, fontweight="bold")
+    ax.set_xlabel("Iterations", fontweight="bold")
+    ax.set_ylabel("CBR", fontweight="bold")
 
-    ax.tick_params(axis="both", labelsize=20, width=1.2)
+    ax.tick_params(axis="both", width=1.2)
     ax.tick_params(axis="x", rotation=0)
 
     ax.set_xticks(range(int(min(iterations)), int(max(iterations)) + 1, 1))
@@ -1266,13 +1328,30 @@ def generate_boxplot_with_mean_std(
     elif len(key_iterations) == 1:
         publication_colors = {first_iter: "#D95F02"}
 
-    plt.style.use("default")
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
 
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    fig, ax = plt.subplots(1, 1, figsize=(12, 10))
 
     fig.suptitle(
         "Lung Insert Correction: Key Iterations Comparison",
-        fontsize=18,
         fontweight="bold",
         y=0.97,
     )
@@ -1370,7 +1449,6 @@ def generate_boxplot_with_mean_std(
             f"μ={mean:.2f}",
             ha="center",
             va="bottom",
-            fontsize=10,
             bbox={
                 "boxstyle": "round,pad=0.3",
                 "facecolor": "white",
@@ -1380,13 +1458,11 @@ def generate_boxplot_with_mean_std(
         )
 
     ax.set_xticks(range(1, len(box_labels) + 1))
-    ax.set_xticklabels(box_labels, fontsize=12)
-    ax.set_xlabel("Key Iterations", fontsize=14, fontweight="bold")
-    ax.set_ylabel(
-        "Accuracy of Correction in Lung Insert (%)", fontsize=14, fontweight="bold"
-    )
+    ax.set_xticklabels(box_labels)
+    ax.set_xlabel("Key Iterations", fontweight="bold")
+    ax.set_ylabel("Accuracy of Correction in Lung Insert (%)", fontweight="bold")
 
-    ax.tick_params(axis="both", labelsize=12, width=1.2)
+    ax.tick_params(axis="both", width=1.2)
     ax.tick_params(axis="x", rotation=0)
 
     ax.grid(True, axis="y", linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
