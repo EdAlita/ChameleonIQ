@@ -35,8 +35,26 @@ def generate_merged_plots(
     df = pd.DataFrame(data)
     experiments = experiment_order
 
-    plt.style.use("default")
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(25, 10))
 
     enhanced_experiments = [
         exp for exp in experiments if plots_status.get(exp) == "enhanced"
@@ -70,7 +88,7 @@ def generate_merged_plots(
         else:
             _color = "#666666FF"
             _linewidth = 1.0
-            _alpha = 0.3
+            _alpha = 0.6
             _zorder = 5
             _linestyle = "--"
             _markersize = 4
@@ -108,25 +126,19 @@ def generate_merged_plots(
             label=experiment if plot_status == "enhanced" else None,
         )
 
-    ax1.set_title(
-        "Contrast Recovery vs Sphere Diameter", fontsize=14, fontweight="bold"
-    )
-    ax1.set_xlabel("Sphere Diameter (mm)", fontsize=12, fontweight="bold")
-    ax1.set_ylabel("Contrast Recovery (%)", fontsize=12, fontweight="bold")
+    ax1.set_title("Contrast Recovery vs Sphere Diameter", fontweight="bold")
+    ax1.set_xlabel("Sphere Diameter (mm)", fontweight="bold")
+    ax1.set_ylabel("Contrast Recovery (%)", fontweight="bold")
     ax1.grid(True, alpha=0.3)
-    ax1.legend(fontsize=10)
-
-    ax2.set_title(
-        "Background Variability vs Sphere Diameter", fontsize=14, fontweight="bold"
-    )
-    ax2.set_xlabel("Sphere Diameter (mm)", fontsize=12, fontweight="bold")
-    ax2.set_ylabel("Background Variability (%)", fontsize=12, fontweight="bold")
+    ax1.legend()
+    ax2.set_title("Background Variability vs Sphere Diameter", fontweight="bold")
+    ax2.set_xlabel("Sphere Diameter (mm)", fontweight="bold")
+    ax2.set_ylabel("Background Variability (%)", fontweight="bold")
     ax2.grid(True, alpha=0.3)
-    ax2.legend(fontsize=10)
+    ax2.legend()
 
     plt.suptitle(
         "NEMA Analysis - Multi-Experiment Comparison",
-        fontsize=16,
         fontweight="bold",
         y=0.98,
     )
@@ -157,8 +169,26 @@ def generate_merged_boxplot(
     df = pd.DataFrame(lung_data)
     experiments = experiment_order
 
-    plt.style.use("default")
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
+    fig, ax = plt.subplots(1, 1, figsize=(20, 10))
 
     plot_data = []
     experiment_names = []
@@ -219,11 +249,10 @@ def generate_merged_boxplot(
 
             ax.text(
                 idx + 1,
-                max(exp_values) + std_val / 4,
+                max(exp_values) + std_val / 6,
                 f"μ={mean_val:.2f}",
                 ha="center",
                 va="bottom",
-                fontsize=10,
                 bbox={
                     "boxstyle": "round,pad=0.3",
                     "facecolor": "white",
@@ -232,11 +261,9 @@ def generate_merged_boxplot(
                 },
             )
 
-    ax.set_title("Lung Insert Accuracy Distribution", fontsize=16, fontweight="bold")
-    ax.set_xlabel("Experiment", fontsize=14, fontweight="bold")
-    ax.set_ylabel(
-        "Accuracy of Corrections in Lung Insert (%)", fontsize=14, fontweight="bold"
-    )
+    ax.set_title("Lung Insert Accuracy Distribution", fontweight="bold", pad=40)
+    ax.set_xlabel("Experiment", fontweight="bold")
+    ax.set_ylabel("Accuracy of Corrections in Lung Insert (%)", fontweight="bold")
     ax.grid(True, axis="y", alpha=0.3)
     ax.set_xticks(range(1, len(experiment_names) + 1))
     ax.set_xticklabels(experiment_names)
@@ -245,7 +272,7 @@ def generate_merged_boxplot(
     if len(experiment_names) > 3:
         ax.tick_params(axis="x", rotation=45)
 
-    ax.tick_params(axis="both", labelsize=12, width=1.2)
+    ax.tick_params(axis="both", width=1.2)
 
     legend_elements = [
         Line2D([0], [0], color=COLORS[i % len(COLORS)], linewidth=4, label=exp)
@@ -257,7 +284,6 @@ def generate_merged_boxplot(
         bbox_to_anchor=(1.05, 1),
         loc="upper left",
         borderaxespad=0,
-        fontsize=12,
     )
 
     plt.tight_layout()
@@ -365,7 +391,6 @@ def generate_dose_merged_plot(
         {"percentaje_constrast_QH": "mean", "background_variability_N": "mean"}
     )
 
-    # Plotting setup
     cmap = plt.cm.get_cmap("Oranges")
     dose_min, dose_max = float(df_agg["dose"].min()), float(df_agg["dose"].max())
     norm = Normalize(vmin=dose_min, vmax=dose_max)
@@ -384,10 +409,27 @@ def generate_dose_merged_plot(
         frac = (d - diam_min) / (diam_max - diam_min)
         return float(min_marker_area + frac * (max_marker_area - min_marker_area))
 
-    plt.style.use("default")
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
 
-    # For each diameter, plot PC and BV against numeric dose - EJES VOLTEADOS
     for d in diameters:
         sub = df_agg[df_agg["diameter_mm"] == d].sort_values("dose")
         doses = sub["dose"].to_numpy()
@@ -396,7 +438,6 @@ def generate_dose_merged_plot(
 
         marker_area = diameter_to_marker_area(float(d))
 
-        ax1.plot(doses, pcs, color=COLORS[-1], lw=1.6, zorder=1, solid_capstyle="round")
         ax1.scatter(
             doses,
             pcs,
@@ -410,7 +451,6 @@ def generate_dose_merged_plot(
             label=None,
         )
 
-        ax2.plot(doses, bvs, color=COLORS[-1], lw=1.6, zorder=1, solid_capstyle="round")
         ax2.scatter(
             doses,
             bvs,
@@ -424,12 +464,10 @@ def generate_dose_merged_plot(
             label=None,
         )
 
-    # Colorbar shared across both axes
     cbar_ax = fig.add_axes((0.78, 0.15, 0.02, 0.7))
     cbar = plt.colorbar(sm, cax=cbar_ax)
     cbar.set_label("DLP", rotation=270, labelpad=15)
 
-    # Legend for diameters (marker sizes)
     legend_handles = []
     for d in diameters:
         ma = diameter_to_marker_area(d)
@@ -453,22 +491,20 @@ def generate_dose_merged_plot(
         framealpha=0.95,
     )
 
-    # Titles, labels, layout - ETIQUETAS VOLTEADAS
-    ax1.set_title("DLP vs Contrast Recovery (PC)", fontsize=14, fontweight="bold")
-    ax1.set_xlabel("PC (%)", fontsize=12)
-    ax1.set_ylabel("DLP", fontsize=12)
+    ax1.set_title("DLP vs Contrast Recovery (PC)", fontweight="bold")
+    ax1.set_xlabel("PC (%)", fontweight="bold")
+    ax1.set_ylabel("DLP", fontweight="bold")
     ax1.grid(alpha=0.25)
     ax1.yaxis.set_major_locator(MaxNLocator(6))
 
-    ax2.set_title("DLP vs Background Variability (BV)", fontsize=14, fontweight="bold")
-    ax2.set_xlabel("BV (%)", fontsize=12)
-    ax2.set_ylabel("DLP", fontsize=12)
+    ax2.set_title("DLP vs Background Variability (BV)", fontweight="bold")
+    ax2.set_xlabel("BV (%)", fontweight="bold")
+    ax2.set_ylabel("DLP", fontweight="bold")
     ax2.grid(alpha=0.25)
     ax2.yaxis.set_major_locator(MaxNLocator(6))
 
     plt.suptitle(
         "Dose Merged Analysis — DLP vs PC and BV",
-        fontsize=16,
         fontweight="bold",
         y=0.95,
     )
@@ -544,7 +580,6 @@ def generate_dose_merged_plot_any_sphere(
                 f"Row {i} missing experiment field. Tried 'experiment', 'Experiment', 'exp'."
             )
 
-        # FILTRAR SOLO ESFERA DE 10mm
         if float(diameter) != sphere_diameter:
             continue
 
@@ -568,22 +603,38 @@ def generate_dose_merged_plot_any_sphere(
 
     df["dose"] = df["experiment"].map(map_exp_to_numeric)
 
-    # No necesitamos agrupar por diámetro ya que solo tenemos 10mm
     df_agg = df.groupby("dose", as_index=False).agg(
         {"percentaje_constrast_QH": "mean", "background_variability_N": "mean"}
     )
 
-    # Plotting setup
     cmap = plt.cm.get_cmap("Oranges")
     dose_min, dose_max = float(df_agg["dose"].min()), float(df_agg["dose"].max())
     norm = Normalize(vmin=dose_min, vmax=dose_max)
     sm = ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
 
-    plt.style.use("default")
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 
-    # Datos ordenados por dosis
     df_sorted = df_agg.sort_values("dose")
     doses = df_sorted["dose"].to_numpy()
     pcs = df_sorted["percentaje_constrast_QH"].to_numpy()
@@ -591,16 +642,6 @@ def generate_dose_merged_plot_any_sphere(
 
     marker_size = 120
 
-    # PC vs DLP
-    ax1.plot(
-        doses,
-        pcs,
-        color=COLORS[-1],
-        lw=3,
-        zorder=2,
-        solid_capstyle="round",
-        label=f"{sphere_diameter:.1f}mm sphere",
-    )
     ax1.scatter(
         doses,
         pcs,
@@ -613,16 +654,6 @@ def generate_dose_merged_plot_any_sphere(
         zorder=3,
     )
 
-    # BV vs DLP
-    ax2.plot(
-        doses,
-        bvs,
-        color=COLORS[-1],
-        lw=3,
-        zorder=2,
-        solid_capstyle="round",
-        label=f"{sphere_diameter:.1f}mm sphere",
-    )
     ax2.scatter(
         doses,
         bvs,
@@ -635,35 +666,28 @@ def generate_dose_merged_plot_any_sphere(
         zorder=3,
     )
 
-    # Colorbar
     cbar_ax = fig.add_axes((0.92, 0.15, 0.02, 0.7))
     cbar = plt.colorbar(sm, cax=cbar_ax)
     cbar.set_label("DLP", rotation=270, labelpad=15)
 
-    # Títulos y etiquetas
     ax1.set_title(
-        f"Contrast Recovery (PC) vs DLP - {sphere_diameter:.1f}mm Sphere",
-        fontsize=14,
+        "DLP vs Contrast Recovery (PC)",
         fontweight="bold",
     )
-    ax1.set_xlabel("DLP", fontsize=12)
-    ax1.set_ylabel("PC (%)", fontsize=12)
+    ax1.set_xlabel("DLP")
+    ax1.set_ylabel("PC (%)")
     ax1.grid(alpha=0.3)
-    ax1.legend()
 
     ax2.set_title(
-        f"Background Variability (BV) vs DLP - {sphere_diameter:.1f}mm Sphere",
-        fontsize=14,
+        "DLP vs Background Variability (BV)",
         fontweight="bold",
     )
-    ax2.set_xlabel("DLP", fontsize=12)
-    ax2.set_ylabel("BV (%)", fontsize=12)
+    ax2.set_xlabel("DLP")
+    ax2.set_ylabel("BV (%)")
     ax2.grid(alpha=0.3)
-    ax2.legend()
 
     plt.suptitle(
-        f"Dose Analysis - {sphere_diameter:.1f}mm Sphere Only",
-        fontsize=16,
+        f"Dosage Merged Analysis - Sphere {sphere_diameter:.1f}mm",
         fontweight="bold",
         y=0.95,
     )
@@ -681,3 +705,423 @@ def generate_dose_merged_plot_any_sphere(
     )
     logger.info("Small sphere dose plot saved: %s", output_path)
     plt.close(fig)
+
+
+def generate_global_metrics_boxplot(
+    advanced_metric_data: List[Dict[str, Any]],
+    output_dir: Path,
+    metrics_to_plot: List[str],
+    name: str = "global_metrics_violinplot",
+) -> None:
+    """
+    Generates violin plots for each metric across all experiments,
+    ignoring experiment grouping, with styled violin bodies.
+    """
+
+    logger.info("Generating global violinplot for advanced metrics")
+
+    df = pd.DataFrame(advanced_metric_data)
+
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
+    fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+
+    plot_data = []
+    for _, row in df.iterrows():
+        for metric in metrics_to_plot:
+            plot_data.append({"metric": metric, "value": row[metric]})
+
+    if not plot_data:
+        logger.warning("No data available for global metrics violinplot")
+        return
+
+    plot_df = pd.DataFrame(plot_data)
+
+    violin_parts = ax.violinplot(
+        [
+            plot_df[plot_df["metric"] == metric]["value"].values
+            for metric in metrics_to_plot
+        ],
+        positions=range(1, len(metrics_to_plot) + 1),
+        showmeans=True,
+        showmedians=False,
+        showextrema=False,
+    )
+
+    for idx, patch in enumerate(cast(List[Any], violin_parts["bodies"])):
+        color = COLORS[idx % len(COLORS)]
+        patch.set_facecolor(color)
+        patch.set_alpha(0.7)
+        patch.set_edgecolor("black")
+        patch.set_linewidth(1)
+
+    violin_parts["cmeans"].set_color("white")
+    violin_parts["cmeans"].set_linewidth(3)
+    logger.info("Metrics resume:")
+    for idx, metric in enumerate(metrics_to_plot):
+        values = plot_df[plot_df["metric"] == metric]["value"].values
+        color = COLORS[idx % len(COLORS)]
+        jitter = np.random.normal(0, 0.04, len(values))
+        ax.scatter(
+            np.full(len(values), idx + 1) + jitter,
+            values,
+            color=color,
+            s=40,
+            alpha=0.8,
+            edgecolors="white",
+            linewidths=1,
+            zorder=10,
+        )
+
+        mean_val = np.mean(values)
+        std_dev = np.std(values)
+        logger.info(
+            f"  {metric}: mean={mean_val:.3f}, std={std_dev:.3f}, n={len(values)}"
+        )
+        ax.text(
+            idx + 1,
+            mean_val + std_dev * 1.5,
+            f"μ={mean_val:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=20,
+            bbox={
+                "boxstyle": "round,pad=0.3",
+                "facecolor": "white",
+                "alpha": 0.9,
+                "edgecolor": "gray",
+            },
+        )
+
+    ax.set_title("Global distribution of advanced metrics", fontweight="bold", pad=40)
+    ax.set_xlabel("Metric", fontweight="bold")
+    ax.set_ylabel("Value", fontweight="bold")
+    ax.grid(True, axis="y", alpha=0.3)
+    ax.set_xticks(range(1, len(metrics_to_plot) + 1))
+    ax.set_xticklabels(metrics_to_plot)
+    ax.set_facecolor("#fafafa")
+
+    if len(metrics_to_plot) > 5:
+        ax.tick_params(axis="x", rotation=45)
+
+    ax.tick_params(axis="both", width=1.2)
+
+    legend_elements = [
+        Line2D([0], [0], color=COLORS[i % len(COLORS)], linewidth=4, label=metric)
+        for i, metric in enumerate(metrics_to_plot)
+    ]
+    ax.legend(
+        handles=legend_elements,
+        bbox_to_anchor=(1.05, 1),
+        loc="upper left",
+        borderaxespad=0,
+    )
+
+    plt.tight_layout()
+
+    output_path = output_dir / name
+    plt.savefig(
+        str(output_path),
+        dpi=600,
+        bbox_inches="tight",
+        facecolor="white",
+        edgecolor="none",
+        format="png",
+    )
+
+    logger.info(f"Global metrics violinplot saved: {output_path}")
+    plt.close()
+
+
+def generate_unified_statistical_heatmaps(
+    statistical_results: Dict[str, Any],
+    experiment_order: List[str],
+    output_dir: Path,
+    metrics_list: List[str],
+    test_name: str,
+) -> None:
+    """Generate unified statistical heatmaps for all metrics in one figure"""
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import seaborn as sns
+
+    available_metrics = [m for m in metrics_list if m in statistical_results]
+    if not available_metrics:
+        logging.warning("No metrics available for unified statistical heatmaps")
+        return
+
+    n_metrics = len(available_metrics)
+
+    if n_metrics <= 2:
+        rows, cols = 1, n_metrics
+        figsize = (12 * n_metrics, 10)
+    elif n_metrics <= 4:
+        rows, cols = 2, 2
+        figsize = (24, 20)
+    elif n_metrics <= 6:
+        rows, cols = 2, 3
+        figsize = (36, 20)
+    else:
+        rows, cols = 3, 3
+        figsize = (36, 30)
+
+    plt.style.use("seaborn-v0_8-talk")
+    plt.rcParams.update(
+        {
+            "font.size": 24,
+            "axes.titlesize": 24,
+            "axes.labelsize": 24,
+            "xtick.labelsize": 24,
+            "ytick.labelsize": 24,
+            "legend.fontsize": 24,
+            "legend.title_fontsize": 24,
+            "lines.linewidth": 2.5,
+            "lines.markersize": 8,
+            "axes.linewidth": 1.2,
+            "axes.grid": True,
+            "grid.alpha": 0.3,
+            "grid.linewidth": 0.8,
+            "font.family": "DejaVu Sans",
+        }
+    )
+
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+
+    if n_metrics == 1:
+        axes = [axes]
+    elif rows == 1 or cols == 1:
+        axes = axes.flatten()
+    else:
+        axes = axes.flatten()
+
+    for idx, metric_name in enumerate(available_metrics):
+        ax = axes[idx]
+
+        if metric_name not in statistical_results:
+            ax.text(
+                0.5,
+                0.5,
+                f"No data for\n{metric_name}",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+                fontsize=12,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray"),
+            )
+            ax.set_title(metric_name)
+            continue
+
+        p_corrected = statistical_results[metric_name]["p_values"]
+        print("Unique p-values corrected for", metric_name, ":", np.unique(p_corrected))
+        effect_sizes = statistical_results[metric_name]["effect_sizes"]
+        print("Effect sizes for", metric_name, ":", np.unique(effect_sizes))
+
+        mask = np.triu(np.ones_like(p_corrected), k=1)
+
+        sns.heatmap(
+            effect_sizes,
+            mask=mask,
+            cmap="coolwarm",
+            center=0,
+            vmin=-2,
+            vmax=2,
+            ax=ax,
+            cbar_kws={"label": "Cohen's d", "shrink": 0.8},
+            xticklabels=False,
+            yticklabels=False,
+        )
+
+        mask_bool = np.triu(np.ones_like(p_corrected, dtype=bool), k=1)
+        sig_mask_bool = (p_corrected < 0.05).astype(bool)
+
+        y, x = np.where(sig_mask_bool & (~mask_bool))
+
+        if len(x) > 0:
+            ax.scatter(x + 0.5, y + 0.5, color="black", s=15, marker="*", alpha=0.8)
+
+        ax.set_title(f"{metric_name}", fontweight="bold", pad=10)
+
+        n_significant = len(x)
+        total_comparisons = int(np.sum(~mask_bool))
+        ax.text(
+            0.02,
+            0.98,
+            f"{n_significant}/{total_comparisons} sig.",
+            transform=ax.transAxes,
+            bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8),
+            verticalalignment="top",
+        )
+
+    for idx in range(len(available_metrics), len(axes)):
+        axes[idx].axis("off")
+
+    from matplotlib.lines import Line2D
+
+    legend_elements = [
+        Line2D(
+            [0],
+            [0],
+            marker="*",
+            color="w",
+            markerfacecolor="black",
+            markersize=8,
+            label="p < 0.05",
+            linestyle="None",
+        )
+    ]
+
+    fig.legend(handles=legend_elements, loc="upper right", bbox_to_anchor=(0.98, 0.95))
+
+    plt.suptitle(
+        "Statistical Analysis: Effect Sizes & Significance", fontweight="bold", y=0.98
+    )
+
+    plt.tight_layout(rect=[0, 0, 0.95, 0.95])
+
+    output_path = output_dir / f"unified_statistical_heatmaps_{test_name}.png"
+    plt.savefig(output_path, dpi=600, bbox_inches="tight", facecolor="white")
+    plt.close()
+
+    logging.info(f"Unified statistical heatmaps saved: {output_path}")
+
+    generate_statistical_summary_matrix(
+        statistical_results, available_metrics, output_dir
+    )
+
+
+def generate_statistical_summary_matrix(
+    statistical_results: Dict[str, Any], metrics_list: List[str], output_dir: Path
+) -> None:
+    """Generate a summary matrix showing significant pairs count for each metric"""
+
+    import matplotlib.pyplot as plt
+
+    summary_data = []
+    for metric_name in metrics_list:
+        if metric_name not in statistical_results:
+            continue
+
+        p_corrected = statistical_results[metric_name]["p_corrected"]
+        effect_sizes = statistical_results[metric_name]["effect_sizes"]
+
+        mask = np.triu(np.ones_like(p_corrected, dtype=bool), k=1)
+        sig_mask = (p_corrected < 0.05) & (~mask)
+        n_significant = np.sum(sig_mask)
+        total_comparisons = np.sum(~mask)
+
+        significant_effects = effect_sizes[sig_mask]
+        if len(significant_effects) > 0:
+            mean_effect = np.mean(np.abs(significant_effects))
+            max_effect = np.max(np.abs(significant_effects))
+        else:
+            mean_effect = 0
+            max_effect = 0
+
+        summary_data.append(
+            {
+                "Metric": metric_name,
+                "Significant Pairs": n_significant,
+                "Total Comparisons": total_comparisons,
+                "Percentage (%)": (
+                    (n_significant / total_comparisons * 100)
+                    if total_comparisons > 0
+                    else 0
+                ),
+                "Mean Effect Size": mean_effect,
+                "Max Effect Size": max_effect,
+            }
+        )
+
+    if not summary_data:
+        return
+
+    df_summary = pd.DataFrame(summary_data)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+    bars = ax1.bar(
+        df_summary["Metric"],
+        df_summary["Percentage (%)"],
+        color=[
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+        ][: len(df_summary)],
+    )
+
+    ax1.set_title("Percentage of Significant Pairs by Metric", fontweight="bold")
+    ax1.set_ylabel("Significant Pairs (%)")
+    ax1.set_xlabel("Metric")
+    ax1.tick_params(axis="x", rotation=45)
+    ax1.grid(True, alpha=0.3)
+
+    for bar, value in zip(bars, df_summary["Percentage (%)"]):
+        ax1.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.5,
+            f"{value:.1f}%",
+            ha="center",
+            va="bottom",
+            fontweight="bold",
+        )
+
+    ax2.scatter(
+        df_summary["Mean Effect Size"],
+        df_summary["Max Effect Size"],
+        s=df_summary["Significant Pairs"] * 10,
+        alpha=0.7,
+        c=range(len(df_summary)),
+        cmap="viridis",
+    )
+
+    for i, row in df_summary.iterrows():
+        ax2.annotate(
+            row["Metric"],
+            (row["Mean Effect Size"], row["Max Effect Size"]),
+            xytext=(5, 5),
+            textcoords="offset points",
+            fontsize=9,
+            alpha=0.8,
+        )
+
+    ax2.set_title("Effect Size Analysis", fontweight="bold")
+    ax2.set_xlabel("Mean Effect Size (|Cohen's d|)")
+    ax2.set_ylabel("Max Effect Size (|Cohen's d|)")
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(
+        output_dir / "statistical_summary_matrix.png",
+        dpi=300,
+        bbox_inches="tight",
+        facecolor="white",
+    )
+    plt.close()
+
+    df_summary.to_csv(output_dir / "statistical_summary_table.csv", index=False)
+
+    logging.info(
+        f"Statistical summary matrix saved: {output_dir / 'statistical_summary_matrix.png'}"
+    )
