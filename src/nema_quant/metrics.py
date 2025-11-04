@@ -410,7 +410,8 @@ def get_values(A, B, measures, background=False, voxelspacing=None):
         else:
             values["AVD"] = np.nan
     if "HD" in measures or "HD95" in measures:
-        hd, h95 = get_HD(A, B, voxelspacing=voxelspacing)
+        hd = directed_HD(A, B)
+        _, h95 = get_HD(A, B, voxelspacing=voxelspacing)
         if "HD" in measures and not background:
             values["HD"] = hd
         else:
@@ -486,7 +487,7 @@ def get_HD(result, reference, voxelspacing=None, connectivity=1):
 
     hd1 = __surface_distances(result, reference, voxelspacing, connectivity)
     hd2 = __surface_distances(reference, result, voxelspacing, connectivity)
-    hd = max(hd1.min(), hd2.min())
+    hd = max(hd1.max(), hd2.max())
     hd95 = np.percentile(np.hstack((hd1, hd2)), 95)
     # hd50 = np.percentile(np.hstack((hd1, hd2)), 50)
     return hd, hd95
