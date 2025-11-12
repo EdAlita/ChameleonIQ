@@ -8,7 +8,7 @@ We strongly recommend that you install Nema Analysis Tool in virtual enviroment!
 
 Use a recent version of Python! 3.11 or newer is guaranteed to work!
 
-1) Install nnU-Net depending on your use case:
+1) Install Nema Analysis Tool depending on your use case:
     1) For use as **out-of-the-box**:
 
         ```pip install nema_analysis_tool```
