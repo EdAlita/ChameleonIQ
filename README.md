@@ -8,6 +8,9 @@
   <a href="https://github.com/EdAlita/nema_analysis_tool/blob/main/LICENSE">
     <img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg">
   </a>
+  <a>
+    <img alt="Python" src="">
+  </a>
 </p>
 
 
@@ -20,33 +23,40 @@ This project is a Python-based tool for the automated analysis of PET image qual
 
 *   Calculates Percent Contrast (Q_H,j), Percent Background Variability (N_j), and Accuracy of Corrections (ΔC_lung,i).
 *   Utilizes 3D Regions of Interest (ROIs) based on the NEMA Body Phantom.
-*   Includes a feature for automatic co-registration of off-center images.
 *   Loads raw image data with user-defined dimensions and voxel spacing.
+*   Automatic postions of ROIs on given centers
 
 ## Project Structure
 
+```bash
+nema-analysis-tool
+├── data
+├── documentation
+├── src
+│  ├── config
+│  ├── nema_merge
+│  ├── nema_quant
+│  └── nema_quant_iter
+└── tests
 ```
-nema-analysis-tool/
-├── src/
-│   ├── nema_quant/         # Main package source code
-│   │   ├── analysis.py     # Core NEMA analysis algorithms
-│   │   ├── io.py           # Medical image I/O operations
-│   │   ├── utils.py        # Utility functions and helpers
-│   │   ├── phantom.py      # Phantom geometry definitions
-│   │   ├── reporting.py    # Report generation and visualization
-│   │   └── cli.py          # Command-line interface
-│   └── config/             # Configuration files moved here
-├── tests/                  # Comprehensive test suite
-└── docs/                   # Documentation and examples
-```
+
+- [**Config**](src/config): configuration files to run the tool
+- [**Data**](src/data): Data for testing and logos used for PDF reports
+- [**Documentation**](src/nema_quant_iter): Documentation, wikis and how to install the tool
+- [**nema_merge**](src/nema_merge): scripts for creating fusing of individuals runs
+- [**nema_quant**](src/nema_quant): scripts for individuals test runs
+- [**nema_quant_iter**](src/nema_quant_iter): scripts for a iteration based analysis
 
 ## How to get Started?
 Read these:
-- [Installation instructions](documentation/INSTALLATION.md)
-- [Usage instructions](documentation/USAGE.md)
-- [How it works?](documentation/HOW_IT_WORKS.md)
+- [**Installation instructions**](documentation/INSTALLATION.md)
+- [**Usage instructions**](documentation/USAGE.md)
+- [**How it works?**](documentation/HOW_IT_WORKS.md)
 
 Additional information:
-- [What will change?](documentation/CHANGELOG.md)
+- [**What will change?**](documentation/CHANGELOG.md)
+
+## License
+This project is licensed under the Apache Lincese 2.0 - see the [LICENSE.md](LICENSE) file for details.
 
 [//]: # (- [Ignore label]&#40;documentation/ignore_label.md&#41;)

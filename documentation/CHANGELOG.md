@@ -5,7 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [](https://github.com/EdAlita/nema_analysis_tool/compare/v0.2.1...HEAD) - 2025-09-24T08:59:56.714Z
+## [](https://github.com/EdAlita/nema_analysis_tool/compare/v0.2.1...HEAD) - 2025-11-04T14:09:27.382Z
+
+### Commits
+- feat(quant): addition of advanced metrics for a complete analysis ([aabf51f](https://github.com/EdAlita/nema_analysis_tool/commit/aabf51fcf83d975023a8342c4f9f15843bcdbf13))
+- chore(reporting): unify plot styling and add advanced statistical visualization ([d65f39d](https://github.com/EdAlita/nema_analysis_tool/commit/d65f39d956c897c7aacef568dbafc04082e6285f))
+- tests(cli):  stabilize CLI tests — use get_cfg_defaults with _prepare_cfg_for_tests, refine filesystem and visualization mocks, and remove flaky/duplicate tests ([010b3e2](https://github.com/EdAlita/nema_analysis_tool/commit/010b3e2051e1b0f2edb4aecbea3d667b9128f5b8))
+- feat(merge): add dose-based merged analysis — parse 'dose' from XML, propagate to loader, and generate dose merged plots (generate_dose_merged_plot, generate_dose_merged_plot_any_sphere) with helper utilities ([6c5d4cd](https://github.com/EdAlita/nema_analysis_tool/commit/6c5d4cde4a5be1675fd25bef12ac87212a42a79e))
+- chore(cli): extend pipeline with advanced metrics analysis and visualization ([009bcb2](https://github.com/EdAlita/nema_analysis_tool/commit/009bcb2f83b9189b8d2782dbc124fc45363f3e55))
+- tests(fix): erase some failing test due to github pipeline failing ([8b6a2f2](https://github.com/EdAlita/nema_analysis_tool/commit/8b6a2f25e68c2ed926c2f0a7727d1c687c5068ff))
+- refactor(reporting): standardize plot styling and localize legend labels ([8c824dc](https://github.com/EdAlita/nema_analysis_tool/commit/8c824dc0544e01a8f2a994c5ac849e389e10ee36))
+- docs(chengelog): update CHANGELOG.md with latest changes and create chagelog-template file ([bf0e56a](https://github.com/EdAlita/nema_analysis_tool/commit/bf0e56ab4c8c0ab30a9358ac4ae6e362c16f0ab8))
+- feat(utils): add CLI for coordinates inversion (mm &lt;-&gt; voxel) in nema_quant.utils ([8328ab5](https://github.com/EdAlita/nema_analysis_tool/commit/8328ab56a34503ead9fb78e421c9fe5b2485580e))
+- feat(reporting): add transverse, coronal sphere and torso plotting fuctions ([cb2ef50](https://github.com/EdAlita/nema_analysis_tool/commit/cb2ef50c199e1c3b3f90d673ec1111a9df1c49c1))
+- feat(quant): add advanced segmentation metrics and CLI support (--advanced-metrics, --gt-image); save metrics to CSV and add minor reporting debug ([bf77f03](https://github.com/EdAlita/nema_analysis_tool/commit/bf77f03428bfa219189d4786aa5e94b5a372deca))
+- feat(merge): filter boxplot to enhanced experiments and improve legend placement in merged lung analysis plot ([97798bd](https://github.com/EdAlita/nema_analysis_tool/commit/97798bd1790008ec7301c189b4bdbe5fb4b8cf7b))
+- refactor(reporting): expand XML parsing output and simplify p-value matrix logic ([363c0fb](https://github.com/EdAlita/nema_analysis_tool/commit/363c0fb7ce899bbabfa2122c72a9203192a01b91))
+- fix(nema_quant): import scipy _ni_support for mypy and remove redundant summary logs ([c319958](https://github.com/EdAlita/nema_analysis_tool/commit/c319958d8fec0e51a8a38021ad2e23bf04b29c5b))
+- feat(cli): add generation of coronal, transverse spheres and torso plot to run_analysis ([7b6bb9b](https://github.com/EdAlita/nema_analysis_tool/commit/7b6bb9bde9035fd3b8684dfda220a6e8b0f82553))
+- chore(analysis): correct Hausdorff Distance calculation and improve HD logic ([eabc11e](https://github.com/EdAlita/nema_analysis_tool/commit/eabc11eb37ad387e3404b92f91f744bb62d3f943))
+- fix(nema_quant):  solve typing issue ([3070717](https://github.com/EdAlita/nema_analysis_tool/commit/3070717e6b6bbf62a1112c9544cb1d8a762cdcc8))
+- feat(reporting): use correct iteration variable in boxplot generation ([c7b6e84](https://github.com/EdAlita/nema_analysis_tool/commit/c7b6e8478da9532789cc41b18cf729f703f7fe89))
+- feat(merge): pass plot_status to generate_merged_plot for enhanced lung analysis plots ([3049176](https://github.com/EdAlita/nema_analysis_tool/commit/30491766eed6919ac53aa414a48cd862e0eef8be))
+- chore(config): bump version to 0.2.1 and add statsmodels dependency ([62f29ff](https://github.com/EdAlita/nema_analysis_tool/commit/62f29ff75e0a93fe5c32dd40304609d2803d14e4))
+- feat(quant_iter): skip None iterations in generate_boxplot_with_mean_std to avoid errors ([5b2e7ff](https://github.com/EdAlita/nema_analysis_tool/commit/5b2e7ff253da10c6fca207ad6942530603c70d18))
+- chore(deps): add scikit-image==0.25.2 to development requirements ([143f13d](https://github.com/EdAlita/nema_analysis_tool/commit/143f13d789425a285a1988f5235cf9796682c5fb))
+- chore(deps): add scikit-image==0.25.2 to project dependencies ([b953747](https://github.com/EdAlita/nema_analysis_tool/commit/b953747e9695f7f5f80b9eea4ffe35d869dfec80))
+- feat(pyproject):add nema_coord CLI entry point for coordinate utility ([6c76d70](https://github.com/EdAlita/nema_analysis_tool/commit/6c76d700f6cbd250c3e33faf781e453036862f5b))
 
 ## [v0.2.1](https://github.com/EdAlita/nema_analysis_tool/compare/v0.2.0...v0.2.1) - 2025-09-24
 

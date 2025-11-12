@@ -1,42 +1,113 @@
 # NEMA Analysis Tool - Usage Guide
 
-## Quick Start
+## nema_quant
 
-### Basic Usage
+### Excecution
+
+To excecute `nema_quant`, provide the necesary paths and configurations settings through command line arguments:
+
+- `input_image`: Nifti file to analize
+- `--output`: Path to save the results
+- `--config`: Path to custom YAML configuration file
+- `--save-visualizations`: flag to activate save visualization mode
+- `--visualizations-dir`: Directory to save visualization image (default: visualizations)
+- `--advanced-metrics`: Calculated advanced metrics. **Must provide gt image**
+- `--gt-image`:  Path to ground truth NIfTI image file for advanced metrics
+- `--verbose`: Enable verbose output
+
+Example of simple run:
 
 ```bash
-# Analyze a NIfTI image with default settings
-python main.py input.nii --output results.txt
-
-# Or using the module
-python -m nema_quant input.nii --output results.txt
+nema_quant path/to/nitftii_file.nii \
+--output path/to/output/file.txt \
+--config path/to/config.yaml
 ```
 
-### Advanced Usage
+Example of advance run:
 
 ```bash
-# Use custom configuration file
-python main.py input.nii --config config/example_config.yaml --output results.txt
-
-# Specify custom voxel spacing (if not in image header)
-python main.py input.nii --spacing 2.0644 2.0644 2.0644 --output results.txt
-
-# Skip registration step
-python main.py input.nii --no-merge --output results.txt
-
-# Verbose output for debugging
-python main.py input.nii --output results.txt --verbose
+nema_quant path/to/nitftii_file.nii \
+--output path/to/output/file.txt \
+--config path/to/config.yaml \
+--advanced-metrics \
+--gt-image path/to/niftii_file.nii \
+--save_visualizations --verbose
 ```
 
-## Command Line Options
+## nema_quant_iter
 
-- `input_image`: Path to input NIfTI file (.nii or .nii.gz) **[REQUIRED]**
-- `--output, -o`: Path to output text file **[REQUIRED]**
-- `--config, -c`: Path to custom YAML configuration file (optional)
-- `--spacing`: Voxel spacing in mm (x y z) (optional, read from header if not provided)
-- `--no-merge`: Skip image registration/merging step
-- `--verbose, -v`: Enable verbose output
-- `--version`: Show version information
+### Excecution
+
+To excecute `nema_quant_iter`, provide the necesary paths and configurations settings through command line arguments:
+
+- `input_path`: Path for the input of the files iterations
+- `--output`: Path to output files for results
+- `--config`: Path to custom YAML configuyration file
+- `--save-visualizations`: flag to activate save visualization mode
+- `--visualizations-dir`: Directory to save visualization image (default: visualizations)
+- `log_level`: Set logging level: 10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR 50=CRITICAL (default: 20)
+- `spacing`:  Voxel spacing in mm (x, y, z)
+- `--verbose`: Enable verbose output
+
+Example of simple run:
+
+```bash
+ nema_quant_iter path/to/directory/for/iterations/
+--output path/to/output/file.txt \
+ --config path/to/config.yaml
+```
+
+Example of advanced run:
+
+```bash
+ nema_quant_iter path/to/directory/for/iterations/ \
+ --output path/to/output/file.txt \
+ --config path/to/config.yaml \
+ --save_visualizations --verbose
+```
+
+## nema_merge
+
+- `xml_config`: Path to XML configuration file with experiments definitions
+- `--output`: Output directory for merged analysis plots
+
+### XML configuration file
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<experiments>
+        <experiment
+        name="test_name"
+        path="/path/to/test/csv/analysis_results.csv"
+        lung_path="/path/to/test/csv/lung_results.csv"
+        dose="254.8571429"
+        plot_status="grayed"/>
+</experiments>
+```
+
+>
+> - Both `path` and `lung_path` comes from the results of running individual test.
+> - `dose` is present, will generate doseage analisis
+> - `plot_status` gives you the ability to `grayout` or `enhanced` your results
+> - If you activate advanced metrics and want to merge you need to pass  `advanced_path` in the xml file
+
+## nema_coord
+
+- `mm2vox,vox2mm`: Convertion command, used to transform the mm to voxel to get the coordinates to define the centers.
+- `--dims`: dimmensions of your image
+- `--spacing`: the spacing to use for the conversion
+
+Example of simple run a mm2vox:
+
+```bash
+nema_coord mm2vox 58.84 23.74 -30.97 --dims 391 391 346 --spacing 2.0644 2.0644 2.0644
+```
+
+Example of simple run a vox2mm:
+
+```bash
+nema_cord vox2mm 158 207 158 --dims 391 391 346 --spacing 2.0644 2.0644 2.0644
+```
 
 ## Configuration File
 
@@ -140,10 +211,5 @@ python main.py data/phantom_image.nii \
 ### Getting Help:
 
 ```bash
-python main.py --help
-```
-
-For verbose debugging output:
-```bash
-python main.py input.nii --output results.txt --verbose
+nema_quant --help
 ```

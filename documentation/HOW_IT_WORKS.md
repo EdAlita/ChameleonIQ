@@ -43,19 +43,29 @@ Unlike rigid analysis tools, the NEMA Analysis Tool adapts to **your specific sc
 ### 🔧 Key Configurable Parameters
 
 **Activity Concentrations:**
-- `cfg.ACTIVITY.HOT`: Activity concentration in hot spheres (Bq/ml)
-- `cfg.ACTIVITY.BACKGROUND`: Background activity concentration (Bq/ml)
-- **Impact**: These values determine the theoretical activity ratio used in contrast calculations
+- `cfg.ACTIVITY.HOT`: Activity concentration in hot spheres
+- `cfg.ACTIVITY.BACKGROUND`: Background activity concentration
+- `cfg.ACTIVITY.RATIO`: Concentration Ratio tu used in the analysis
+- `cfg.ACTIVITY.UNITS`: Units for the HOT and Background Activity
+- `cfg.ACTIVITY.ACTIVITY_TOTAL`: Measure Activity with Units of the phantom
+- **Impact**: These impact the calcualtions and PDF reports, per each run
 
 **Geometric Parameters:**
 - `cfg.ROIS.SPACING`: Voxel spacing in mm (typically 2.0644mm for many scanners)
 - `cfg.ROIS.CENTRAL_SLICE`: Which slice contains the sphere centers
+- `cfg.ORIENTATION_YX`: Typically helpfull to indicate the orientation of your image. 1 or -1
 - **Impact**: Critical for accurate millimeter-to-voxel conversions
 
 **Analysis Settings:**
 - `cfg.ROIS.BACKGROUND_OFFSET_YX`: Positions of the 12 background regions
 - Background sphere count and positioning strategy
 - **Impact**: Affects background statistics and measurement reliability
+
+**File Settings**
+- `cfg.FILE.USER_PATTERN`: name used to look for the iterations for iteration based analysis
+
+**Adquisition Settings**
+- `cfg.ACQUISITION.EMMISION_IMAGE_TIME_MINUTES`: time to use for the report
 
 ### Real-World Flexibility Examples
 
@@ -114,24 +124,6 @@ The tool creates a "translation system" between:
 - **Conversion Formula**: `voxel_position = mm_position / cfg.ROIS.SPACING`
 
 *Think of it like having both a street address and GPS coordinates for the same location.*
-
-### Step 2: Activity Ratio Validation
-Before any calculations begin, the tool validates your activity settings:
-
-**🔬 Activity Validation Checks**
-```
-if activity_bkg <= 0 or (activity_hot / activity_bkg) <= 1:
-    raise ValueError("Activity ratio must be greater than 1")
-```
-
-**📊 Activity Ratio Calculation**
-The tool calculates the theoretical activity ratio term:
-`activity_ratio_term = (cfg.ACTIVITY.HOT / cfg.ACTIVITY.BACKGROUND) - 1.0`
-
-This value becomes crucial for the NEMA percent contrast formula later!
-
-### Step 3: Creating the Digital Phantom Map
-The tool builds a complete digital blueprint of your phantom using your configuration:
 
 **🎯 Sphere Location Mapping**
 For each sphere, it calculates:
@@ -249,7 +241,7 @@ The percent contrast calculation uses your specific activity configuration:
 
 **🔢 The Mathematical Journey**
 ```python
-activity_ratio_term = (cfg.ACTIVITY.HOT / cfg.ACTIVITY.BACKGROUND) - 1.0
+activity_ratio_term = (cfg.ACTIVITY.RATIO) - 1.0
 percent_contrast = ((C_H / C_B) - 1.0) / activity_ratio_term * 100.0
 ```
 
@@ -417,20 +409,6 @@ The tool uses your configuration to validate:
 - Whether voxel spacing produces reasonable geometric conversions
 - If background regions avoid hot sphere contamination
 
-**🚨 Configuration-Based Warnings**
-```python
-if activity_bkg <= 0 or (activity_hot / activity_bkg) <= 1:
-    raise ValueError("Activity ratio must be greater than 1")
-
-# Warns if spheres extend beyond image boundaries
-# Alerts if voxel spacing seems unrealistic
-# Flags if background regions are too close to hot spheres
-```
-
-[↑ Back to Table of Contents](#-table-of-contents)
-
----
-
 ## 💡 Pro Tips & Troubleshooting
 
 ### Optimizing Your Configuration
@@ -522,16 +500,7 @@ Smaller voxels (higher resolution) will:
 
 ### Quick Start Commands
 
-```bash
-# Basic analysis
-python -m nema_quant analyze input_image.nii
-
-# With visualizations
-python -m nema_quant analyze input_image.nii --save-visualizations
-
-# With custom configuration
-python -m nema_quant analyze input_image.nii --config my_config.yaml
-```
+Check [Usage](../documentation/USAGE.md) for a complete explanation of the commands
 
 **Ready to revolutionize your medical imaging quality assurance? The NEMA Analysis Tool's configurable approach ensures accurate results for any scanner, any protocol, any phantom setup!**
 
