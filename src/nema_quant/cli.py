@@ -70,10 +70,6 @@ def create_parser() -> argparse.ArgumentParser:
         help="Path to custom YAML configuration file",
     )
 
-    parser.add_argument(
-        "--spacing", nargs=3, type=float, help="Voxel spacing in mm (x, y, z)"
-    )
-
     # Optional arguments
     parser.add_argument(
         "--save-visualizations",
