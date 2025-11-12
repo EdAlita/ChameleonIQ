@@ -475,10 +475,6 @@ class TestCLIRemainingCoverage:
                 "output.txt",
                 "--config",
                 "config.yaml",
-                "--spacing",
-                "1.0",
-                "2.0",
-                "3.0",
                 "--verbose",
                 "--save-visualizations",
                 "--visualizations-dir",
@@ -486,7 +482,6 @@ class TestCLIRemainingCoverage:
             ]
         )
 
-        assert args.spacing == [1.0, 2.0, 3.0]
         assert args.verbose is True
         assert args.save_visualizations is True
         assert args.visualizations_dir == "viz_dir"

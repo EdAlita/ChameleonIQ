@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import numpy as np
-import pytest
 from yacs.config import CfgNode
 
 from src.nema_quant import cli
@@ -394,41 +393,6 @@ class TestCLIMissingLines:
         except SystemExit:
             # May fail due to validation, which is acceptable
             pass
-
-    def test_spacing_argument_validation(self):
-        """Test spacing argument validation."""
-        parser = cli.create_parser()
-
-        # Test valid spacing
-        args = parser.parse_args(
-            [
-                "input.nii",
-                "--output",
-                "output.txt",
-                "--config",
-                "config.yaml",
-                "--spacing",
-                "1.0",
-                "2.0",
-                "3.0",
-            ]
-        )
-        assert args.spacing == [1.0, 2.0, 3.0]
-
-        # Test invalid spacing (wrong number of values)
-        with pytest.raises(SystemExit):
-            parser.parse_args(
-                [
-                    "input.nii",
-                    "--output",
-                    "output.txt",
-                    "--config",
-                    "config.yaml",
-                    "--spacing",
-                    "1.0",
-                    "2.0",  # Only 2 values instead of 3
-                ]
-            )
 
     def test_verbose_logging_setup(self):
         """Test verbose logging setup paths."""

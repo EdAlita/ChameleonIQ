@@ -21,10 +21,6 @@ class TestCLIArgumentParsing:
             "output.txt",
             "--config",
             "config.yaml",
-            "--spacing",
-            "2.0",
-            "2.0",
-            "2.0",
             "--save-visualizations",
             "--visualizations-dir",
             "viz_output",
@@ -37,7 +33,6 @@ class TestCLIArgumentParsing:
         assert args.input_image == "input.nii"
         assert args.output == "output.txt"
         assert args.config == "config.yaml"
-        assert args.spacing == [2.0, 2.0, 2.0]
         assert args.save_visualizations is True
         assert args.visualizations_dir == "viz_output"
         assert args.verbose is True
@@ -54,7 +49,6 @@ class TestCLIArgumentParsing:
         assert args.output == "output.txt"
         assert args.config == "config.yaml"
         # Check defaults
-        assert args.spacing is None
         assert args.save_visualizations is False
         assert args.verbose is False
 
@@ -130,22 +124,6 @@ class TestCLIUtilityFunctions:
             assert cfg is not None
         else:
             pytest.skip("load_configuration function not found")
-
-    def test_get_image_properties_with_spacing(self):
-        """Test image properties extraction with spacing override."""
-        if hasattr(cli, "get_image_properties"):
-            image_data = np.ones((10, 20, 30))
-            affine = np.eye(4)
-            spacing_override = (1.5, 2.0, 2.5)
-
-            dims, spacing = cli.get_image_properties(
-                image_data, affine, spacing_override
-            )
-
-            assert dims == (10, 20, 30)
-            assert spacing == spacing_override
-        else:
-            pytest.skip("get_image_properties function not found")
 
     def test_get_image_properties_from_affine(self):
         """Test extracting spacing from affine matrix."""
