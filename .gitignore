@@ -163,4 +163,6 @@ order.py
 run_nema_quant_sweep.sh
 xml_generator.py
 run_torso_202409.sh
+PETDOSE_DoseOptimization_DatasetGuide.md
+PETDOSE_DoseOptimization_DatasetGuide.pdf
 */*/nema_phantom_config_202409.yaml
