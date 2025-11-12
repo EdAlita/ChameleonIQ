@@ -503,7 +503,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                 output_path,
                 cfg,
                 input_path,
-                (2.0644, 2.0644, 2.0644),
+                (cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
             )
             logging.info("Text results saved successfully")
 
@@ -516,7 +516,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                     pdf_output_path,
                     cfg,
                     input_path,
-                    (2.0644, 2.0644, 2.0644),
+                    (cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
                     plot_path,
                     pc_vs_bg_path,
                     rois_loc_path,
