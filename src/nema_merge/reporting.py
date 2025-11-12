@@ -924,7 +924,7 @@ def generate_unified_statistical_heatmaps(
                 va="center",
                 transform=ax.transAxes,
                 fontsize=12,
-                bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray"),
+                bbox={"boxstyle": "round,pad=0.3", "facecolor": "lightgray"},
             )
             ax.set_title(metric_name)
             continue
@@ -966,7 +966,7 @@ def generate_unified_statistical_heatmaps(
             0.98,
             f"{n_significant}/{total_comparisons} sig.",
             transform=ax.transAxes,
-            bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8),
+            bbox={"boxstyle": "round,pad=0.2", "facecolor": "white", "alpha": 0.8},
             verticalalignment="top",
         )
 
@@ -1096,7 +1096,7 @@ def generate_statistical_summary_matrix(
         cmap="viridis",
     )
 
-    for i, row in df_summary.iterrows():
+    for _, row in df_summary.iterrows():
         ax2.annotate(
             row["Metric"],
             (row["Mean Effect Size"], row["Max Effect Size"]),
