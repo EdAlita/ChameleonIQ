@@ -515,7 +515,7 @@ def generate_dose_merged_plot(
     output_path = output_dir / "dose_merged_plot.png"
     plt.savefig(
         str(output_path),
-        dpi=300,
+        dpi=600,
         bbox_inches="tight",
         facecolor="white",
         edgecolor="none",
@@ -698,7 +698,7 @@ def generate_dose_merged_plot_any_sphere(
     output_path = output_dir / f"dose_{sphere_diameter:.1f}mm_sphere_plot.png"
     plt.savefig(
         str(output_path),
-        dpi=300,
+        dpi=600,
         bbox_inches="tight",
         facecolor="white",
         edgecolor="none",
@@ -1114,7 +1114,7 @@ def generate_statistical_summary_matrix(
     plt.tight_layout()
     plt.savefig(
         output_dir / "statistical_summary_matrix.png",
-        dpi=300,
+        dpi=600,
         bbox_inches="tight",
         facecolor="white",
     )
