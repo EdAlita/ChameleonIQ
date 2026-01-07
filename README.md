@@ -9,7 +9,7 @@
     <img alt="License: Apache-2.0" src="https://img.shields.io/badge/License-Apache_2.0-blue.svg">
   </a>
   <a>
-    <img alt="Python" src="">
+    <img alt="Python" src="https://img.shields.io/badge/language-Python-blue?logo=python">
   </a>
 </p>
 
