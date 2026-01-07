@@ -108,19 +108,18 @@ def generate_plots(
     key_iterations = list(dict.fromkeys(key_iterations))
 
     publication_colors = {
-        first_iter: "#1B9E77FF",
-        highest_cbr_iter: "#D95F02FF",
-        final_iter: "#7570B3FF",
+        first_iter: "#72874EFF",
+        highest_cbr_iter: "#F0B533FF",
+        final_iter: "#453947FF",
     }
 
     if len(key_iterations) == 2:
-        if first_iter == highest_cbr_iter:
-            publication_colors = {first_iter: "#1B9E77FF", final_iter: "#7570B3FF"}
-        elif final_iter == highest_cbr_iter:
-            publication_colors = {first_iter: "#1B9E77FF", final_iter: "#D95F02FF"}
+        if first_iter == best_cbr_iter:
+            publication_colors = {first_iter: "#72874EFF", final_iter: "#453947FF"}
+        elif final_iter == best_cbr_iter:
+            publication_colors = {first_iter: "#72874EFF", final_iter: "#F0B533FF"}
     elif len(key_iterations) == 1:
-        publication_colors = {first_iter: "#D95F02FF"}
-
+        publication_colors = {first_iter: "#F0B533FF"}
     iteration_styles = {}
 
     for iteration in iterations:
@@ -182,10 +181,14 @@ def generate_plots(
 
     fig, axes = plt.subplots(1, 2, figsize=(25, 10), sharex=True)
 
-    fig.suptitle("NEMA Iteration Comparison", fontweight="bold", y=0.85)
+    # fig.suptitle("NEMA Iteration Comparison", fontweight="bold", y=0.85)
 
     plot_configs = [
-        ("percentaje_constrast_QH", "Contrast  (%)", "Contrast by Sphere Diameter"),
+        (
+            "percentaje_constrast_QH",
+            "Contrast Recovery (%)",
+            "Contrast by Sphere Diameter",
+        ),
         (
             "background_variability_N",
             "Background Variability (%)",
@@ -193,7 +196,7 @@ def generate_plots(
         ),
     ]
 
-    panel_labels = ["a", "b"]
+    # panel_labels = ["a", "b"]
 
     for i, (ax, (yvar, ylabel, title)) in enumerate(zip(axes, plot_configs)):
         sorted_iterations = sorted(
@@ -211,19 +214,19 @@ def generate_plots(
                 label = None
                 if style["is_key"]:
                     if style["is_best"] and style["is_first"] and style["is_final"]:
-                        label = f"Iteración {int(iteration)} (Mejor CBR)"
+                        label = f"Iteration {int(iteration)} (Peak CBR)"
                     elif style["is_best"] and style["is_first"]:
-                        label = f"Iteración {int(iteration)} (Mejor CBR)"
+                        label = f"Iteration {int(iteration)} (Peak CBR)"
                     elif style["is_best"] and style["is_final"]:
-                        label = f"Iteración {int(iteration)} (Mejor CBR)"
+                        label = f"Iteration {int(iteration)} (Peak CBR)"
                     elif style["is_first"] and style["is_final"]:
-                        label = f"Iteración {int(iteration)}"
+                        label = f"Iteration {int(iteration)}"
                     elif style["is_best"]:
-                        label = f"Iteración {int(iteration)} (Mejor CBR)"
+                        label = f"Iteration {int(iteration)} (Peak CBR)"
                     elif style["is_first"]:
-                        label = f"Iteración {int(iteration)}"
+                        label = f"Iteration {int(iteration)}"
                     elif style["is_final"]:
-                        label = f"Iteración {int(iteration)}"
+                        label = f"Iteration {int(iteration)}"
 
                 ax.plot(
                     iteration_data["diameter_mm"],
@@ -241,41 +244,41 @@ def generate_plots(
                     solid_capstyle="round",
                 )
 
-        ax.text(
-            0.02,
-            1.15,
-            f"({panel_labels[i]})",
-            transform=ax.transAxes,
-            fontweight="bold",
-            verticalalignment="top",
-            horizontalalignment="left",
-        )
+        # ax.text(
+        #     0.02,
+        #     1.15,
+        #     f"({panel_labels[i]})",
+        #     transform=ax.transAxes,
+        #     fontweight="bold",
+        #     verticalalignment="top",
+        #     horizontalalignment="left",
+        # )
 
-        ax.set_title(title, fontweight="bold", pad=15)
-        ax.set_ylabel(ylabel, fontweight="bold")
+        # ax.set_title(title, fontweight="bold", pad=15)
+        ax.set_ylabel(ylabel, fontweight="bold", labelpad=20)
+        ax.set_xlabel("Sphere Diameter [mm]", fontweight="bold", labelpad=20)
         ax.tick_params(axis="both", width=1.2)
         ax.tick_params(axis="x", rotation=0)
 
-        ax.grid(True, linestyle="-", alpha=0.2, color="gray", linewidth=0.8)
+        ax.grid(True, linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
         ax.set_axisbelow(True)
 
         unique_diameters = sorted(df_filtered["diameter_mm"].unique())
         ax.set_xticks(unique_diameters)
 
         ax.set_facecolor("#fafafa")
+        for spine in ax.spines:
+            ax.spines[spine].set_linewidth(1.2)
+            ax.spines[spine].set_color("#333333")
 
-        for spine in ax.spines.values():
-            spine.set_linewidth(1.2)
-            spine.set_color("#333333")
-
-    fig.text(
-        0.5,
-        0.02,
-        "Sphere Diameter [mm]",
-        ha="center",
-        va="bottom",
-        fontweight="bold",
-    )
+    # fig.text(
+    #     0.5,
+    #     0.02,
+    #     "Sphere Diameter [mm]",
+    #     ha="center",
+    #     va="bottom",
+    #     fontweight="bold",
+    # )
 
     handles, labels = axes[0].get_legend_handles_labels()
 
@@ -291,8 +294,8 @@ def generate_plots(
         fig.legend(
             key_handles,
             key_labels,
-            loc="lower center",
-            bbox_to_anchor=(0.5, -0.08),
+            loc="upper center",
+            # bbox_to_anchor=(0.5, -0.08),
             ncol=ncol,
             frameon=True,
             fancybox=True,
@@ -381,14 +384,14 @@ def generate_pc_vs_bg_plot(
     key_iterations = list(dict.fromkeys(key_iterations))
 
     diameter_colors = [
-        "#1B9E77FF",
-        "#D95F02FF",
-        "#7570B3FF",
-        "#E7298AFF",
-        "#66A61EFF",
-        "#E6AB02FF",
-        "#A6761DFF",
-        "#666666FF",
+        "#023743FF",
+        "#72874EFF",
+        "#476F84FF",
+        "#A4BED5FF",
+        "#453947FF",
+        "#8C7A6BFF",
+        "#C97D60FF",
+        "#F0B533FF",
     ]
 
     diameter_color_map = {}
@@ -416,11 +419,7 @@ def generate_pc_vs_bg_plot(
     )
 
     fig, ax = plt.subplots(1, 1, figsize=(15, 10))
-    fig.suptitle(
-        "NEMA Analysis: Contrast vs Background Variability",
-        fontweight="bold",
-        y=0.97,
-    )
+    # fig.suptitle("NEMA Analysis: Contrast vs Background Variability", fontweight="bold", y=0.97,)
 
     for diameter in diameters:
         diameter_data = df_filtered[df_filtered["diameter_mm"] == diameter].sort_values(
@@ -496,8 +495,8 @@ def generate_pc_vs_bg_plot(
                             zorder=20,
                         )
 
-    ax.set_ylabel("Contrast (%)", fontweight="bold")
-    ax.set_xlabel("Background Variability (%)", fontweight="bold")
+    ax.set_ylabel("Contrast Recovery (%)", fontweight="bold", labelpad=20)
+    ax.set_xlabel("Background Variability (%)", fontweight="bold", labelpad=20)
 
     ax.tick_params(axis="both", width=1.2)
     ax.tick_params(axis="x", rotation=0)
@@ -507,9 +506,9 @@ def generate_pc_vs_bg_plot(
     ax.set_axisbelow(True)
 
     ax.set_facecolor("#fafafa")
-    for spine in ax.spines.values():
-        spine.set_linewidth(1.2)
-        spine.set_color("#333333")
+    for spine in ax.spines:
+        ax.spines[spine].set_linewidth(1.2)
+        ax.spines[spine].set_color("#333333")
 
     legend_elements = []
     for diameter in diameters:
@@ -661,16 +660,16 @@ def generate_wcbr_convergence_plot(
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
 
-    fig.suptitle("Weighted CBR Convergence Analysis", fontweight="bold", y=0.97)
+    # fig.suptitle("Weighted CBR Convergence Analysis", fontweight="bold", y=0.97)
 
     ax.plot(
         cbr_stats["iteration"],
         cbr_stats["mean"],
-        color="#2E86AB",
+        color="#023743FF",
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#2E86AB",
+        markerfacecolor="#023743FF",
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -684,12 +683,10 @@ def generate_wcbr_convergence_plot(
     key_iterations = list(dict.fromkeys(key_iterations))
 
     key_colors = {
-        first_iter: "#1B9E77",
-        max_cbr_iter: "#D95F02",
-        final_iter: "#7570B3",
+        first_iter: "#72874EFF",
+        max_cbr_iter: "#F0B533FF",
+        final_iter: "#453947FF",
     }
-    if convergence_iter:
-        key_colors[convergence_iter] = "#E7298A"
 
     for iteration in key_iterations:
         iter_data = cbr_stats[cbr_stats["iteration"] == iteration]
@@ -710,13 +707,13 @@ def generate_wcbr_convergence_plot(
 
             if iteration == first_iter:
                 label = f"Start\n({iteration}: {y_pos:.3f})"
-                offset = (10, 20)
+                offset = (45, 60)
             elif iteration == max_cbr_iter:
                 label = f"Peak CBR\n({iteration}: {y_pos:.3f})"
-                offset = (10, -30)
+                offset = (30, -90)
             elif iteration == final_iter:
                 label = f"Final\n({iteration}: {y_pos:.3f})"
-                offset = (-20, 20)
+                offset = (-60, 60)
             else:
                 continue
 
@@ -744,8 +741,8 @@ def generate_wcbr_convergence_plot(
     improvement = ((max_cbr_value - first_cbr) / first_cbr) * 100
     final_vs_peak = ((final_cbr - max_cbr_value) / max_cbr_value) * 100
 
-    ax.set_xlabel("Iterations", fontweight="bold")
-    ax.set_ylabel("Weighted CBR", fontweight="bold")
+    ax.set_xlabel("Iterations", fontweight="bold", labelpad=20)
+    ax.set_ylabel("Weighted CBR", fontweight="bold", labelpad=20)
 
     ax.tick_params(axis="both", width=1.2)
     ax.tick_params(axis="x", rotation=0)
@@ -756,9 +753,9 @@ def generate_wcbr_convergence_plot(
     ax.set_axisbelow(True)
 
     ax.set_facecolor("#fafafa")
-    for spine in ax.spines.values():
-        spine.set_linewidth(1.2)
-        spine.set_color("#333333")
+    for spine in ax.spines:
+        ax.spines[spine].set_linewidth(1.2)
+        ax.spines[spine].set_color("#333333")
 
     plt.tight_layout()
 
@@ -914,20 +911,16 @@ def generate_cbr_convergence_plot(
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
 
-    fig.suptitle(
-        "CBR Convergence Analysis by Sphere Diameter",
-        fontweight="bold",
-        y=0.97,
-    )
+    # fig.suptitle("CBR Convergence Analysis by Sphere Diameter", fontweight="bold", y=0.97)
 
     ax.plot(
         cbr37_stats["iteration"],
         cbr37_stats["mean"],
-        color="#E6AB02FF",
+        color="#8C7A6BFF",
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#E6AB02FF",
+        markerfacecolor="#8C7A6BFF",
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -938,11 +931,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr28_stats["iteration"],
         cbr28_stats["mean"],
-        color="#66A61EFF",
+        color="#453947FF",
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#66A61EFF",
+        markerfacecolor="#453947FF",
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -953,11 +946,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr22_stats["iteration"],
         cbr22_stats["mean"],
-        color="#E7298AFF",
+        color="#A4BED5FF",
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#E7298AFF",
+        markerfacecolor="#A4BED5FF",
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -968,11 +961,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr17_stats["iteration"],
         cbr17_stats["mean"],
-        color="#7570B3FF",
+        color="#476F84FF",
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#7570B3FF",
+        markerfacecolor="#476F84FF",
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -983,11 +976,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr13_stats["iteration"],
         cbr13_stats["mean"],
-        color="#D95F02FF",
+        color="#72874EFF",
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#D95F02FF",
+        markerfacecolor="#72874EFF",
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -998,11 +991,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr10_stats["iteration"],
         cbr10_stats["mean"],
-        color="#1B9E77FF",
+        color="#023743FF",
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#1B9E77FF",
+        markerfacecolor="#023743FF",
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -1013,12 +1006,12 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr_stats["iteration"],
         cbr_stats["mean"],
-        color="#2E86AB",
+        color="#C97D60FF",
         linewidth=4.0,
         linestyle="--",
         marker="o",
         markersize=8,
-        markerfacecolor="#2E86AB",
+        markerfacecolor="#C97D60FF",
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -1032,7 +1025,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_37_iter,
         max_37_value,
-        color="red",
+        color="#F0B533FF",
         s=100,
         zorder=20,
         edgecolors="white",
@@ -1045,7 +1038,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_28_iter,
         max_28_value,
-        color="red",
+        color="#F0B533FF",
         s=100,
         zorder=20,
         edgecolors="white",
@@ -1058,7 +1051,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_22_iter,
         max_22_value,
-        color="red",
+        color="#F0B533FF",
         s=100,
         zorder=20,
         edgecolors="white",
@@ -1071,7 +1064,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_13_iter,
         max_13_value,
-        color="red",
+        color="#F0B533FF",
         s=100,
         zorder=20,
         edgecolors="white",
@@ -1084,7 +1077,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_17_iter,
         max_17_value,
-        color="red",
+        color="#F0B533FF",
         s=100,
         zorder=20,
         edgecolors="white",
@@ -1097,7 +1090,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_10_iter,
         max_10_value,
-        color="red",
+        color="#F0B533FF",
         s=100,
         zorder=20,
         edgecolors="white",
@@ -1110,15 +1103,15 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_weighted_iter,
         max_weighted_value,
-        color="red",
+        color="#F0B533FF",
         s=100,
         zorder=20,
         edgecolors="white",
         linewidths=2,
     )
 
-    ax.set_xlabel("Iterations", fontweight="bold")
-    ax.set_ylabel("CBR", fontweight="bold")
+    ax.set_xlabel("Iterations", fontweight="bold", labelpad=20)
+    ax.set_ylabel("CBR", fontweight="bold", labelpad=20)
 
     ax.tick_params(axis="both", width=1.2)
     ax.tick_params(axis="x", rotation=0)
@@ -1134,7 +1127,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#E6AB02FF",
+            color="#8C7A6BFF",
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1145,7 +1138,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#66A61EFF",
+            color="#453947FF",
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1156,7 +1149,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#E7298AFF",
+            color="#A4BED5FF",
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1167,7 +1160,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#7570B3FF",
+            color="#476F84FF",
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1178,7 +1171,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#D95F02FF",
+            color="#72874EFF",
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1189,7 +1182,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#1B9E77FF",
+            color="#023743FF",
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1200,7 +1193,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#2E86AB",
+            color="#C97D60FF",
             linewidth=4,
             linestyle="--",
             marker="o",
@@ -1213,7 +1206,7 @@ def generate_cbr_convergence_plot(
             [0],
             [0],
             marker="o",
-            color="red",
+            color="#F0B533FF",
             linestyle="None",
             markersize=10,
             markeredgecolor="white",
@@ -1235,9 +1228,9 @@ def generate_cbr_convergence_plot(
     )
 
     ax.set_facecolor("#fafafa")
-    for spine in ax.spines.values():
-        spine.set_linewidth(1.2)
-        spine.set_color("#333333")
+    for spine in ax.spines:
+        ax.spines[spine].set_linewidth(1.2)
+        ax.spines[spine].set_color("#333333")
 
     plt.tight_layout(rect=(0.0, 0.0, 0.85, 1.0))
 
@@ -1315,18 +1308,18 @@ def generate_boxplot_with_mean_std(
     key_iterations = list(dict.fromkeys(key_iterations))
 
     publication_colors = {
-        first_iter: "#1B9E77",
-        best_cbr_iter: "#D95F02",
-        final_iter: "#7570B3",
+        first_iter: "#72874EFF",
+        best_cbr_iter: "#F0B533FF",
+        final_iter: "#453947FF",
     }
 
     if len(key_iterations) == 2:
         if first_iter == best_cbr_iter:
-            publication_colors = {first_iter: "#1B9E77", final_iter: "#7570B3"}
+            publication_colors = {first_iter: "#72874EFF", final_iter: "#453947FF"}
         elif final_iter == best_cbr_iter:
-            publication_colors = {first_iter: "#1B9E77", final_iter: "#D95F02"}
+            publication_colors = {first_iter: "#72874EFF", final_iter: "#F0B533FF"}
     elif len(key_iterations) == 1:
-        publication_colors = {first_iter: "#D95F02"}
+        publication_colors = {first_iter: "#F0B533FF"}
 
     plt.style.use("seaborn-v0_8-talk")
     plt.rcParams.update(
@@ -1350,11 +1343,11 @@ def generate_boxplot_with_mean_std(
 
     fig, ax = plt.subplots(1, 1, figsize=(12, 10))
 
-    fig.suptitle(
-        "Lung Insert Correction: Key Iterations Comparison",
-        fontweight="bold",
-        y=0.97,
-    )
+    # fig.suptitle(
+    #     "Lung Insert Correction: Key Iterations Comparison",
+    #     fontweight="bold",
+    #     y=0.97,
+    # )
 
     box_data = []
     box_labels = []
@@ -1430,10 +1423,7 @@ def generate_boxplot_with_mean_std(
             zorder=10,
         )
 
-    for spine in ["top", "right"]:
-        ax.spines[spine].set_visible(False)
-
-    for spine in ["left", "bottom"]:
+    for spine in ax.spines:
         ax.spines[spine].set_linewidth(1.2)
         ax.spines[spine].set_color("#333333")
 
@@ -1459,8 +1449,10 @@ def generate_boxplot_with_mean_std(
 
     ax.set_xticks(range(1, len(box_labels) + 1))
     ax.set_xticklabels(box_labels)
-    ax.set_xlabel("Key Iterations", fontweight="bold")
-    ax.set_ylabel("Accuracy of Correction in Lung Insert (%)", fontweight="bold")
+    ax.set_xlabel("Key Iterations", fontweight="bold", labelpad=20)
+    ax.set_ylabel(
+        "Accuracy of Correction in Lung Insert (%)", fontweight="bold", labelpad=20
+    )
 
     ax.tick_params(axis="both", width=1.2)
     ax.tick_params(axis="x", rotation=0)

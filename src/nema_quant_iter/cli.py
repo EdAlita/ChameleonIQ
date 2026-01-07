@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import numpy.typing as npt
 import yacs.config
+from rich.logging import RichHandler
 
 from config.defaults import get_cfg_defaults
 from nema_quant.analysis import calculate_nema_metrics, calculate_weighted_cbr_from
@@ -124,11 +125,11 @@ def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> Non
 
     logging.basicConfig(
         level=log_level,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+        format="%(message)s",
+        datefmt="[%H:%M:%S]",
         handlers=[
             logging.FileHandler(log_file_path, mode="w", encoding="utf-8"),
-            logging.StreamHandler(sys.stdout),
+            RichHandler(rich_tracebacks=True),
         ],
     )
 
