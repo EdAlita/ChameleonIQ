@@ -1,4 +1,5 @@
 import logging
+import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional, cast
 
@@ -6,21 +7,38 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
 
+warnings.filterwarnings(
+    "ignore",
+    message=".*not compatible with tight_layout.*",
+    category=UserWarning,
+)
+
 logger = logging.getLogger(__name__)
 
+# COLORS = [
+#     "#1B9E77FF",
+#     "#D95F02FF",
+#     "#7570B3FF",
+#     "#E7298AFF",
+#     "#66A61EFF",
+#     "#E6AB02FF",
+#     "#A6761DFF",
+#     "#666666FF",
+# ]
+
 COLORS = [
-    "#1B9E77FF",
-    "#D95F02FF",
-    "#7570B3FF",
-    "#E7298AFF",
-    "#66A61EFF",
-    "#E6AB02FF",
-    "#A6761DFF",
-    "#666666FF",
+    "#023743FF",
+    "#72874EFF",
+    "#476F84FF",
+    "#A4BED5FF",
+    "#453947FF",
+    "#8C7A6BFF",
+    "#C97D60FF",
+    "#F0B533FF",
 ]
 
 
@@ -126,22 +144,15 @@ def generate_merged_plots(
             label=experiment if plot_status == "enhanced" else None,
         )
 
-    ax1.set_title("Contrast Recovery vs Sphere Diameter", fontweight="bold")
-    ax1.set_xlabel("Sphere Diameter (mm)", fontweight="bold")
-    ax1.set_ylabel("Contrast Recovery (%)", fontweight="bold")
-    ax1.grid(True, alpha=0.3)
+    ax1.set_xlabel("Sphere Diameter (mm)", fontweight="bold", labelpad=20)
+    ax1.set_ylabel("Contrast Recovery (%)", fontweight="bold", labelpad=20)
+    ax1.grid(True, linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
     ax1.legend()
-    ax2.set_title("Background Variability vs Sphere Diameter", fontweight="bold")
-    ax2.set_xlabel("Sphere Diameter (mm)", fontweight="bold")
-    ax2.set_ylabel("Background Variability (%)", fontweight="bold")
-    ax2.grid(True, alpha=0.3)
+    ax2.set_xlabel("Sphere Diameter (mm)", fontweight="bold", labelpad=20)
+    ax2.set_ylabel("Background Variability (%)", fontweight="bold", labelpad=20)
+    ax2.grid(True, linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
     ax2.legend()
 
-    plt.suptitle(
-        "NEMA Analysis - Multi-Experiment Comparison",
-        fontweight="bold",
-        y=0.98,
-    )
     plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.96))
 
     output_path = output_dir / "merge_analysis_plot.png"
@@ -245,11 +256,11 @@ def generate_merged_boxplot(
             )
 
             mean_val = np.mean(exp_values)
-            std_val = np.std(exp_values)
+            # std_val = np.std(exp_values)
 
             ax.text(
-                idx + 1,
-                max(exp_values) + std_val / 6,
+                idx + 1.25,
+                min(exp_values),
                 f"μ={mean_val:.2f}",
                 ha="center",
                 va="bottom",
@@ -261,10 +272,11 @@ def generate_merged_boxplot(
                 },
             )
 
-    ax.set_title("Lung Insert Accuracy Distribution", fontweight="bold", pad=40)
-    ax.set_xlabel("Experiment", fontweight="bold")
-    ax.set_ylabel("Accuracy of Corrections in Lung Insert (%)", fontweight="bold")
-    ax.grid(True, axis="y", alpha=0.3)
+    ax.set_xlabel("Experiment", fontweight="bold", labelpad=20)
+    ax.set_ylabel(
+        "Accuracy of Corrections in Lung Insert (%)", fontweight="bold", labelpad=20
+    )
+    ax.grid(True, axis="y", linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
     ax.set_xticks(range(1, len(experiment_names) + 1))
     ax.set_xticklabels(experiment_names)
     ax.set_facecolor("#fafafa")
@@ -391,7 +403,21 @@ def generate_dose_merged_plot(
         {"percentaje_constrast_QH": "mean", "background_variability_N": "mean"}
     )
 
-    cmap = plt.cm.get_cmap("Oranges")
+    palette_hex = [
+        c[:7]
+        for c in [
+            "#453947FF",
+            "#023743FF",
+            "#476F84FF",
+            "#A4BED5FF",
+            "#8C7A6BFF",
+            "#72874EFF",
+            "#C97D60FF",
+            "#F0B533FF",
+        ]
+    ]
+
+    cmap = LinearSegmentedColormap.from_list("custom_palette", palette_hex, N=256)
     dose_min, dose_max = float(df_agg["dose"].min()), float(df_agg["dose"].max())
     norm = Normalize(vmin=dose_min, vmax=dose_max)
     sm = ScalarMappable(norm=norm, cmap=cmap)
@@ -491,23 +517,16 @@ def generate_dose_merged_plot(
         framealpha=0.95,
     )
 
-    ax1.set_title("DLP vs Contrast Recovery (PC)", fontweight="bold")
-    ax1.set_xlabel("PC (%)", fontweight="bold")
-    ax1.set_ylabel("DLP", fontweight="bold")
-    ax1.grid(alpha=0.25)
+    ax1.set_xlabel("Contrast Recovery (%)", fontweight="bold", labelpad=20)
+    ax1.set_ylabel("DLP", fontweight="bold", labelpad=20)
+    ax1.grid(alpha=0.30)
     ax1.yaxis.set_major_locator(MaxNLocator(6))
 
-    ax2.set_title("DLP vs Background Variability (BV)", fontweight="bold")
-    ax2.set_xlabel("BV (%)", fontweight="bold")
-    ax2.set_ylabel("DLP", fontweight="bold")
-    ax2.grid(alpha=0.25)
+    ax2.set_xlabel("Background Variability (%)", fontweight="bold", labelpad=20)
+    ax2.set_ylabel("DLP", fontweight="bold", labelpad=20)
+    ax2.grid(alpha=0.30)
     ax2.yaxis.set_major_locator(MaxNLocator(6))
 
-    plt.suptitle(
-        "Dose Merged Analysis — DLP vs PC and BV",
-        fontweight="bold",
-        y=0.95,
-    )
     plt.subplots_adjust(left=0.08, right=0.75, top=0.88, bottom=0.12, wspace=0.25)
 
     output_dir = Path(output_dir)
@@ -603,11 +622,32 @@ def generate_dose_merged_plot_any_sphere(
 
     df["dose"] = df["experiment"].map(map_exp_to_numeric)
 
+    numeric_df = df.select_dtypes(include=["number"])
+
+    stats = numeric_df.describe().T
+    stats["median"] = numeric_df.median()
+
+    print(stats)
+
     df_agg = df.groupby("dose", as_index=False).agg(
         {"percentaje_constrast_QH": "mean", "background_variability_N": "mean"}
     )
 
-    cmap = plt.cm.get_cmap("Oranges")
+    palette_hex = [
+        c[:7]
+        for c in [
+            "#453947FF",
+            "#023743FF",
+            "#476F84FF",
+            "#A4BED5FF",
+            "#8C7A6BFF",
+            "#72874EFF",
+            "#C97D60FF",
+            "#F0B533FF",
+        ]
+    ]
+
+    cmap = LinearSegmentedColormap.from_list("custom_palette", palette_hex, N=256)
     dose_min, dose_max = float(df_agg["dose"].min()), float(df_agg["dose"].max())
     norm = Normalize(vmin=dose_min, vmax=dose_max)
     sm = ScalarMappable(norm=norm, cmap=cmap)
@@ -630,10 +670,12 @@ def generate_dose_merged_plot_any_sphere(
             "grid.alpha": 0.3,
             "grid.linewidth": 0.8,
             "font.family": "DejaVu Sans",
+            "xtick.major.pad": 30,
+            "ytick.major.pad": 30,
         }
     )
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
 
     df_sorted = df_agg.sort_values("dose")
     doses = df_sorted["dose"].to_numpy()
@@ -668,29 +710,29 @@ def generate_dose_merged_plot_any_sphere(
 
     cbar_ax = fig.add_axes((0.92, 0.15, 0.02, 0.7))
     cbar = plt.colorbar(sm, cax=cbar_ax)
-    cbar.set_label("DLP", rotation=270, labelpad=15)
+    cbar.set_label("DLP", fontweight="bold", rotation=270, labelpad=30)
 
-    ax1.set_title(
-        "DLP vs Contrast Recovery (PC)",
-        fontweight="bold",
-    )
-    ax1.set_xlabel("DLP")
-    ax1.set_ylabel("PC (%)")
+    # ax1.set_title(
+    #     "DLP vs Contrast Recovery (PC)",
+    #     fontweight="bold",
+    # )
+    ax1.set_xlabel("DLP", fontweight="bold", labelpad=20)
+    ax1.set_ylabel("Contrast Recovery (%)", fontweight="bold", labelpad=20)
     ax1.grid(alpha=0.3)
 
-    ax2.set_title(
-        "DLP vs Background Variability (BV)",
-        fontweight="bold",
-    )
-    ax2.set_xlabel("DLP")
-    ax2.set_ylabel("BV (%)")
+    # ax2.set_title(
+    #     "DLP vs Background Variability (BV)",
+    #     fontweight="bold",
+    # )
+    ax2.set_xlabel("DLP", fontweight="bold", labelpad=20)
+    ax2.set_ylabel("Background Variability (%)", fontweight="bold", labelpad=20)
     ax2.grid(alpha=0.3)
 
-    plt.suptitle(
-        f"Dosage Merged Analysis - Sphere {sphere_diameter:.1f}mm",
-        fontweight="bold",
-        y=0.95,
-    )
+    # plt.suptitle(
+    #     f"Dosage Merged Analysis - Sphere {sphere_diameter:.1f}mm",
+    #     fontweight="bold",
+    #     y=0.95,
+    # )
     plt.tight_layout(rect=(0.0, 0.0, 0.9, 0.93))
 
     output_dir = Path(output_dir)
@@ -796,8 +838,8 @@ def generate_global_metrics_boxplot(
             f"  {metric}: mean={mean_val:.3f}, std={std_dev:.3f}, n={len(values)}"
         )
         ax.text(
-            idx + 1,
-            mean_val + std_dev * 1.5,
+            idx + 1.5,
+            np.min(values),
             f"μ={mean_val:.3f}",
             ha="center",
             va="bottom",
@@ -810,10 +852,10 @@ def generate_global_metrics_boxplot(
             },
         )
 
-    ax.set_title("Global distribution of advanced metrics", fontweight="bold", pad=40)
-    ax.set_xlabel("Metric", fontweight="bold")
-    ax.set_ylabel("Value", fontweight="bold")
-    ax.grid(True, axis="y", alpha=0.3)
+    # ax.set_title("Global distribution of advanced metrics", fontweight="bold", pad=40)
+    ax.set_xlabel("Metric", fontweight="bold", labelpad=20)
+    ax.set_ylabel("Value", fontweight="bold", labelpad=20)
+    ax.grid(True, axis="y", linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
     ax.set_xticks(range(1, len(metrics_to_plot) + 1))
     ax.set_xticklabels(metrics_to_plot)
     ax.set_facecolor("#fafafa")
@@ -990,9 +1032,9 @@ def generate_unified_statistical_heatmaps(
 
     fig.legend(handles=legend_elements, loc="upper right", bbox_to_anchor=(0.98, 0.95))
 
-    plt.suptitle(
-        "Statistical Analysis: Effect Sizes & Significance", fontweight="bold", y=0.98
-    )
+    # plt.suptitle(
+    #     "Statistical Analysis: Effect Sizes & Significance", fontweight="bold", y=0.98
+    # )
 
     plt.tight_layout(rect=(0, 0, 0.95, 0.95))
 
@@ -1073,9 +1115,9 @@ def generate_statistical_summary_matrix(
 
     ax1.set_title("Percentage of Significant Pairs by Metric", fontweight="bold")
     ax1.set_ylabel("Significant Pairs (%)")
-    ax1.set_xlabel("Metric")
+    ax1.set_xlabel("Metric", labelpad=20)
     ax1.tick_params(axis="x", rotation=45)
-    ax1.grid(True, alpha=0.3)
+    ax1.grid(True, linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
 
     for bar, value in zip(bars, df_summary["Percentage (%)"]):
         ax1.text(
@@ -1107,9 +1149,9 @@ def generate_statistical_summary_matrix(
         )
 
     ax2.set_title("Effect Size Analysis", fontweight="bold")
-    ax2.set_xlabel("Mean Effect Size (|Cohen's d|)")
-    ax2.set_ylabel("Max Effect Size (|Cohen's d|)")
-    ax2.grid(True, alpha=0.3)
+    ax2.set_xlabel("Mean Effect Size (|Cohen's d|)", labelpad=20)
+    ax2.set_ylabel("Max Effect Size (|Cohen's d|)", labelpad=20)
+    ax2.grid(True, linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
 
     plt.tight_layout()
     plt.savefig(

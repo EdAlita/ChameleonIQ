@@ -1,12 +1,15 @@
 import argparse
+import datetime
 import logging
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+from venv import logger
 
 import numpy as np
 import pandas as pd
+from rich.logging import RichHandler
 from scipy.stats import ttest_ind, ttest_rel
 from statsmodels.stats.multitest import multipletests
 
@@ -20,22 +23,44 @@ from .reporting import (
 )
 
 
-def setup_logging(log_level: int = 20) -> None:
+def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> None:
+    """Configuration logging for the application."""
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    if output_path:
+        output_path_obj = Path(output_path)
+        run_name = output_path_obj.stem
+        log_filename = f"{run_name}_{timestamp}.log"
+    else:
+        log_filename = f"{timestamp}.log"
+        log_dir = Path("logs")
+
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file_path = log_dir / log_filename
+
     logging.basicConfig(
         level=log_level,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout)],
+        format="%(message)s",
+        datefmt="[%H:%M:%S]",
+        handlers=[
+            logging.FileHandler(log_file_path, mode="w", encoding="utf-8"),
+            RichHandler(rich_tracebacks=True),
+        ],
     )
 
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
     logging.getLogger("PIL").setLevel(logging.WARNING)
+    logging.getLogger("report_lab").setLevel(logging.WARNING)
+
+    logging.info(f"Logging initialized. Log file: {log_file_path}")
 
 
 def parse_xml_config(
     xml_path: Path,
 ) -> tuple[List[Dict[str, Any]], List[Dict[str, str]], List[Dict[str, str]]]:
-    logging.info(f"Parsing XML configuration: {xml_path}")
+    logging.info("Parsing XML configuration")
+    logging.info("XML Path :%s", xml_path)
 
     tree = ET.parse(xml_path)
     root = tree.getroot()
@@ -44,9 +69,19 @@ def parse_xml_config(
     lung_experiments = []
     advanced_metrics = []
 
-    for experiment in root.findall("experiment"):
+    for idx, experiment in enumerate(root.findall("experiment"), start=1):
         name = experiment.get("name")
         file_path = experiment.get("path")
+
+        if not name or not file_path:
+            logging.warning(
+                "Skipping experiment %d: missing name or path (name=%s, path=%s)",
+                idx,
+                name,
+                file_path,
+            )
+            continue
+
         plot_status = experiment.get("plot_status", "enhanced")
         lung_path = experiment.get("lung_path")
         advanced_metric_path = experiment.get("advanced_path")
@@ -61,11 +96,14 @@ def parse_xml_config(
                     "dose": dose,
                 }
             )
-            logging.info(f"Found experiment: {name} -> {file_path}")
+
+            logger.info(
+                "Experiment found: name=%s plot=%s dose=%s", name, plot_status, dose
+            )
 
             if lung_path:
                 lung_experiments.append({"name": name, "path": lung_path})
-                logging.info(f"Found lung data: {name} -> {lung_path}")
+                logging.info("  Lung data: %s", lung_path)
 
             if advanced_metric_path:
                 advanced_metrics.append({"name": name, "path": advanced_metric_path})
@@ -426,24 +464,24 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
             logging.error("No data loaded from experiments")
             return 1
 
-        if all_data:
-            logging.info("Performing statistical analysis on NEMA metrics...")
-            nema_metrics = [
-                "percentaje_constrast_QH",
-                "background_variability_N",
-                "avg_hot_counts_CH",
-                "avg_bkg_counts_CB",
-            ]
-            nema_stats = perform_statistical_analysis(
-                all_data, nema_metrics, output_dir, experiment_order, "unpaired"
-            )
-            generate_unified_statistical_heatmaps(
-                nema_stats,
-                experiment_order,
-                output_dir,
-                nema_metrics,
-                test_name="nema_metrics",
-            )
+        # if all_data:
+        #     logging.info("Performing statistical analysis on NEMA metrics...")
+        #     nema_metrics = [
+        #         "percentaje_constrast_QH",
+        #         "background_variability_N",
+        #         "avg_hot_counts_CH",
+        #         "avg_bkg_counts_CB",
+        #     ]
+        # nema_stats = perform_statistical_analysis(
+        #     all_data, nema_metrics, output_dir, experiment_order, "unpaired"
+        # )
+        # generate_unified_statistical_heatmaps(
+        #     nema_stats,
+        #     experiment_order,
+        #     output_dir,
+        #     nema_metrics,
+        #     test_name="nema_metrics",
+        # )
 
         logging.info("Generating merged plots...")
         generate_merged_plots(all_data, output_dir, experiment_order, plots_status)
@@ -451,7 +489,7 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
             dose is not None and str(dose).replace(".", "", 1).isdigit()
             for dose in experiment_dose.values()
         ):
-            print("Generating dose merged plots...")
+            logging.info("Generating dose merged plots...")
             generate_dose_merged_plot(all_data, output_dir, experiment_dose)
             generate_dose_merged_plot_any_sphere(
                 all_data, output_dir, experiment_dose, 10.0
