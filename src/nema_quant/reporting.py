@@ -511,7 +511,7 @@ def generate_plots(
             df["diameter_mm"],
             df[yvar],
             marker="o",
-            color="#1B9E77FF",
+            color="#023743FF",
             linestyle="-",
             alpha=1.0,
             linewidth=4.0,
@@ -522,6 +522,7 @@ def generate_plots(
 
         ax.set_title(title, fontsize=16, weight="bold", pad=15)
         ax.set_ylabel(ylabel, fontsize=14, weight="bold")
+        ax.set_xlabel("Sphere Diameter [mm]", fontsize=14, weight="bold")
         ax.tick_params(axis="both", labelsize=20, width=1.2)
         ax.tick_params(axis="x", rotation=0)
 
@@ -531,16 +532,6 @@ def generate_plots(
         ax.set_xticks(sorted(df["diameter_mm"].unique()))
 
         ax.set_facecolor("#fafafa")
-
-    fig.text(
-        0.5,
-        0.04,
-        "Sphere Diameter [mm]",
-        ha="center",
-        va="bottom",
-        fontsize=14,
-        fontweight="bold",
-    )
 
     plt.tight_layout(rect=(0, 0.1, 1, 0.92))
 
@@ -603,7 +594,7 @@ def generate_boxplot_with_mean_std(
 
     violin_bodies = cast(List[Any], bp["bodies"])
     for patch in violin_bodies:
-        patch.set_facecolor("#1B9E77")
+        patch.set_facecolor("#023743FF")
         patch.set_alpha(0.7)
         patch.set_linewidth(1)
         patch.set_edgecolor("black")
@@ -612,7 +603,7 @@ def generate_boxplot_with_mean_std(
     bp["cmeans"].set_linewidth(3)
 
     exp_values = df["data"].values
-    color = "#1B9E77"
+    color = "#023743FF"
 
     jitter = np.random.normal(0, 0.04, size=len(exp_values))
     positions = np.full(len(exp_values), 1) + jitter
@@ -788,7 +779,7 @@ def generate_transverse_sphere_plots(
             cfg.ROIS.CENTRAL_SLICE, y - 10 : y + 10, x - 10 : x + 10  # noqa: E203
         ]
         crop = crop >= 0.41 * np.max(crop)
-        print(f"Unique values in crop for {roi['name']}: {np.unique(crop)}")
+        logging.debug(f"Unique values in crop for {roi['name']}: {np.unique(crop)}")
         ax.imshow(crop, cmap="binary", origin="lower")
         ax.axis("off")
         ax.set_title(roi["name"], y=-0.15)

@@ -8,6 +8,7 @@ Date: 2025-07-16
 """
 
 import argparse
+import datetime
 import logging
 import sys
 from pathlib import Path
@@ -16,6 +17,7 @@ from typing import Any, Optional, Tuple
 import numpy as np
 import numpy.typing as npt
 import yacs.config
+from rich.logging import RichHandler
 
 from config.defaults import get_cfg_defaults
 
@@ -78,6 +80,10 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--spacing", nargs=3, type=float, help="Voxel spacing in mm (x, y, z)"
+    )
+
+    parser.add_argument(
         "--visualizations-dir",
         type=str,
         default="visualizations",
@@ -108,22 +114,37 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def setup_logging(verbose: bool = False) -> None:
-    """Configure logging for the application."""
-    level = logging.DEBUG if verbose else logging.INFO
+def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> None:
+    """Configuration logging for the application."""
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    if output_path:
+        output_path_obj = Path(output_path)
+        run_name = output_path_obj.stem
+        log_filename = f"{run_name}_{timestamp}.log"
+    else:
+        log_filename = f"{timestamp}.log"
+        log_dir = Path("logs")
+
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file_path = log_dir / log_filename
 
     logging.basicConfig(
-        level=level,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+        level=log_level,
+        format="%(message)s",
+        datefmt="[%H:%M:%S]",
         handlers=[
-            logging.StreamHandler(sys.stdout),
+            logging.FileHandler(log_file_path, mode="w", encoding="utf-8"),
+            RichHandler(rich_tracebacks=True),
         ],
     )
 
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
     logging.getLogger("PIL").setLevel(logging.WARNING)
-    logging.getLogger("reportlab").setLevel(logging.WARNING)
+    logging.getLogger("report_lab").setLevel(logging.WARNING)
+
+    logging.info(f"Logging initialized. Log file: {log_file_path}")
 
 
 def load_configuration(config_path: Optional[str]) -> yacs.config.CfgNode:
@@ -135,7 +156,7 @@ def load_configuration(config_path: Optional[str]) -> yacs.config.CfgNode:
         if not config_file.exists():
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-        logging.info(f"Loading configuration from: {config_path}")
+        logging.info("Loading configuration: %s", config_path)
         cfg.merge_from_file(config_path)
     else:
         logging.info("Using default configuration")
@@ -182,6 +203,7 @@ def run_analysis(args: argparse.Namespace) -> int:
         logging.info("Starting NEMA NU 2-2018 Image Quality Analysis")
         logging.info(f"Input image: {args.input_image}")
         logging.info(f"Output file: {args.output}")
+        logging.info(f"Configuration file: {args.config}")
 
         input_path = Path(args.input_image)
         if not input_path.exists():
