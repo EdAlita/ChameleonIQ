@@ -9,9 +9,12 @@ from venv import logger
 
 import numpy as np
 import pandas as pd
+import yacs.config
 from rich.logging import RichHandler
 from scipy.stats import ttest_ind, ttest_rel
 from statsmodels.stats.multitest import multipletests
+
+from config.defaults import get_cfg_defaults
 
 from .reporting import (
     generate_dose_merged_plot,
@@ -21,6 +24,22 @@ from .reporting import (
     generate_merged_plots,
     generate_unified_statistical_heatmaps,
 )
+
+
+def load_configuration(config_path: Optional[str]) -> yacs.config.CfgNode:
+    """Load configuration from file or use defaults."""
+    cfg = get_cfg_defaults()
+
+    if config_path:
+        config_file = Path(config_path)
+        if not config_file.exists():
+            raise FileNotFoundError(f"Configuration file not found: {config_path}")
+
+        logging.info("Loading configuration: %s", config_path)
+        cfg.merge_from_file(config_path)
+    else:
+        logging.info("Using default configuration")
+    return cfg
 
 
 def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> None:
@@ -243,9 +262,17 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--config",
+        "-c",
+        type=str,
+        required=True,
+        help="Path to custom YAML configuration file",
+    )
+
+    parser.add_argument(
         "--log-level",
         type=int,
-        default=20,
+        default=10,
         help="Logging level (10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR)",
     )
     parser.add_argument(
@@ -438,6 +465,7 @@ def perform_advanced_statistical_analysis(
 def run_merge_analysis(args: argparse.Namespace) -> int:
     try:
         setup_logging(args.log_level)
+        cfg = load_configuration(args.config)
 
         logging.info("Starting NEMA Merge Analysis")
         logging.info(f"XML config: {args.xml_config}")
@@ -464,45 +492,28 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
             logging.error("No data loaded from experiments")
             return 1
 
-        # if all_data:
-        #     logging.info("Performing statistical analysis on NEMA metrics...")
-        #     nema_metrics = [
-        #         "percentaje_constrast_QH",
-        #         "background_variability_N",
-        #         "avg_hot_counts_CH",
-        #         "avg_bkg_counts_CB",
-        #     ]
-        # nema_stats = perform_statistical_analysis(
-        #     all_data, nema_metrics, output_dir, experiment_order, "unpaired"
-        # )
-        # generate_unified_statistical_heatmaps(
-        #     nema_stats,
-        #     experiment_order,
-        #     output_dir,
-        #     nema_metrics,
-        #     test_name="nema_metrics",
-        # )
-
         logging.info("Generating merged plots...")
-        generate_merged_plots(all_data, output_dir, experiment_order, plots_status)
+        generate_merged_plots(
+            all_data, output_dir, experiment_order, plots_status, cfg=cfg
+        )
         if any(
             dose is not None and str(dose).replace(".", "", 1).isdigit()
             for dose in experiment_dose.values()
         ):
             logging.info("Generating dose merged plots...")
-            generate_dose_merged_plot(all_data, output_dir, experiment_dose)
+            generate_dose_merged_plot(all_data, output_dir, cfg, experiment_dose)
             generate_dose_merged_plot_any_sphere(
-                all_data, output_dir, experiment_dose, 10.0
+                all_data, output_dir, cfg, experiment_dose, 10.0
             )
             generate_dose_merged_plot_any_sphere(
-                all_data, output_dir, experiment_dose, 17.0
+                all_data, output_dir, cfg, experiment_dose, 17.0
             )
 
         if lung_experiments:
             lung_data = load_lung_data(lung_experiments)
             if lung_data:
                 generate_merged_boxplot(
-                    lung_data, output_dir, experiment_order, plots_status
+                    lung_data, output_dir, experiment_order, plots_status, cfg
                 )
             else:
                 logging.warning("No lung data loaded, skipping lung analysis")
@@ -516,12 +527,14 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
                     advanced_metrics_data,
                     output_dir,
                     ["Dice", "Jaccard", "VS", "MI", "Recall"],
+                    cfg=cfg,
                     name="global_metrics_boxplot_basic.png",
                 )
                 generate_global_metrics_boxplot(
                     advanced_metrics_data,
                     output_dir,
                     ["ASSD"],
+                    cfg=cfg,
                     name="global_metrics_boxplot_hd_asd.png",
                 )
                 advanced_stats = perform_statistical_analysis(
@@ -537,6 +550,7 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
                     output_dir,
                     ["Dice", "Jaccard", "VS", "MI", "F1", "Recall"],
                     test_name="advanced_basic",
+                    cfg=cfg,
                 )
         return 0
 
@@ -544,7 +558,8 @@ def run_merge_analysis(args: argparse.Namespace) -> int:
         logging.info("Analysis interrupted by user")
         return 1
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
+        logging.error("Unexpected error:")
+        logging.exception(e)
         return 1
 
 

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, cast
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import yacs.config
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.lines import Line2D
@@ -19,66 +20,28 @@ warnings.filterwarnings(
 
 logger = logging.getLogger(__name__)
 
-# COLORS = [
-#     "#1B9E77FF",
-#     "#D95F02FF",
-#     "#7570B3FF",
-#     "#E7298AFF",
-#     "#66A61EFF",
-#     "#E6AB02FF",
-#     "#A6761DFF",
-#     "#666666FF",
-# ]
-
-COLORS = [
-    "#023743FF",
-    "#72874EFF",
-    "#476F84FF",
-    "#A4BED5FF",
-    "#453947FF",
-    "#8C7A6BFF",
-    "#C97D60FF",
-    "#F0B533FF",
-]
-
 
 def generate_merged_plots(
     data: List[Dict[str, Any]],
     output_dir: Path,
     experiment_order: List[str],
     plots_status: Dict[str, str],
+    cfg: yacs.config.CfgNode,
 ) -> None:
     logger.info("Generating merged analysis plots")
 
     df = pd.DataFrame(data)
     experiments = experiment_order
 
-    plt.style.use("seaborn-v0_8-talk")
-    plt.rcParams.update(
-        {
-            "font.size": 24,
-            "axes.titlesize": 24,
-            "axes.labelsize": 24,
-            "xtick.labelsize": 24,
-            "ytick.labelsize": 24,
-            "legend.fontsize": 24,
-            "legend.title_fontsize": 24,
-            "lines.linewidth": 2.5,
-            "lines.markersize": 8,
-            "axes.linewidth": 1.2,
-            "axes.grid": True,
-            "grid.alpha": 0.3,
-            "grid.linewidth": 0.8,
-            "font.family": "DejaVu Sans",
-        }
-    )
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(25, 10))
-
     enhanced_experiments = [
         exp for exp in experiments if plots_status.get(exp) == "enhanced"
     ]
     enhanced_color_map = {
-        exp: COLORS[i % len(COLORS)] for i, exp in enumerate(enhanced_experiments)
+        exp: cfg.STYLE.COLORS[i % len(cfg.STYLE.COLORS)]
+        for i, exp in enumerate(enhanced_experiments)
     }
 
     for _exp_idx, experiment in enumerate(experiments):
@@ -97,20 +60,20 @@ def generate_merged_plots(
 
         if plot_status == "enhanced":
             _color = enhanced_color_map[experiment]
-            _linewidth = 4.0
-            _alpha = 1.0
-            _zorder = 30
-            _linestyle = "-"
-            _markersize = 10
-            _markeredgewidth = 2.0
+            _linewidth = cfg.STYLE.PLOT.ENHANCED.LINEWIDTH
+            _alpha = cfg.STYLE.PLOT.ENHANCED.ALPHA
+            _zorder = cfg.STYLE.PLOT.ENHANCED.ZORDER
+            _linestyle = cfg.STYLE.PLOT.ENHANCED.LINESTYLE
+            _markersize = cfg.STYLE.PLOT.ENHANCED.MARKERSIZE
+            _markeredgewidth = cfg.STYLE.PLOT.ENHANCED.MARKEREDGEWIDTH
         else:
-            _color = "#666666FF"
-            _linewidth = 1.0
-            _alpha = 0.6
-            _zorder = 5
-            _linestyle = "--"
-            _markersize = 4
-            _markeredgewidth = 0.5
+            _color = cfg.STYLE.PLOT.DEFAULT.COLOR
+            _linewidth = cfg.STYLE.PLOT.DEFAULT.LINEWIDTH
+            _alpha = cfg.STYLE.PLOT.DEFAULT.ALPHA
+            _zorder = cfg.STYLE.PLOT.DEFAULT.ZORDER
+            _linestyle = cfg.STYLE.PLOT.DEFAULT.LINESTYLE
+            _markersize = cfg.STYLE.PLOT.DEFAULT.MARKERSIZE
+            _markeredgewidth = cfg.STYLE.PLOT.DEFAULT.MARKEREDGEWIDTH
 
         ax1.plot(
             exp_diameters,
@@ -144,13 +107,42 @@ def generate_merged_plots(
             label=experiment if plot_status == "enhanced" else None,
         )
 
-    ax1.set_xlabel("Sphere Diameter (mm)", fontweight="bold", labelpad=20)
-    ax1.set_ylabel("Contrast Recovery (%)", fontweight="bold", labelpad=20)
-    ax1.grid(True, linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
+    ax1.set_xlabel(
+        "Sphere Diameter (mm)",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax1.set_ylabel(
+        "Contrast Recovery (%)",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax1.grid(
+        True,
+        linestyle=cfg.STYLE.GRID.LINESTYLE,
+        alpha=cfg.STYLE.GRID.ALPHA,
+        color=cfg.STYLE.GRID.COLOR,
+        linewidth=cfg.STYLE.GRID.LINEWIDTH,
+    )
     ax1.legend()
-    ax2.set_xlabel("Sphere Diameter (mm)", fontweight="bold", labelpad=20)
-    ax2.set_ylabel("Background Variability (%)", fontweight="bold", labelpad=20)
-    ax2.grid(True, linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
+    ax2.set_xlabel(
+        "Sphere Diameter (mm)",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax2.set_ylabel(
+        "Background Variability (%)",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+
+    ax2.grid(
+        True,
+        linestyle=cfg.STYLE.GRID.LINESTYLE,
+        alpha=cfg.STYLE.GRID.ALPHA,
+        color=cfg.STYLE.GRID.COLOR,
+        linewidth=cfg.STYLE.GRID.LINEWIDTH,
+    )
     ax2.legend()
 
     plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.96))
@@ -162,7 +154,7 @@ def generate_merged_plots(
         bbox_inches="tight",
         facecolor="white",
         edgecolor="none",
-        format="png",
+        format="jpeg",
     )
 
     logger.info(f"Merged analysis plot saved: {output_path}")
@@ -174,31 +166,15 @@ def generate_merged_boxplot(
     output_dir: Path,
     experiment_order: List[str],
     plots_status: Dict[str, str],
+    cfg: yacs.config.CfgNode,
 ) -> None:
     logger.info("Generating merged lung insert violin plot analysis")
 
     df = pd.DataFrame(lung_data)
     experiments = experiment_order
 
-    plt.style.use("seaborn-v0_8-talk")
-    plt.rcParams.update(
-        {
-            "font.size": 24,
-            "axes.titlesize": 24,
-            "axes.labelsize": 24,
-            "xtick.labelsize": 24,
-            "ytick.labelsize": 24,
-            "legend.fontsize": 24,
-            "legend.title_fontsize": 24,
-            "lines.linewidth": 2.5,
-            "lines.markersize": 8,
-            "axes.linewidth": 1.2,
-            "axes.grid": True,
-            "grid.alpha": 0.3,
-            "grid.linewidth": 0.8,
-            "font.family": "DejaVu Sans",
-        }
-    )
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
     fig, ax = plt.subplots(1, 1, figsize=(20, 10))
 
     plot_data = []
@@ -228,7 +204,7 @@ def generate_merged_boxplot(
         for idx, (pc, _exp) in enumerate(
             zip(cast(List[Any], violin_parts["bodies"]), experiment_names)
         ):
-            color = COLORS[idx % len(COLORS)]
+            color = cfg.STYLE.COLORS[idx % len(cfg.STYLE.COLORS)]
             pc.set_facecolor(color)
             pc.set_alpha(0.7)
             pc.set_edgecolor("black")
@@ -239,7 +215,7 @@ def generate_merged_boxplot(
 
         for idx, experiment in enumerate(experiment_names):
             exp_values = plot_df[plot_df["experiment"] == experiment]["value"].values
-            color = COLORS[idx % len(COLORS)]
+            color = cfg.STYLE.COLORS[idx % len(cfg.STYLE.COLORS)]
 
             jitter = np.random.normal(0, 0.04, len(exp_values))
             positions = np.full(len(exp_values), idx + 1) + jitter
@@ -256,7 +232,6 @@ def generate_merged_boxplot(
             )
 
             mean_val = np.mean(exp_values)
-            # std_val = np.std(exp_values)
 
             ax.text(
                 idx + 1.25,
@@ -272,11 +247,23 @@ def generate_merged_boxplot(
                 },
             )
 
-    ax.set_xlabel("Experiment", fontweight="bold", labelpad=20)
-    ax.set_ylabel(
-        "Accuracy of Corrections in Lung Insert (%)", fontweight="bold", labelpad=20
+    ax.set_xlabel(
+        "Experiment",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
     )
-    ax.grid(True, axis="y", linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
+    ax.set_ylabel(
+        "Accuracy of Corrections in Lung Insert (%)",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax.grid(
+        True,
+        linestyle=cfg.STYLE.GRID.LINESTYLE,
+        alpha=cfg.STYLE.GRID.ALPHA,
+        color=cfg.STYLE.GRID.COLOR,
+        linewidth=cfg.STYLE.GRID.LINEWIDTH,
+    )
     ax.set_xticks(range(1, len(experiment_names) + 1))
     ax.set_xticklabels(experiment_names)
     ax.set_facecolor("#fafafa")
@@ -287,7 +274,13 @@ def generate_merged_boxplot(
     ax.tick_params(axis="both", width=1.2)
 
     legend_elements = [
-        Line2D([0], [0], color=COLORS[i % len(COLORS)], linewidth=4, label=exp)
+        Line2D(
+            [0],
+            [0],
+            color=cfg.STYLE.COLORS[i % len(cfg.STYLE.COLORS)],
+            linewidth=4,
+            label=exp,
+        )
         for i, exp in enumerate(experiment_names)
     ]
 
@@ -307,7 +300,7 @@ def generate_merged_boxplot(
         bbox_inches="tight",
         facecolor="white",
         edgecolor="none",
-        format="png",
+        format="jpeg",
     )
 
     logger.info(f"Merged lung insert violin plot analysis saved: {output_path}")
@@ -332,6 +325,7 @@ def _find_value_for_row_candidates(
 def generate_dose_merged_plot(
     data: List[Dict[str, Any]],
     output_dir: Path,
+    cfg: yacs.config.CfgNode,
     dosis_map: Optional[Dict[str, float]] = None,
 ) -> None:
     logger.info("Generating dose merged plot")
@@ -403,19 +397,7 @@ def generate_dose_merged_plot(
         {"percentaje_constrast_QH": "mean", "background_variability_N": "mean"}
     )
 
-    palette_hex = [
-        c[:7]
-        for c in [
-            "#453947FF",
-            "#023743FF",
-            "#476F84FF",
-            "#A4BED5FF",
-            "#8C7A6BFF",
-            "#72874EFF",
-            "#C97D60FF",
-            "#F0B533FF",
-        ]
-    ]
+    palette_hex = [c[:7] for c in cfg.STYLE.COLORS]
 
     cmap = LinearSegmentedColormap.from_list("custom_palette", palette_hex, N=256)
     dose_min, dose_max = float(df_agg["dose"].min()), float(df_agg["dose"].max())
@@ -435,25 +417,8 @@ def generate_dose_merged_plot(
         frac = (d - diam_min) / (diam_max - diam_min)
         return float(min_marker_area + frac * (max_marker_area - min_marker_area))
 
-    plt.style.use("seaborn-v0_8-talk")
-    plt.rcParams.update(
-        {
-            "font.size": 24,
-            "axes.titlesize": 24,
-            "axes.labelsize": 24,
-            "xtick.labelsize": 24,
-            "ytick.labelsize": 24,
-            "legend.fontsize": 24,
-            "legend.title_fontsize": 24,
-            "lines.linewidth": 2.5,
-            "lines.markersize": 8,
-            "axes.linewidth": 1.2,
-            "axes.grid": True,
-            "grid.alpha": 0.3,
-            "grid.linewidth": 0.8,
-            "font.family": "DejaVu Sans",
-        }
-    )
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
 
     for d in diameters:
@@ -517,14 +482,42 @@ def generate_dose_merged_plot(
         framealpha=0.95,
     )
 
-    ax1.set_xlabel("Contrast Recovery (%)", fontweight="bold", labelpad=20)
-    ax1.set_ylabel("DLP", fontweight="bold", labelpad=20)
-    ax1.grid(alpha=0.30)
+    ax1.set_xlabel(
+        "Contrast Recovery (%)",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax1.set_ylabel(
+        "DLP",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+
+    ax1.grid(
+        alpha=cfg.STYLE.GRID.ALPHA,
+        linestyle=cfg.STYLE.GRID.LINESTYLE,
+        color=cfg.STYLE.GRID.COLOR,
+        linewidth=cfg.STYLE.GRID.LINEWIDTH,
+    )
     ax1.yaxis.set_major_locator(MaxNLocator(6))
 
-    ax2.set_xlabel("Background Variability (%)", fontweight="bold", labelpad=20)
-    ax2.set_ylabel("DLP", fontweight="bold", labelpad=20)
-    ax2.grid(alpha=0.30)
+    ax2.set_xlabel(
+        "Background Variability (%)",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax2.set_ylabel(
+        "DLP",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+
+    ax2.grid(
+        alpha=cfg.STYLE.GRID.ALPHA,
+        linestyle=cfg.STYLE.GRID.LINESTYLE,
+        color=cfg.STYLE.GRID.COLOR,
+        linewidth=cfg.STYLE.GRID.LINEWIDTH,
+    )
     ax2.yaxis.set_major_locator(MaxNLocator(6))
 
     plt.subplots_adjust(left=0.08, right=0.75, top=0.88, bottom=0.12, wspace=0.25)
@@ -546,6 +539,7 @@ def generate_dose_merged_plot(
 def generate_dose_merged_plot_any_sphere(
     data: List[Dict[str, Any]],
     output_dir: Path,
+    cfg: yacs.config.CfgNode,
     dosis_map: Optional[Dict[str, float]] = None,
     sphere_diameter: float = 10.0,
 ) -> None:
@@ -633,19 +627,7 @@ def generate_dose_merged_plot_any_sphere(
         {"percentaje_constrast_QH": "mean", "background_variability_N": "mean"}
     )
 
-    palette_hex = [
-        c[:7]
-        for c in [
-            "#453947FF",
-            "#023743FF",
-            "#476F84FF",
-            "#A4BED5FF",
-            "#8C7A6BFF",
-            "#72874EFF",
-            "#C97D60FF",
-            "#F0B533FF",
-        ]
-    ]
+    palette_hex = [c[:7] for c in cfg.STYLE.COLORS]
 
     cmap = LinearSegmentedColormap.from_list("custom_palette", palette_hex, N=256)
     dose_min, dose_max = float(df_agg["dose"].min()), float(df_agg["dose"].max())
@@ -653,27 +635,8 @@ def generate_dose_merged_plot_any_sphere(
     sm = ScalarMappable(norm=norm, cmap=cmap)
     sm.set_array([])
 
-    plt.style.use("seaborn-v0_8-talk")
-    plt.rcParams.update(
-        {
-            "font.size": 24,
-            "axes.titlesize": 24,
-            "axes.labelsize": 24,
-            "xtick.labelsize": 24,
-            "ytick.labelsize": 24,
-            "legend.fontsize": 24,
-            "legend.title_fontsize": 24,
-            "lines.linewidth": 2.5,
-            "lines.markersize": 8,
-            "axes.linewidth": 1.2,
-            "axes.grid": True,
-            "grid.alpha": 0.3,
-            "grid.linewidth": 0.8,
-            "font.family": "DejaVu Sans",
-            "xtick.major.pad": 30,
-            "ytick.major.pad": 30,
-        }
-    )
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
 
@@ -710,29 +673,48 @@ def generate_dose_merged_plot_any_sphere(
 
     cbar_ax = fig.add_axes((0.92, 0.15, 0.02, 0.7))
     cbar = plt.colorbar(sm, cax=cbar_ax)
-    cbar.set_label("DLP", fontweight="bold", rotation=270, labelpad=30)
+    cbar.set_label(
+        "DLP", fontweight=cfg.STYLE.LEGEND.FONTWEIGHT, rotation=270, labelpad=30
+    )
 
-    # ax1.set_title(
-    #     "DLP vs Contrast Recovery (PC)",
-    #     fontweight="bold",
-    # )
-    ax1.set_xlabel("DLP", fontweight="bold", labelpad=20)
-    ax1.set_ylabel("Contrast Recovery (%)", fontweight="bold", labelpad=20)
-    ax1.grid(alpha=0.3)
+    ax1.set_xlabel(
+        "DLP",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax1.set_ylabel(
+        "Contrast Recovery (%)",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax1.grid(
+        alpha=cfg.STYLE.GRID.ALPHA,
+        linestyle=cfg.STYLE.GRID.LINESTYLE,
+        color=cfg.STYLE.GRID.COLOR,
+        linewidth=cfg.STYLE.GRID.LINEWIDTH,
+    )
 
-    # ax2.set_title(
-    #     "DLP vs Background Variability (BV)",
-    #     fontweight="bold",
-    # )
-    ax2.set_xlabel("DLP", fontweight="bold", labelpad=20)
-    ax2.set_ylabel("Background Variability (%)", fontweight="bold", labelpad=20)
-    ax2.grid(alpha=0.3)
+    ax2.set_title(
+        "DLP vs Background Variability (BV)",
+        fontweight="bold",
+    )
+    ax2.set_xlabel(
+        "DLP",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax2.set_ylabel(
+        "Background Variability (%)",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax2.grid(
+        alpha=cfg.STYLE.GRID.ALPHA,
+        linestyle=cfg.STYLE.GRID.LINESTYLE,
+        color=cfg.STYLE.GRID.COLOR,
+        linewidth=cfg.STYLE.GRID.LINEWIDTH,
+    )
 
-    # plt.suptitle(
-    #     f"Dosage Merged Analysis - Sphere {sphere_diameter:.1f}mm",
-    #     fontweight="bold",
-    #     y=0.95,
-    # )
     plt.tight_layout(rect=(0.0, 0.0, 0.9, 0.93))
 
     output_dir = Path(output_dir)
@@ -753,6 +735,7 @@ def generate_global_metrics_boxplot(
     advanced_metric_data: List[Dict[str, Any]],
     output_dir: Path,
     metrics_to_plot: List[str],
+    cfg: yacs.config.CfgNode,
     name: str = "global_metrics_violinplot",
 ) -> None:
     """
@@ -764,25 +747,9 @@ def generate_global_metrics_boxplot(
 
     df = pd.DataFrame(advanced_metric_data)
 
-    plt.style.use("seaborn-v0_8-talk")
-    plt.rcParams.update(
-        {
-            "font.size": 24,
-            "axes.titlesize": 24,
-            "axes.labelsize": 24,
-            "xtick.labelsize": 24,
-            "ytick.labelsize": 24,
-            "legend.fontsize": 24,
-            "legend.title_fontsize": 24,
-            "lines.linewidth": 2.5,
-            "lines.markersize": 8,
-            "axes.linewidth": 1.2,
-            "axes.grid": True,
-            "grid.alpha": 0.3,
-            "grid.linewidth": 0.8,
-            "font.family": "DejaVu Sans",
-        }
-    )
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
+
     fig, ax = plt.subplots(1, 1, figsize=(14, 10))
 
     plot_data = []
@@ -808,7 +775,7 @@ def generate_global_metrics_boxplot(
     )
 
     for idx, patch in enumerate(cast(List[Any], violin_parts["bodies"])):
-        color = COLORS[idx % len(COLORS)]
+        color = cfg.STYLE.COLORS[idx % len(cfg.STYLE.COLORS)]
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
         patch.set_edgecolor("black")
@@ -819,7 +786,7 @@ def generate_global_metrics_boxplot(
     logger.info("Metrics resume:")
     for idx, metric in enumerate(metrics_to_plot):
         values = plot_df[plot_df["metric"] == metric]["value"].values
-        color = COLORS[idx % len(COLORS)]
+        color = cfg.STYLE.COLORS[idx % len(cfg.STYLE.COLORS)]
         jitter = np.random.normal(0, 0.04, len(values))
         ax.scatter(
             np.full(len(values), idx + 1) + jitter,
@@ -852,10 +819,23 @@ def generate_global_metrics_boxplot(
             },
         )
 
-    # ax.set_title("Global distribution of advanced metrics", fontweight="bold", pad=40)
-    ax.set_xlabel("Metric", fontweight="bold", labelpad=20)
-    ax.set_ylabel("Value", fontweight="bold", labelpad=20)
-    ax.grid(True, axis="y", linestyle="-", alpha=0.3, color="gray", linewidth=0.8)
+    ax.set_xlabel(
+        "Metric",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax.set_ylabel(
+        "Value",
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
+    ax.grid(
+        True,
+        linestyle=cfg.STYLE.GRID.LINESTYLE,
+        alpha=cfg.STYLE.GRID.ALPHA,
+        color=cfg.STYLE.GRID.COLOR,
+        linewidth=cfg.STYLE.GRID.LINEWIDTH,
+    )
     ax.set_xticks(range(1, len(metrics_to_plot) + 1))
     ax.set_xticklabels(metrics_to_plot)
     ax.set_facecolor("#fafafa")
@@ -866,7 +846,13 @@ def generate_global_metrics_boxplot(
     ax.tick_params(axis="both", width=1.2)
 
     legend_elements = [
-        Line2D([0], [0], color=COLORS[i % len(COLORS)], linewidth=4, label=metric)
+        Line2D(
+            [0],
+            [0],
+            color=cfg.STYLE.COLORS[i % len(cfg.STYLE.COLORS)],
+            linewidth=4,
+            label=metric,
+        )
         for i, metric in enumerate(metrics_to_plot)
     ]
     ax.legend(
@@ -885,7 +871,7 @@ def generate_global_metrics_boxplot(
         bbox_inches="tight",
         facecolor="white",
         edgecolor="none",
-        format="png",
+        format="jpeg",
     )
 
     logger.info(f"Global metrics violinplot saved: {output_path}")
@@ -898,6 +884,7 @@ def generate_unified_statistical_heatmaps(
     output_dir: Path,
     metrics_list: List[str],
     test_name: str,
+    cfg: yacs.config.CfgNode,
 ) -> None:
     """Generate unified statistical heatmaps for all metrics in one figure"""
 
@@ -925,25 +912,8 @@ def generate_unified_statistical_heatmaps(
         rows, cols = 3, 3
         figsize = (36, 30)
 
-    plt.style.use("seaborn-v0_8-talk")
-    plt.rcParams.update(
-        {
-            "font.size": 24,
-            "axes.titlesize": 24,
-            "axes.labelsize": 24,
-            "xtick.labelsize": 24,
-            "ytick.labelsize": 24,
-            "legend.fontsize": 24,
-            "legend.title_fontsize": 24,
-            "lines.linewidth": 2.5,
-            "lines.markersize": 8,
-            "axes.linewidth": 1.2,
-            "axes.grid": True,
-            "grid.alpha": 0.3,
-            "grid.linewidth": 0.8,
-            "font.family": "DejaVu Sans",
-        }
-    )
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     fig, axes = plt.subplots(rows, cols, figsize=figsize)
 
@@ -1031,10 +1001,6 @@ def generate_unified_statistical_heatmaps(
     ]
 
     fig.legend(handles=legend_elements, loc="upper right", bbox_to_anchor=(0.98, 0.95))
-
-    # plt.suptitle(
-    #     "Statistical Analysis: Effect Sizes & Significance", fontweight="bold", y=0.98
-    # )
 
     plt.tight_layout(rect=(0, 0, 0.95, 0.95))
 
