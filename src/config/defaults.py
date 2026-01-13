@@ -105,6 +105,63 @@ _C.FILE = CN()
 _C.FILE.USER_PATTERN = r"frame(\d+)"
 _C.FILE.CASE = "Test"
 
+_C.STYLE = CN()
+_C.STYLE.COLORS = [
+    "#023743FF",
+    "#72874EFF",
+    "#476F84FF",
+    "#A4BED5FF",
+    "#453947FF",
+    "#8C7A6BFF",
+    "#C97D60FF",
+    "#F0B533FF",
+]
+_C.STYLE.PLT_STYLE = "seaborn-v0_8-talk"
+_C.STYLE.RCPARAMS = [
+    ("font.size", 24),
+    ("axes.titlesize", 24),
+    ("axes.labelsize", 24),
+    ("xtick.labelsize", 24),
+    ("ytick.labelsize", 24),
+    ("legend.fontsize", 24),
+    ("legend.title_fontsize", 24),
+    ("lines.linewidth", 2.5),
+    ("lines.markersize", 8),
+    ("axes.linewidth", 1.2),
+    ("axes.grid", True),
+    ("grid.alpha", 0.3),
+    ("grid.linewidth", 0.8),
+    ("font.family", "DejaVu Sans"),
+]
+
+_C.STYLE.LEGEND = CN()
+_C.STYLE.LEGEND.LABELPAD = 20
+_C.STYLE.LEGEND.FONTWEIGHT = "bold"  # or Normal, Light, Heavy, etc.
+
+_C.STYLE.GRID = CN()
+_C.STYLE.GRID.LINESTYLE = "--"
+_C.STYLE.GRID.LINEWIDTH = 2.0
+_C.STYLE.GRID.ALPHA = 1.0
+_C.STYLE.GRID.COLOR = "black"
+
+_C.STYLE.PLOT = CN()
+_C.STYLE.PLOT.DEFAULT = CN()
+_C.STYLE.PLOT.DEFAULT.COLOR = "#666666FF"
+_C.STYLE.PLOT.DEFAULT.LINEWIDTH = 1.0
+_C.STYLE.PLOT.DEFAULT.ALPHA = 0.6
+_C.STYLE.PLOT.DEFAULT.ZORDER = 5
+_C.STYLE.PLOT.DEFAULT.LINESTYLE = "--"
+_C.STYLE.PLOT.DEFAULT.MARKERSIZE = 4
+_C.STYLE.PLOT.DEFAULT.MARKEREDGEWIDTH = 0.5
+
+_C.STYLE.PLOT.ENHANCED = CN()
+_C.STYLE.PLOT.ENHANCED.LINEWIDTH = 4.0
+_C.STYLE.PLOT.ENHANCED.ALPHA = 1.0
+_C.STYLE.PLOT.ENHANCED.ZORDER = 30
+_C.STYLE.PLOT.ENHANCED.LINESTYLE = "-"
+_C.STYLE.PLOT.ENHANCED.MARKERSIZE = 15
+_C.STYLE.PLOT.ENHANCED.MARKEREDGEWIDTH = 2.0
+
 
 def get_cfg_defaults():
     """Get a yacs CfgNode object with default values for my_project."""
