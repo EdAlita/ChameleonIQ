@@ -441,14 +441,8 @@ def run_analysis(args: argparse.Namespace) -> int:
         print("Analysis interrupted by user")
         return 130
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
-        print(f"ERROR: Unexpected error: {e}")
-        if hasattr(args, "verbose") and args.verbose:
-            import traceback
-
-            logging.error(traceback.format_exc())
-            print("\nFull traceback:")
-            traceback.print_exc()
+        logging.error("Unexpected error:")
+        logging.exception(e)
         return 1
 
 
