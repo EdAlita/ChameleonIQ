@@ -497,7 +497,8 @@ def generate_plots(
     df.to_csv(csv_path, index=False)
     logging.info(f"Results saved to CSV at: {csv_path}")
 
-    plt.style.use("default")
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(cfg.STYLE.RCPARAMS)
 
     fig, axes = plt.subplots(1, 2, figsize=(22, 10), sharex=True)
 
@@ -520,13 +521,29 @@ def generate_plots(
             markeredgewidth=2.0,
         )
 
-        ax.set_title(title, fontsize=16, weight="bold", pad=15)
-        ax.set_ylabel(ylabel, fontsize=14, weight="bold")
-        ax.set_xlabel("Sphere Diameter [mm]", fontsize=14, weight="bold")
+        ax.set_title(title, fontsize=16, weight=cfg.STYLE.LEGEND.FONTWEIGHT)
+        ax.set_ylabel(
+            ylabel,
+            fontsize=14,
+            weight=cfg.STYLE.LEGEND.FONTWEIGHT,
+            labelpad=cfg.STYLE.LEGEND.LABELPAD,
+        )
+        ax.set_xlabel(
+            "Sphere Diameter [mm]",
+            fontsize=14,
+            weight=cfg.STYLE.LEGEND.FONTWEIGHT,
+            labelpad=cfg.STYLE.LEGEND.LABELPAD,
+        )
         ax.tick_params(axis="both", labelsize=20, width=1.2)
         ax.tick_params(axis="x", rotation=0)
 
-        ax.grid(True, linestyle="-", alpha=0.2, color="gray", linewidth=0.8)
+        ax.grid(
+            True,
+            linestyle=cfg.STYLE.GRID.LINESTYLE,
+            alpha=cfg.STYLE.GRID.ALPHA,
+            color=cfg.STYLE.GRID.COLOR,
+            linewidth=cfg.STYLE.GRID.LINEWIDTH,
+        )
         ax.set_axisbelow(True)
 
         ax.set_xticks(sorted(df["diameter_mm"].unique()))
@@ -571,7 +588,8 @@ def generate_boxplot_with_mean_std(
     None
         This function does not return a value; the plot is saved to disk.
     """
-    plt.style.use("default")
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(cfg.STYLE.RCPARAMS)
 
     data = list(data_dict.values())
     std_dev = float(np.std(data))
@@ -637,15 +655,29 @@ def generate_boxplot_with_mean_std(
     )
 
     plt.xticks([1], [label])
-    plt.xlabel("Lung Insert Accuracy Distribution", fontsize=14, fontweight="bold")
+    plt.xlabel(
+        "Lung Insert Accuracy Distribution",
+        fontsize=14,
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
+    )
     plt.ylabel(
-        "Accuracy of Correction in Lung Insert (%)", fontsize=14, fontweight="bold"
+        "Accuracy of Correction in Lung Insert (%)",
+        fontsize=14,
+        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
+        labelpad=cfg.STYLE.LEGEND.LABELPAD,
     )
 
     plt.tick_params(axis="both", labelsize=12, width=1.2)
     plt.tick_params(axis="x", rotation=0)
 
-    plt.grid(True, axis="y", alpha=0.3)
+    plt.grid(
+        True,
+        linestyle=cfg.STYLE.GRID.LINESTYLE,
+        alpha=cfg.STYLE.GRID.ALPHA,
+        color=cfg.STYLE.GRID.COLOR,
+        linewidth=cfg.STYLE.GRID.LINEWIDTH,
+    )
     plt.gca().set_axisbelow(True)
 
     plt.gca().set_facecolor("#fafafa")
@@ -822,7 +854,6 @@ def generate_coronal_sphere_plots(
     for ax, roi in zip(axs, rois):
         y, x = roi["center_yx"]
 
-        # Coronal cut: fix Y, vary Z and X
         crop = image[
             cfg.ROIS.CENTRAL_SLICE - 10 : cfg.ROIS.CENTRAL_SLICE + 10,  # noqa: E203
             y,
@@ -833,7 +864,6 @@ def generate_coronal_sphere_plots(
         ax.axis("off")
         ax.set_title(roi["name"], y=-0.15)
 
-    # Remove spacing between plots
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
     plt.margins(0, 0)
     plt.tight_layout(pad=0)
