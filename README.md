@@ -1,4 +1,8 @@
 <p align="center">
+  <img alt="Logo Banner" src="data/banner.png">
+</p>
+
+<p align="center">
   <a href="https://github.com/EdAlita/nema_analysis_tool/actions/workflows/tests.yml">
     <img alt="Tests" src="https://github.com/EdAlita/nema_analysis_tool/actions/workflows/tests.yml/badge.svg?branch=main">
   </a>
@@ -11,11 +15,16 @@
   <a>
     <img alt="Python" src="https://img.shields.io/badge/language-Python-blue?logo=python">
   </a>
+  <a>
+    <img alt="Git Download" src="https://img.shields.io/github/downloads/EdAlita/nema_analysis_tool/total">
+  </a>
+  <a>
+    <img alt="Git Release" src="https://img.shields.io/github/v/release/EdAlita/ChameleonIQ">
+  </a>
 </p>
 
 
-
-# NEMA NU 2-2018 Image Quality Analysis Tool
+# ChameleonIQ: Nema-aware Image Quality Tool for Python
 
 This project is a Python-based tool for the automated analysis of PET image quality based on the NEMA NU 2-2018 standard, specifically focusing on Section 7.4.1.
 
@@ -23,7 +32,7 @@ This project is a Python-based tool for the automated analysis of PET image qual
 
 *   Calculates Percent Contrast (Q_H,j), Percent Background Variability (N_j), and Accuracy of Corrections (ΔC_lung,i).
 *   Utilizes 3D Regions of Interest (ROIs) based on the NEMA Body Phantom.
-*   Loads raw image data with user-defined dimensions and voxel spacing.
+*   Loads nii image data with user-defined dimensions and voxel spacing.
 *   Automatic postions of ROIs on given centers
 
 ## Project Structure
