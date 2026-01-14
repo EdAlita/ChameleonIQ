@@ -3,6 +3,7 @@ import datetime
 import logging
 import sys
 import xml.etree.ElementTree as ET
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from venv import logger
@@ -244,7 +245,7 @@ def load_advanced_metrics_data(
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="NEMA Merge Analysis Tool",
+        description="ChameleonIQ Merge Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -276,7 +277,7 @@ def create_parser() -> argparse.ArgumentParser:
         help="Logging level (10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR)",
     )
     parser.add_argument(
-        "--version", action="version", version="NEMA Analysis Tool v0.2.0"
+        "--version", action="version", version=f"%(prog)s {version('ChameleonIQ')}"
     )
 
     return parser
