@@ -128,9 +128,6 @@ _C.STYLE.RCPARAMS = [
     ("lines.linewidth", 2.5),
     ("lines.markersize", 8),
     ("axes.linewidth", 1.2),
-    ("axes.grid", True),
-    ("grid.alpha", 0.3),
-    ("grid.linewidth", 0.8),
     ("font.family", "DejaVu Sans"),
 ]
 
@@ -141,8 +138,8 @@ _C.STYLE.LEGEND.FONTWEIGHT = "bold"  # or Normal, Light, Heavy, etc.
 _C.STYLE.GRID = CN()
 _C.STYLE.GRID.LINESTYLE = "--"
 _C.STYLE.GRID.LINEWIDTH = 2.0
-_C.STYLE.GRID.ALPHA = 1.0
-_C.STYLE.GRID.COLOR = "black"
+_C.STYLE.GRID.ALPHA = 0.3
+_C.STYLE.GRID.COLOR = "gray"
 
 _C.STYLE.PLOT = CN()
 _C.STYLE.PLOT.DEFAULT = CN()
