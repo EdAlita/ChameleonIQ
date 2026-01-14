@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nema-quant"
+name = "ChameleonIQ"
 version = "0.2.1"
 authors = [
   { name="EdAlita", email="eyulibri@i3m.upv.es" },
@@ -32,6 +32,7 @@ dependencies = [
     "types-reportlab==4.4.1.20250602",
     "SimpleITK==2.5.2",
     "scikit-image==0.25.2",
+    "rich==14.2.0"
 ]
 
 [project.scripts]
@@ -39,6 +40,10 @@ nema_quant = "nema_quant.__main__:main"
 nema_quant_iter = "nema_quant_iter.__main__:main"
 nema_merge = "nema_merge.__main__:main"
 nema_coord = "nema_quant.utils:main"
+chameleoniq_quant = "nema_quant.__main__:main"
+chameleoniq_quant_iter = "nema_quant_iter.__main__:main"
+chameleoniq_merge = "nema_merge.__main__:main"
+chameleoniq_coord = "nema_quant.utils:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
