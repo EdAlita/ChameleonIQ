@@ -4,21 +4,25 @@
 
 ### Excecution
 
-To excecute `nema_quant`, provide the necesary paths and configurations settings through command line arguments:
+To excecute `chameleoniq_quant`, provide the necesary paths and configurations settings through command line arguments:
 
-- `input_image`: Nifti file to analize
-- `--output`: Path to save the results
+**Required**
+- `input_image`: Path to input NIfTI image file (.nii or .nii.gz)
+- `--output`: Path to output file for results
 - `--config`: Path to custom YAML configuration file
+
+**Optional**
 - `--save-visualizations`: flag to activate save visualization mode
+- `--spacing`: Overide of configuration file for spacing
 - `--visualizations-dir`: Directory to save visualization image (default: visualizations)
 - `--advanced-metrics`: Calculated advanced metrics. **Must provide gt image**
 - `--gt-image`:  Path to ground truth NIfTI image file for advanced metrics
-- `--verbose`: Enable verbose output
+- `--log_level`: Set the logging level (e.g., DEBUG, INFO, WARNING)
 
 Example of simple run:
 
 ```bash
-nema_quant path/to/nitftii_file.nii \
+chameleoniq_quant path/to/nitftii_file.nii \
 --output path/to/output/file.txt \
 --config path/to/config.yaml
 ```
@@ -26,7 +30,7 @@ nema_quant path/to/nitftii_file.nii \
 Example of advance run:
 
 ```bash
-nema_quant path/to/nitftii_file.nii \
+chameleoniq_quant path/to/nitftii_file.nii \
 --output path/to/output/file.txt \
 --config path/to/config.yaml \
 --advanced-metrics \
@@ -34,15 +38,18 @@ nema_quant path/to/nitftii_file.nii \
 --save_visualizations --verbose
 ```
 
-## nema_quant_iter
+## chameleoniq_quant_iter
 
 ### Excecution
 
-To excecute `nema_quant_iter`, provide the necesary paths and configurations settings through command line arguments:
+To excecute `chameleoniq_iter`, provide the necesary paths and configurations settings through command line arguments:
 
+**Required**
 - `input_path`: Path for the input of the files iterations
 - `--output`: Path to output files for results
 - `--config`: Path to custom YAML configuyration file
+
+**Optional**
 - `--save-visualizations`: flag to activate save visualization mode
 - `--visualizations-dir`: Directory to save visualization image (default: visualizations)
 - `log_level`: Set logging level: 10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR 50=CRITICAL (default: 20)
@@ -52,7 +59,7 @@ To excecute `nema_quant_iter`, provide the necesary paths and configurations set
 Example of simple run:
 
 ```bash
- nema_quant_iter path/to/directory/for/iterations/
+ chameleoniq_iter path/to/directory/for/iterations/
 --output path/to/output/file.txt \
  --config path/to/config.yaml
 ```
@@ -60,16 +67,21 @@ Example of simple run:
 Example of advanced run:
 
 ```bash
- nema_quant_iter path/to/directory/for/iterations/ \
+ chameleoniq_iter path/to/directory/for/iterations/ \
  --output path/to/output/file.txt \
  --config path/to/config.yaml \
  --save_visualizations --verbose
 ```
 
-## nema_merge
+## chameleoniq_merge
 
+**Required**
 - `xml_config`: Path to XML configuration file with experiments definitions
 - `--output`: Output directory for merged analysis plots
+- `--config`: Path to custom YAML configuyration file
+
+**Optional**
+- `log_level`: Set logging level: 10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR 50=CRITICAL (default: 20)
 
 ### XML configuration file
 
@@ -91,7 +103,7 @@ Example of advanced run:
 > - `plot_status` gives you the ability to `grayout` or `enhanced` your results
 > - If you activate advanced metrics and want to merge you need to pass  `advanced_path` in the xml file
 
-## nema_coord
+## chameleoniq_coord
 
 - `mm2vox,vox2mm`: Convertion command, used to transform the mm to voxel to get the coordinates to define the centers.
 - `--dims`: dimmensions of your image
@@ -100,13 +112,13 @@ Example of advanced run:
 Example of simple run a mm2vox:
 
 ```bash
-nema_coord mm2vox 58.84 23.74 -30.97 --dims 391 391 346 --spacing 2.0644 2.0644 2.0644
+chameleoniq_coord mm2vox 58.84 23.74 -30.97 --dims 391 391 346 --spacing 2.0644 2.0644 2.0644
 ```
 
 Example of simple run a vox2mm:
 
 ```bash
-nema_cord vox2mm 158 207 158 --dims 391 391 346 --spacing 2.0644 2.0644 2.0644
+chameleoniq_cord vox2mm 158 207 158 --dims 391 391 346 --spacing 2.0644 2.0644 2.0644
 ```
 
 ## Configuration File
@@ -169,28 +181,6 @@ Diameter   Q_H (%)    N (%)      C_H          C_B          SD_B
 ...
 ```
 
-## Examples
-
-### Example 1: Basic Analysis
-```bash
-python main.py data/phantom_image.nii --output results/analysis.txt
-```
-
-### Example 2: Custom Configuration
-```bash
-python main.py data/phantom_image.nii \
-    --config my_config.yaml \
-    --output results/custom_analysis.txt \
-    --verbose
-```
-
-### Example 3: Manual Spacing
-```bash
-python main.py data/phantom_image.nii \
-    --spacing 1.5 1.5 2.0 \
-    --output results/analysis_manual_spacing.txt
-```
-
 ## Troubleshooting
 
 ### Common Issues:
@@ -211,5 +201,5 @@ python main.py data/phantom_image.nii \
 ### Getting Help:
 
 ```bash
-nema_quant --help
+chameleoniq_quant --help
 ```

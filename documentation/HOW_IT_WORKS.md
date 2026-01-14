@@ -1,4 +1,4 @@
-# How NEMA Analysis Tool Works: A Complete Guide
+# How ChameleonIQ: A Complete Guide
 
 *Transform your medical imaging quality assessment with automated NEMA NU 2-2018 analysis*
 
@@ -23,7 +23,7 @@
 ## 🎯 What You'll Learn
 
 By the end of this guide, you'll understand:
-- How the NEMA Analysis Tool automatically detects and measures phantom spheres
+- How the ChameleonIQ automatically detects and measures phantom spheres
 - How configuration files control activity ratios, voxel spacing, and calculation parameters
 - Why the tool uses 12 background regions and how they're positioned
 - How the advanced 3D offset optimization finds the perfect sphere locations
@@ -38,34 +38,149 @@ By the end of this guide, you'll understand:
 ## ⚙️ Configuration System
 
 ### Why Configuration Matters
-Unlike rigid analysis tools, the NEMA Analysis Tool adapts to **your specific scanner** and **phantom setup**. Every calculation parameter can be customized through configuration files, ensuring accurate results regardless of your equipment or protocol.
+Unlike rigid analysis tools, the ChameleonIQ adapts to **your specific scanner** and **phantom setup**. Every calculation parameter can be customized through configuration files, ensuring accurate results regardless of your equipment or protocol.
 
 ### 🔧 Key Configurable Parameters
 
+In order to configure the tool you need to create a `.yaml` file with the below information, you must pass this to each command.
+
 **Activity Concentrations:**
-- `cfg.ACTIVITY.HOT`: Activity concentration in hot spheres
-- `cfg.ACTIVITY.BACKGROUND`: Background activity concentration
-- `cfg.ACTIVITY.RATIO`: Concentration Ratio tu used in the analysis
-- `cfg.ACTIVITY.UNITS`: Units for the HOT and Background Activity
-- `cfg.ACTIVITY.ACTIVITY_TOTAL`: Measure Activity with Units of the phantom
-- **Impact**: These impact the calcualtions and PDF reports, per each run
+
+```yaml
+ACTIVITY:
+  HOT: 31.22
+  BACKGROUND: 3.76
+  UNITS: "kBq/mL"
+  RATIO: 8.30
+  ACTIVITY_TOTAL: "37.42 MBq"
+```
+
+- `HOT`: Activity concentration in hot spheres
+- `BACKGROUND`: Background activity concentration
+- `RATIO`: Concentration Ratio tu used in the analysis
+- `UNITS`: Units for the HOT and Background Activity
+- `ACTIVITY_TOTAL`: Measure Activity with Units of the phantom
+
+> [!IMPORTANT]
+> These impact the calcualtions and PDF reports, per each run
 
 **Geometric Parameters:**
-- `cfg.ROIS.SPACING`: Voxel spacing in mm (typically 2.0644mm for many scanners)
-- `cfg.ROIS.CENTRAL_SLICE`: Which slice contains the sphere centers
-- `cfg.ORIENTATION_YX`: Typically helpfull to indicate the orientation of your image. 1 or -1
-- **Impact**: Critical for accurate millimeter-to-voxel conversions
 
-**Analysis Settings:**
-- `cfg.ROIS.BACKGROUND_OFFSET_YX`: Positions of the 12 background regions
-- Background sphere count and positioning strategy
-- **Impact**: Affects background statistics and measurement reliability
+```yaml
+ROIS:
+  SPACING : 2.0644
+  CENTRAL_SLICE: 165
+  ORIENTATION_YX: [1, -1]
+```
+- `SPACING`: Voxel spacing in mm (typically 2.0644mm for many scanners)
+- `CENTRAL_SLICE`: Which slice contains the sphere centers
+- `ORIENTATION_YX`: Typically helpfull to indicate the orientation of your image. 1 or -1
+> [!IMPORTANT]
+> Critical for accurate millimeter-to-voxel conversions
 
 **File Settings**
-- `cfg.FILE.USER_PATTERN`: name used to look for the iterations for iteration based analysis
+
+```yaml
+FILE:
+  USER_PATTERN: "frame(\\d+)"
+```
+
+- `USER_PATTERN`: name used to look for the iterations for iteration based analysis
 
 **Adquisition Settings**
-- `cfg.ACQUISITION.EMMISION_IMAGE_TIME_MINUTES`: time to use for the report
+
+```yaml
+ACQUISITION:
+  EMMISION_IMAGE_TIME_MINUTES: 34
+```
+
+- `EMMISION_IMAGE_TIME_MINUTES`: time to use for the report
+
+**Plots Settings**
+
+```yaml
+
+STYLE:
+  COLORS:
+    - "#023743FF"
+    - "#72874EFF"
+    - "#476F84FF"
+    - "#A4BED5FF"
+    - "#453947FF"
+    - "#8C7A6BFF"
+    - "#C97D60FF"
+    - "#F0B533FF"
+
+  PLT_STYLE: "seaborn-v0_8-talk"
+
+  RCPARAMS:
+    - ["font.size", 24]
+    - ["axes.titlesize", 24]
+    - ["axes.labelsize", 24]
+    - ["xtick.labelsize", 24]
+    - ["ytick.labelsize", 24]
+    - ["legend.fontsize", 24]
+    - ["legend.title_fontsize", 24]
+    - ["lines.linewidth", 2.5]
+    - ["lines.markersize", 8]
+    - ["axes.linewidth", 1.2]
+    - ["axes.grid", true]
+    - ["grid.alpha", 0.3]
+    - ["grid.linewidth", 0.8]
+    - ["font.family", "DejaVu Sans"]
+
+  LEGEND:
+    LABELPAD: 20
+    FONTWEIGHT: "bold"
+
+  GRID:
+    LINESTYLE: "--"
+    LINEWIDTH: 2.0
+    ALPHA: 1.0
+    COLOR: "black"
+
+  PLOT:
+    DEFAULT:
+      COLOR: "#666666FF"
+      LINEWIDTH: 1.0
+      ALPHA: 0.6
+      ZORDER: 5
+      LINESTYLE: "--"
+      MARKERSIZE: 4
+      MARKEREDGEWIDTH: 0.5
+
+    ENHANCED:
+      LINEWIDTH: 4.0
+      ALPHA: 1.0
+      ZORDER: 30
+      LINESTYLE: "-"
+      MARKERSIZE: 15
+      MARKEREDGEWIDTH: 2.0
+
+```
+
+- `COLORS`: list of hex colors used as the project's default plotting palette (ordered for consistent visual identity across all figures).
+- `PLT_STYLE`: base matplotlib style to load before applying custom settings (e.g., seaborn presets for readability and aesthetics).
+- ``RCPARAMS``: list of matplotlib rcParams overrides to control global typography, line appearance, grid visibility, and figure styling.
+- ``LEGEND.LABELPAD``: padding (in points) between legend text and the marker/line, improving readability.
+- ``LEGEND.FONTWEIGHT``: weight applied to legend text (e.g., bold, normal), used to emphasize legend labels.
+- ``GRID.LINESTYLE``: visual style of grid lines (solid, dashed, etc.).
+- ``GRID.LINEWIDTH``: thickness of grid lines.
+- ``GRID.ALPHA``: transparency of grid lines.
+- ``GRID.COLOR``: color used for the grid overlay.
+- ``PLOT.DEFAULT.COLOR``: default color for simple or background-level plot elements.
+- ``PLOT.DEFAULT.LINEWIDTH``: baseline line thickness for default plots.
+-`` PLOT.DEFAULT.ALPHA``: transparency for default plot elements.
+- ``PLOT.DEFAULT.ZORDER``: drawing priority (higher values appear on top).
+- ``PLOT.DEFAULT.LINESTYLE``: default line pattern for basic plots.
+- ``PLOT.DEFAULT.MARKERSIZE``: size for default markers.
+- ``PLOT.DEFAULT.MARKEREDGEWIDTH``: thickness of marker edges.
+- ``PLOT.ENHANCED.LINEWIDTH``: line thickness for highlighted or key plots.
+- ``PLOT.ENHANCED.ALPHA``: opacity for enhanced plot elements (typically fully opaque).
+- ``PLOT.ENHANCED.ZORDER``: drawing priority for enhanced/high‑importance elements.
+- ``PLOT.ENHANCED.LINESTYLE``: line pattern for enhanced visual elements.
+- ``PLOT.ENHANCED.MARKERSIZE``: marker size for emphasized points.
+- ``PLOT.ENHANCED.MARKEREDGEWIDTH``: edge thickness for enhanced markers.
 
 ### Real-World Flexibility Examples
 
@@ -78,6 +193,64 @@ Unlike rigid analysis tools, the NEMA Analysis Tool adapts to **your specific sc
 - **Standard 4:1 ratio**: `HOT: 40000`, `BACKGROUND: 10000` Bq/ml
 - **High contrast 8:1**: `HOT: 80000`, `BACKGROUND: 10000` Bq/ml
 - **Low dose protocol**: `HOT: 20000`, `BACKGROUND: 5000` Bq/ml
+
+
+### Example of yaml file for configuration
+
+```yaml
+
+ACQUISITION:
+  EMMISION_IMAGE_TIME_MINUTES: 34
+
+ACTIVITY:
+  HOT: 31.22
+  BACKGROUND: 3.76
+  UNITS: "kBq/mL"
+  RATIO: 8.30
+  ACTIVITY_TOTAL: "37.42 MBq"
+
+PHANTHOM:
+  ROI_DEFINITIONS_MM:
+    - center_yx: [213, 225]
+      diameter_mm: 37
+      color: "red"
+      alpha: 0.18
+      name: "hot_sphere_37mm"
+    - center_yx: [188, 213]
+      diameter_mm: 28
+      color: "orange"
+      alpha: 0.18
+      name: "hot_sphere_28mm"
+    - center_yx: [190, 184]
+      diameter_mm: 22
+      color: "gold"
+      alpha: 0.18
+      name: "hot_sphere_22mm"
+    - center_yx: [213, 170]
+      diameter_mm: 17
+      color: "lime"
+      alpha: 0.18
+      name: "hot_sphere_17mm"
+    - center_yx: [237, 184]
+      diameter_mm: 13
+      color: "cyan"
+      alpha: 0.18
+      name: "hot_sphere_13mm"
+    - center_yx: [237, 212]
+      diameter_mm: 10
+      color: "blue"
+      alpha: 0.18
+      name: "hot_sphere_10mm"
+
+ROIS:
+  CENTRAL_SLICE: 165
+  ORIENTATION_YX: [1, -1]
+
+FILE:
+  USER_PATTERN: "frame(\\d+)"
+  CASE: "Test"
+
+```
 
 [↑ Back to Table of Contents](#-table-of-contents)
 
@@ -502,7 +675,7 @@ Smaller voxels (higher resolution) will:
 
 Check [Usage](../documentation/USAGE.md) for a complete explanation of the commands
 
-**Ready to revolutionize your medical imaging quality assurance? The NEMA Analysis Tool's configurable approach ensures accurate results for any scanner, any protocol, any phantom setup!**
+**Ready to revolutionize your medical imaging quality assurance? The ChameleonIQ's configurable approach ensures accurate results for any scanner, any protocol, any phantom setup!**
 
 [↑ Back to Table of Contents](#-table-of-contents)
 
