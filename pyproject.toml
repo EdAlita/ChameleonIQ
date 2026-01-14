@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ChameleonIQ"
-version = "0.2.1"
+version = "1.0.0"
 authors = [
   { name="EdAlita", email="eyulibri@i3m.upv.es" },
 ]
