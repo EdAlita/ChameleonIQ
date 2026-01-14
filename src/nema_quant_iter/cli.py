@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -45,7 +46,7 @@ def create_parser() -> argparse.ArgumentParser:
         epilog="""
     Examples:
     # Basic analysis
-    nema_quant_iter input_dir/ --config custom_config.yaml --output results.txt
+    chameleoniq_quant_iter input_dir/ --config custom_config.yaml --output results.txt
     """,
     )
 
@@ -66,14 +67,14 @@ def create_parser() -> argparse.ArgumentParser:
         "-c",
         type=str,
         required=True,
-        help="Path to custom YAML configuration file",
+        help="Path to custom YAML configuration file. Check defaults/config.yaml for reference or in HOW IT WORKS section from Documentation.",
     )
 
+    # Optional arguments
     parser.add_argument(
         "--spacing", nargs=3, type=float, help="Voxel spacing in mm (x, y, z)"
     )
 
-    # Optional arguments
     parser.add_argument(
         "--save-visualizations",
         action="store_true",
@@ -100,7 +101,7 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--version", action="version", version="NEMA Analysis Tool v0.2.0"
+        "--version", action="version", version=f"%(prog)s {version('ChameleonIQ')}"
     )
 
     return parser
@@ -278,9 +279,7 @@ def run_analysis(args: argparse.Namespace) -> int:
     try:
         setup_logging(args.log_level, args.output)
 
-        logging.info(
-            "Starting NEMA NU 2-2018 Image Quality Analysis for Multiple Iterations"
-        )
+        logging.info("Starting ChameleonIQ for Multiple Iterations")
         logging.info(f" Input folder: {args.input_path}")
         logging.info(f" Output file: {args.output}")
 
