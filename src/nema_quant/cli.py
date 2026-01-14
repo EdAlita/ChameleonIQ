@@ -11,6 +11,7 @@ import argparse
 import datetime
 import logging
 import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Optional, Tuple
 
@@ -44,10 +45,10 @@ def create_parser() -> argparse.ArgumentParser:
         epilog="""
     Examples:
     # Basic analysis
-    nema_quant input.nii --config custom_config.yaml --output results.txt
+    chameleoniq_quant input.nii --config custom_config.yaml --output results.txt
 
     # Verbose output
-    nema_quant input.nii --config custom_config.yaml --output results.txt --verbose
+    chameleoniq_quant input.nii --config custom_config.yaml --output results.txt --verbose
     """,
     )
 
@@ -69,7 +70,7 @@ def create_parser() -> argparse.ArgumentParser:
         "-c",
         type=str,
         required=True,
-        help="Path to custom YAML configuration file",
+        help="Path to custom YAML configuration file. Check defaults/config.yaml for reference or in HOW IT WORKS section from Documentation.",
     )
 
     # Optional arguments
@@ -104,11 +105,13 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable verbose output"
+        "--log_level",
+        default="INFO",
+        help="Set the logging level (e.g., DEBUG, INFO, WARNING)",
     )
 
     parser.add_argument(
-        "--version", action="version", version="NEMA Analysis Tool v0.2.0"
+        "--version", action="version", version=f"%(prog)s {version('ChameleonIQ')}"
     )
 
     return parser
@@ -198,9 +201,9 @@ def run_analysis(args: argparse.Namespace) -> int:
     """Run the NEMA analysis with the provided arguments."""
     try:
         # Setup logging
-        setup_logging(args.verbose)
+        setup_logging(args.log_level)
 
-        logging.info("Starting NEMA NU 2-2018 Image Quality Analysis")
+        logging.info("Starting ChameleonIQ ")
         logging.info(f"Input image: {args.input_image}")
         logging.info(f"Output file: {args.output}")
         logging.info(f"Configuration file: {args.config}")

@@ -534,8 +534,6 @@ def generate_plots(
             weight=cfg.STYLE.LEGEND.FONTWEIGHT,
             labelpad=cfg.STYLE.LEGEND.LABELPAD,
         )
-        ax.tick_params(axis="both", labelsize=20, width=1.2)
-        ax.tick_params(axis="x", rotation=0)
 
         ax.grid(
             True,
@@ -544,6 +542,10 @@ def generate_plots(
             color=cfg.STYLE.GRID.COLOR,
             linewidth=cfg.STYLE.GRID.LINEWIDTH,
         )
+
+        ax.tick_params(axis="both", labelsize=20, width=1.2)
+        ax.tick_params(axis="x", rotation=0)
+
         ax.set_axisbelow(True)
 
         ax.set_xticks(sorted(df["diameter_mm"].unique()))
@@ -600,6 +602,9 @@ def generate_boxplot_with_mean_std(
     logging.info(f"Lung Results saved to CSV at: {csv_path}")
 
     label = f"{(output_dir.stem).capitalize()}"
+
+    if label == "Png":
+        label = ""
 
     plt.figure(figsize=(10, 8))
     bp = plt.violinplot(
@@ -810,11 +815,11 @@ def generate_transverse_sphere_plots(
         crop = image[
             cfg.ROIS.CENTRAL_SLICE, y - 10 : y + 10, x - 10 : x + 10  # noqa: E203
         ]
-        crop = crop >= 0.41 * np.max(crop)
-        logging.debug(f"Unique values in crop for {roi['name']}: {np.unique(crop)}")
+        # crop = crop >= 0.41 * np.max(crop)
+        # logging.debug(f"Unique values in crop for {roi['name']}: {np.unique(crop)}")
         ax.imshow(crop, cmap="binary", origin="lower")
         ax.axis("off")
-        ax.set_title(roi["name"], y=-0.15)
+        ax.set_title(roi["diameter_mm"], y=-0.15)
 
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
     plt.margins(0, 0)
@@ -862,7 +867,7 @@ def generate_coronal_sphere_plots(
 
         ax.imshow(crop, cmap="binary", origin="lower")
         ax.axis("off")
-        ax.set_title(roi["name"], y=-0.15)
+        ax.set_title(roi["diameter_mm"], y=-0.15)
 
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
     plt.margins(0, 0)
