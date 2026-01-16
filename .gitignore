@@ -119,7 +119,7 @@ dmypy.json
 *~
 
 # Project specific
-data/
+
 output/
 results/
 visualization_output/
