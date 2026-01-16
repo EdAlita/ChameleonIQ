@@ -5,10 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [](https://github.com/EdAlita/nema_analysis_tool/compare/v1.0.0...HEAD) - 2026-01-14T11:42:11.738Z
+## [](https://github.com/EdAlita/nema_analysis_tool/compare/v1.0.5...HEAD) - 2026-01-16T14:17:20.400Z
 
 ### Commits
+- docs(README): minor change to comply with pipy ([33ad263](https://github.com/EdAlita/nema_analysis_tool/commit/33ad263cb3d61b8509399b8c2af2bf6e54b87caa))
+- feat(pyproject): minor change to comply with pipy ([aac7a68](https://github.com/EdAlita/nema_analysis_tool/commit/aac7a683c7b046e9a34df6bae29aaf0761092ec7))
+- docs(INSTALLATION): minor change to comply with pipy ([4655a57](https://github.com/EdAlita/nema_analysis_tool/commit/4655a57583d5bcbfd816bccab8173e98363a25a4))
+- chore(.gitignore): Update of ignore data directory ([0116b4c](https://github.com/EdAlita/nema_analysis_tool/commit/0116b4cf57bc266c96a58e6f3fcfc8938e31b683))
+- chore(LICENSE): minor change in name to comply with pipy ([beecf78](https://github.com/EdAlita/nema_analysis_tool/commit/beecf78048cad00e980bc8b3704a6bbf00d446ad))
+
+## [v1.0.5](https://github.com/EdAlita/nema_analysis_tool/compare/v1.0.0...v1.0.5) - 2026-01-16
+
+### Commits
+- docs(CHANGELOG.md): Creation of changes in latest versio ([24a4ade](https://github.com/EdAlita/nema_analysis_tool/commit/24a4ade3c41db550ee16ace4602c1663731281ed))
+- Add pull request template for contributions ([7eca0a9](https://github.com/EdAlita/nema_analysis_tool/commit/7eca0a9f7abd33a273511eebcdf741133402783d))
 - fix(package-info): Update project version to 1.0.0 ([e367de3](https://github.com/EdAlita/nema_analysis_tool/commit/e367de3b43e98ef2a8e64b209d3077cc4e447ced))
+- docs(banner): adding banner ([6cd1ef3](https://github.com/EdAlita/nema_analysis_tool/commit/6cd1ef30ea7021ef112b17e7ae89e6fdce11b670))
 
 ## [v1.0.0](https://github.com/EdAlita/nema_analysis_tool/compare/v0.2.1...v1.0.0) - 2026-01-14
 
