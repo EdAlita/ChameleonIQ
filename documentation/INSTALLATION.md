@@ -11,7 +11,7 @@ Use a recent version of Python! 3.11 or newer is guaranteed to work!
 1) Install Nema Analysis Tool depending on your use case:
     1) For use as **out-of-the-box**:
 
-        ```pip install chameleoniq```
+        ```pip install ChameleonIQ```
 
     2) For integrative **framework** (this will create a copy of the Nema Analysis Tool code on your computer so that you can modify it as needed):
 
