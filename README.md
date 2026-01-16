@@ -1,5 +1,8 @@
 <p align="center">
-  <img alt="Logo Banner" src="data/banner.png">
+  <img
+    alt="Logo Banner"
+    src="https://raw.githubusercontent.com/EdAlita/nema_analysis_tool/main/data/banner.png"
+  >
 </p>
 
 <p align="center">
@@ -35,37 +38,16 @@ This project is a Python-based tool for the automated analysis of PET image qual
 *   Loads nii image data with user-defined dimensions and voxel spacing.
 *   Automatic postions of ROIs on given centers
 
-## Project Structure
-
-```bash
-nema-analysis-tool
-├── data
-├── documentation
-├── src
-│  ├── config
-│  ├── nema_merge
-│  ├── nema_quant
-│  └── nema_quant_iter
-└── tests
-```
-
-- [**Config**](src/config): configuration files to run the tool
-- [**Data**](src/data): Data for testing and logos used for PDF reports
-- [**Documentation**](src/nema_quant_iter): Documentation, wikis and how to install the tool
-- [**nema_merge**](src/nema_merge): scripts for creating fusing of individuals runs
-- [**nema_quant**](src/nema_quant): scripts for individuals test runs
-- [**nema_quant_iter**](src/nema_quant_iter): scripts for a iteration based analysis
-
 ## How to get Started?
 Read these:
-- [**Installation instructions**](documentation/INSTALLATION.md)
-- [**Usage instructions**](documentation/USAGE.md)
-- [**How it works?**](documentation/HOW_IT_WORKS.md)
+- [**Installation instructions**](https://github.com/EdAlita/ChameleonIQ/wiki/Installation)
+- [**Usage instructions**](https://github.com/EdAlita/ChameleonIQ/wiki/Usage)
+- [**How it works?**](https://github.com/EdAlita/ChameleonIQ/wiki/How-it-works)
 
 Additional information:
-- [**What will change?**](documentation/CHANGELOG.md)
+- [**What will change?**](https://github.com/EdAlita/ChameleonIQ/wiki/Changelog)
 
 ## License
-This project is licensed under the Apache Lincese 2.0 - see the [LICENSE.md](LICENSE) file for details.
+This project is licensed under the Apache Lincese 2.0 - see the [LICENSE.md](Lhttps://github.com/EdAlita/ChameleonIQ/blob/main/LICENSE.txt) file for details.
 
 [//]: # (- [Ignore label]&#40;documentation/ignore_label.md&#41;)
