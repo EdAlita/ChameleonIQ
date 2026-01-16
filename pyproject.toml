@@ -4,17 +4,23 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ChameleonIQ"
-version = "1.0.0"
+version = "1.0.5"
 authors = [
   { name="EdAlita", email="eyulibri@i3m.upv.es" },
 ]
 description = "A tool for NEMA NU 2-2018 Image Quality analysis."
 readme = "README.md"
 requires-python = ">=3.8"
+license = "MIT AND (Apache-2.0 OR BSD-2-clause)"
+license-files = ["LICEN[CS]E*", "AUTHORS*"]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.11",
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
     "Operating System :: OS Independent",
+    "Intended Audience :: Healthcare Industry",
+    "Natural Language :: English",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
 dependencies = [
@@ -34,6 +40,14 @@ dependencies = [
     "scikit-image==0.25.2",
     "rich==14.2.0"
 ]
+
+[project.urls]
+Homepage = "https://github.com/EdAlita/ChameleonIQ/wiki"
+GitHub = "https://github.com/EdAlita/ChameleonIQ"
+Changelog = "https://github.com/EdAlita/ChameleonIQ/wiki/Changelog"
+Issues = "https://github.com/EdAlita/ChameleonIQ/issues"
+Download = "https://pypi.org/project/ChameleonIQ/#files"
+
 
 [project.scripts]
 nema_quant = "nema_quant.__main__:main"
