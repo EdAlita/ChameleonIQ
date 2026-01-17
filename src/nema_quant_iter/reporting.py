@@ -177,7 +177,7 @@ def generate_plots(
         ),
     ]
 
-    for i, (ax, (yvar, ylabel, title)) in enumerate(zip(axes, plot_configs)):
+    for _i, (ax, (yvar, ylabel, _title)) in enumerate(zip(axes, plot_configs)):
         sorted_iterations = sorted(
             iterations, key=lambda x: iteration_styles[x]["zorder"]
         )
