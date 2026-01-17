@@ -24,7 +24,6 @@ class TestCLIArgumentParsing:
             "--save-visualizations",
             "--visualizations-dir",
             "viz_output",
-            "--verbose",
         ]
 
         args = parser.parse_args(test_args)
@@ -35,7 +34,7 @@ class TestCLIArgumentParsing:
         assert args.config == "config.yaml"
         assert args.save_visualizations is True
         assert args.visualizations_dir == "viz_output"
-        assert args.verbose is True
+        assert args.log_level == "DEBUG"
 
     def test_parser_minimal_arguments(self):
         """Test parser with minimal required arguments."""
@@ -50,7 +49,7 @@ class TestCLIArgumentParsing:
         assert args.config == "config.yaml"
         # Check defaults
         assert args.save_visualizations is False
-        assert args.verbose is False
+        assert args.log_level == "DEBUG"
 
     def test_parser_version(self):
         """Test version argument."""
@@ -80,7 +79,7 @@ class TestCLIUtilityFunctions:
         """Test verbose logging setup."""
         # Test that function exists and can be called
         if hasattr(cli, "setup_logging"):
-            cli.setup_logging(verbose=True)
+            cli.setup_logging(log_level=20)
             # Should not raise exception
         else:
             pytest.skip("setup_logging function not found")
@@ -88,7 +87,7 @@ class TestCLIUtilityFunctions:
     def test_setup_logging_quiet(self):
         """Test quiet logging setup."""
         if hasattr(cli, "setup_logging"):
-            cli.setup_logging(verbose=False)
+            cli.setup_logging(log_level=10)
             # Should not raise exception
         else:
             pytest.skip("setup_logging function not found")

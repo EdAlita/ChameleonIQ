@@ -60,7 +60,7 @@ class TestCLIRemainingCoverage:
         mock_is_dir.return_value = False  # Directory doesn't exist
 
         args = MagicMock()
-        args.verbose = False
+        args.log_level = "INFO"
         args.input_image = "input.nii"
         args.output = "output.txt"
         args.config = "config.yaml"
@@ -122,7 +122,7 @@ class TestCLIRemainingCoverage:
         mock_generate_plots.return_value = None
 
         args = MagicMock()
-        args.verbose = False
+        args.log_level = "INFO"
         args.input_image = "input.nii"
         args.output = "output.txt"
         args.config = "config.yaml"
@@ -190,7 +190,7 @@ class TestCLIRemainingCoverage:
         mock_rois_plots.return_value = None
 
         args = MagicMock()
-        args.verbose = False
+        args.log_level = "INFO"
         args.input_image = "input.nii"
         args.output = "output.txt"
         args.config = "config.yaml"
@@ -226,7 +226,7 @@ class TestCLIRemainingCoverage:
             mock_load_config.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.config = "config.yaml"
 
@@ -257,7 +257,7 @@ class TestCLIRemainingCoverage:
             mock_load_image.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.config = "config.yaml"
 
@@ -302,7 +302,7 @@ class TestCLIRemainingCoverage:
             mock_calculate_metrics.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.config = "config.yaml"
             args.spacing = None
@@ -365,7 +365,7 @@ class TestCLIRemainingCoverage:
             mock_save_results.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.output = "output.txt"
             args.config = "config.yaml"
@@ -432,7 +432,7 @@ class TestCLIRemainingCoverage:
             mock_generate_plots.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.output = "output.txt"
             args.config = "config.yaml"
@@ -442,15 +442,6 @@ class TestCLIRemainingCoverage:
 
             result = cli.run_analysis(args)
             assert result == 1  # Should return error code for visualization errors
-
-    def test_verbose_logging_setup(self):
-        """Test verbose and non-verbose logging setup."""
-        # Test both verbose modes to hit different logging paths
-        cli.setup_logging(verbose=True)
-        cli.setup_logging(verbose=False)
-
-        # Should complete without errors
-        assert True
 
     def test_argument_parser_comprehensive(self):
         """Test argument parser with various inputs."""
@@ -464,7 +455,7 @@ class TestCLIRemainingCoverage:
         assert args.input_image == "input.nii"
         assert args.output == "output.txt"
         assert args.config == "config.yaml"
-        assert args.verbose is False
+        assert args.log_level == "DEBUG"
         assert args.save_visualizations is False
 
         # Test with all arguments
@@ -475,13 +466,12 @@ class TestCLIRemainingCoverage:
                 "output.txt",
                 "--config",
                 "config.yaml",
-                "--verbose",
                 "--save-visualizations",
                 "--visualizations-dir",
                 "viz_dir",
             ]
         )
 
-        assert args.verbose is True
+        assert args.log_level == "DEBUG"
         assert args.save_visualizations is True
         assert args.visualizations_dir == "viz_dir"

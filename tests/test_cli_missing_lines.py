@@ -58,7 +58,6 @@ class TestCLIMissingLines:
 
         # Test case 1: visualizations_dir is None but save_visualizations is True
         args = MagicMock()
-        args.verbose = False
         args.input_image = "input.nii"
         args.output = "output.txt"
         args.config = "config.yaml"
@@ -132,7 +131,6 @@ class TestCLIMissingLines:
 
         # Enable all visualizations
         args = MagicMock()
-        args.verbose = False
         args.input_image = "input.nii"
         args.output = "output.txt"
         args.config = "config.yaml"
@@ -173,7 +171,7 @@ class TestCLIMissingLines:
             mock_load_config.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.config = "config.yaml"
 
@@ -204,7 +202,7 @@ class TestCLIMissingLines:
             mock_load_image.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.config = "config.yaml"
 
@@ -250,7 +248,7 @@ class TestCLIMissingLines:
             mock_calculate_metrics.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.config = "config.yaml"
             args.spacing = None
@@ -302,7 +300,7 @@ class TestCLIMissingLines:
             mock_save_results.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.output = "output.txt"
             args.config = "config.yaml"
@@ -357,7 +355,7 @@ class TestCLIMissingLines:
             mock_generate_plots.side_effect = error
 
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = "input.nii"
             args.output = "output.txt"
             args.config = "config.yaml"
@@ -394,18 +392,6 @@ class TestCLIMissingLines:
             # May fail due to validation, which is acceptable
             pass
 
-    def test_verbose_logging_setup(self):
-        """Test verbose logging setup paths."""
-        if hasattr(cli, "setup_logging"):
-            # Test verbose mode
-            cli.setup_logging(verbose=True)
-
-            # Test quiet mode
-            cli.setup_logging(verbose=False)
-
-            # Should not raise exceptions
-            assert True
-
     def test_configuration_loading_edge_cases(self):
         """Test configuration loading edge cases."""
         if hasattr(cli, "load_configuration"):
@@ -437,7 +423,7 @@ class TestCLIMissingLines:
 
         for ext in extensions_to_test:
             args = MagicMock()
-            args.verbose = False
+            args.log_level = "INFO"
             args.input_image = ext
             args.config = "config.yaml"
 
