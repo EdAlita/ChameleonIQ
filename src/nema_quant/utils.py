@@ -41,10 +41,17 @@ def find_phantom_center(
         logger.debug(f" Binary th: {threshold:06f}")
     binary_mask = image_data_3d > threshold
     labeled_mask, num_features = ndimage_label(binary_mask)  # type: ignore[misc]
+    logger.info(f" Número de objetos encontrados: {num_features}")
     if num_features == 0:
         raise RuntimeError(
-            "No se pudo encontrar ningún objeto" "en la imagen con el umbral actual."
+            "No se pudo encontrar ningún objeto en la imagen con el umbral actual."
         )
+    # Calculate and log center of mass for each labeled region
+    for i in range(1, num_features + 1):
+        region_mask = labeled_mask == i
+        com = center_of_mass(region_mask)
+        com_rounded = (round(com[0]), round(com[1]), round(com[2]))
+        logger.debug(f" Region {i}: center of mass = {com_rounded}")
 
     largest_label = np.argmax(np.bincount(labeled_mask.ravel())[1:]) + 1
     phantom_mask = labeled_mask == largest_label

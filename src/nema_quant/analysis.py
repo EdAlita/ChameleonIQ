@@ -393,7 +393,9 @@ def calculate_nema_metrics(
             }
         )
 
-    phantom_center_zyx = find_phantom_center(image_data)
+    phantom_center_zyx = find_phantom_center(
+        image_data, threshold=(np.max(image_data) * 0.5)
+    )
 
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug(f" Phantom Center found at (z,y,x) : {phantom_center_zyx}")

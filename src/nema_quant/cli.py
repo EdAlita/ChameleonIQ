@@ -14,6 +14,7 @@ import sys
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Optional, Tuple
+from venv import logger
 
 import numpy as np
 import numpy.typing as npt
@@ -106,7 +107,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--log_level",
-        default="INFO",
+        default="DEBUG",
         help="Set the logging level (e.g., DEBUG, INFO, WARNING)",
     )
 
@@ -227,7 +228,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             cfg = load_configuration(args.config)
         except Exception as e:
             logging.error(f"Failed to load configuration: {e}")
-            if args.verbose:
+            if args.log_level == "DEBUG":
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -240,7 +241,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.info("Image loaded successfully")
         except Exception as e:
             logging.error(f"Failed to load image: {e}")
-            if args.verbose:
+            if args.log_level == "DEBUG":
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -253,7 +254,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             )
         except Exception as e:
             logging.error(f"Failed to extract image properties: {e}")
-            if args.verbose:
+            if args.log_level == "DEBUG":
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -266,7 +267,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.info(f"Phantom initialized with {len(phantom.rois)} ROIs")
         except Exception as e:
             logging.error(f"Failed to initialize phantom: {e}")
-            if args.verbose:
+            if args.log_level == "DEBUG":
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -292,7 +293,7 @@ def run_analysis(args: argparse.Namespace) -> int:
 
         except Exception as e:
             logging.error(f"Failed to perform analysis: {e}")
-            if args.verbose:
+            if args.log_level == "DEBUG":
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -320,7 +321,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.info("Plots generated successfully")
         except Exception as e:
             logging.error(f"Failed to generated plots: {e}")
-            if args.verbose:
+            if logger.isEnabledFor(logging.DEBUG):
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -354,7 +355,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.info("Results saved successfully")
         except Exception as e:
             logging.error(f"Failed to save results: {e}")
-            if args.verbose:
+            if logger.isEnabledFor(logging.DEBUG):
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -381,7 +382,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                 logging.info("Ground truth image loaded successfully")
             except Exception as e:
                 logging.error(f"Failed to load ground truth image: {e}")
-                if args.verbose:
+                if logger.isEnabledFor(logging.DEBUG):
                     import traceback
 
                     logging.error(traceback.format_exc())
@@ -423,7 +424,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                 logging.info("Advanced metrics calculated successfully")
             except Exception as e:
                 logging.error(f"Failed to calculate advanced metrics: {e}")
-                if args.verbose:
+                if logger.isEnabledFor(logging.DEBUG):
                     import traceback
 
                     logging.error(traceback.format_exc())
