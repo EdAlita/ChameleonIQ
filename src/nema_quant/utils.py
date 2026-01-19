@@ -41,7 +41,7 @@ def find_phantom_center(
         logger.debug(f" Binary th: {threshold:06f}")
     binary_mask = image_data_3d > threshold
     labeled_mask, num_features = ndimage_label(binary_mask)  # type: ignore[misc]
-    logger.info(f" Número de objetos encontrados: {num_features}")
+    logger.info(f" Number of objects found: {num_features}")
     if num_features == 0:
         raise RuntimeError(
             "No se pudo encontrar ningún objeto en la imagen con el umbral actual."
