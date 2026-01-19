@@ -61,7 +61,7 @@ chameleoniq_quant_iter = "nema_quant_iter.__main__:main"
 chameleoniq_merge = "nema_merge.__main__:main"
 chameleoniq_coord = "nema_quant.utils:main"
 chameleoniq_roi_detector = "nema_quant.interactive_roi_editor:main"
-chameleonIQ = "GUI.chameleon_iq:main"
+chameleoniq_gui = "GUI.chameleon_iq:main"
 
 
 [tool.setuptools]
