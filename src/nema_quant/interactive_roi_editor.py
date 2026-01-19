@@ -116,7 +116,8 @@ class InteractiveROIEditor:
 
         # Create binary mask and label objects
         binary_mask = slice_img > threshold
-        labeled_mask, num_features = ndimage_label(binary_mask)
+        labeled_mask, num_features = ndimage_label(binary_mask)  # type: ignore
+        num_features = int(num_features)
         logger.info(f"Number of objects found: {num_features}")
 
         if num_features == 0:
@@ -182,21 +183,21 @@ class InteractiveROIEditor:
     def _setup_widgets(self) -> None:
         """Setup interactive text boxes and buttons."""
         # Central Slice control
-        ax_slice = plt.axes([0.70, 0.90, 0.15, 0.03])
+        ax_slice = plt.axes((0.70, 0.90, 0.15, 0.03))
         self.textbox_slice = TextBox(
             ax_slice, "Central Slice:", initial=str(self.central_slice)
         )
         self.textbox_slice.on_submit(self._update_slice)
 
         # Orientation Y control
-        ax_orient_y = plt.axes([0.70, 0.85, 0.07, 0.03])
+        ax_orient_y = plt.axes((0.70, 0.85, 0.07, 0.03))
         self.textbox_orient_y = TextBox(
             ax_orient_y, "Orient Y:", initial=str(self.orientation_yx[0])
         )
         self.textbox_orient_y.on_submit(self._update_orientation)
 
         # Orientation X control
-        ax_orient_x = plt.axes([0.78, 0.85, 0.07, 0.03])
+        ax_orient_x = plt.axes((0.78, 0.85, 0.07, 0.03))
         self.textbox_orient_x = TextBox(
             ax_orient_x, "X:", initial=str(self.orientation_yx[1])
         )
@@ -209,28 +210,28 @@ class InteractiveROIEditor:
 
         for i in range(6):
             # Y coordinate
-            ax_y = plt.axes([0.68, y_start - i * y_step, 0.08, 0.03])
+            ax_y = plt.axes((0.68, y_start - i * y_step, 0.08, 0.03))
             tb_y = TextBox(
                 ax_y,
                 f"{self.sphere_diameters[i]}mm Y:",
                 initial=str(self.roi_centers[i][0]),
             )
-            tb_y.on_submit(lambda text, idx=i: self._update_roi(idx, text, True))
+            tb_y.on_submit(lambda text, idx=i, fn=self._update_roi: fn(idx, text, True))  # type: ignore
 
             # X coordinate
-            ax_x = plt.axes([0.77, y_start - i * y_step, 0.08, 0.03])
+            ax_x = plt.axes((0.77, y_start - i * y_step, 0.08, 0.03))
             tb_x = TextBox(ax_x, "X:", initial=str(self.roi_centers[i][1]))
-            tb_x.on_submit(lambda text, idx=i: self._update_roi(idx, text, False))
+            tb_x.on_submit(lambda text, idx=i, fn=self._update_roi: fn(idx, text, False))  # type: ignore
 
             self.textbox_rois.append((tb_y, tb_x))
 
         # Generate YAML button
-        ax_button = plt.axes([0.70, 0.05, 0.15, 0.05])
+        ax_button = plt.axes((0.70, 0.05, 0.15, 0.05))
         self.btn_generate = Button(ax_button, "Generate YAML")
         self.btn_generate.on_clicked(self._generate_yaml)
 
         # Re-detect button
-        ax_redetect = plt.axes([0.70, 0.12, 0.15, 0.05])
+        ax_redetect = plt.axes((0.70, 0.12, 0.15, 0.05))
         self.btn_redetect = Button(ax_redetect, "Re-detect ROIs")
         self.btn_redetect.on_clicked(self._redetect_rois)
 
