@@ -14,7 +14,7 @@ import sys
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Optional, Tuple
-from venv import logger
+logger = logging.getLogger(__name__)
 
 import numpy as np
 import numpy.typing as npt
