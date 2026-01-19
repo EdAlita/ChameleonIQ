@@ -41,7 +41,7 @@ from .reporting import (
 def create_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser."""
     parser = argparse.ArgumentParser(
-        description="NEMA NU 2-2018 Image Quality Analysis Tool",
+        description="ChameleonIQ Quant Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
     Examples:
