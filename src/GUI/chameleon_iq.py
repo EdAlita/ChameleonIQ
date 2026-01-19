@@ -484,7 +484,12 @@ class CommandLauncher(QWidget):
         subprocess.run(cmd)
 
 
-app = QApplication(sys.argv)
-win = CommandLauncher()
-win.show()
-sys.exit(app.exec_())
+def main() -> int:
+    app = QApplication(sys.argv)
+    win = CommandLauncher()
+    win.show()
+    return app.exec_()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
