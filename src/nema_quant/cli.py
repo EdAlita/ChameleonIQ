@@ -14,7 +14,6 @@ import sys
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Optional, Tuple
-from venv import logger
 
 import numpy as np
 import numpy.typing as npt
@@ -201,8 +200,14 @@ def get_image_properties(
 def run_analysis(args: argparse.Namespace) -> int:
     """Run the NEMA analysis with the provided arguments."""
     try:
+        # Convert string log level to integer
+        log_level_int = getattr(logging, args.log_level.upper(), logging.INFO)
+        
         # Setup logging
-        setup_logging(args.log_level)
+        setup_logging(log_level_int)
+
+        # Get logger for checking log levels
+        logger = logging.getLogger()
 
         logging.info("Starting ChameleonIQ ")
         logging.info(f"Input image: {args.input_image}")
@@ -228,7 +233,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             cfg = load_configuration(args.config)
         except Exception as e:
             logging.error(f"Failed to load configuration: {e}")
-            if args.log_level == "DEBUG":
+            if logger.isEnabledFor(logging.DEBUG):
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -241,7 +246,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.info("Image loaded successfully")
         except Exception as e:
             logging.error(f"Failed to load image: {e}")
-            if args.log_level == "DEBUG":
+            if logger.isEnabledFor(logging.DEBUG):
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -254,7 +259,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             )
         except Exception as e:
             logging.error(f"Failed to extract image properties: {e}")
-            if args.log_level == "DEBUG":
+            if logger.isEnabledFor(logging.DEBUG):
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -267,7 +272,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.info(f"Phantom initialized with {len(phantom.rois)} ROIs")
         except Exception as e:
             logging.error(f"Failed to initialize phantom: {e}")
-            if args.log_level == "DEBUG":
+            if logger.isEnabledFor(logging.DEBUG):
                 import traceback
 
                 logging.error(traceback.format_exc())
@@ -293,7 +298,7 @@ def run_analysis(args: argparse.Namespace) -> int:
 
         except Exception as e:
             logging.error(f"Failed to perform analysis: {e}")
-            if args.log_level == "DEBUG":
+            if logger.isEnabledFor(logging.DEBUG):
                 import traceback
 
                 logging.error(traceback.format_exc())

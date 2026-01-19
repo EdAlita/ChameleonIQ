@@ -123,6 +123,8 @@ dmypy.json
 output/
 results/
 visualization_output/
+csv/
+png/
 *.nii
 *.nii.gz
 
