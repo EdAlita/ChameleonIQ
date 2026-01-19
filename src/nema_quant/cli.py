@@ -325,7 +325,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             generate_torso_plot(image=image_data, output_dir=png_dir, cfg=cfg)
             logging.info("Plots generated successfully")
         except Exception as e:
-            logging.error(f"Failed to generated plots: {e}")
+            logging.error(f"Failed to generate plots: {e}")
             if logger.isEnabledFor(logging.DEBUG):
                 import traceback
 
