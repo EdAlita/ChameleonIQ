@@ -42,8 +42,8 @@ COMMANDS: Dict[str, Dict[str, Any]] = {
             {
                 "name": "--log_level",
                 "type": "choice",
-                "choices": ["DEBUG", "INFO", "WARNING", "ERROR"],
-                "default": "INFO",
+                "choices": ["10", "20", "30", "40"],
+                "default": "20",
             },
         ],
     },
