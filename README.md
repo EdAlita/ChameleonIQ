@@ -31,6 +31,11 @@
 
 This project is a Python-based tool for the automated analysis of PET image quality based on the NEMA NU 2-2018 standard, specifically focusing on Section 7.4.1.
 
+Please use this cite when using the sofware:
+
+     Ulin-Briseno, E. (2026). ChameleonIQ (Version 2.0.0) [Computer software]. https://github.com/EdAlita/ChameleonIQ
+
+
 ## Features
 
 *   Calculates Percent Contrast (Q_H,j), Percent Background Variability (N_j), and Accuracy of Corrections (ΔC_lung,i).
@@ -49,5 +54,16 @@ Additional information:
 
 ## License
 This project is licensed under the Apache Lincese 2.0 - see the [LICENSE.md](Lhttps://github.com/EdAlita/ChameleonIQ/blob/main/LICENSE.txt) file for details.
+
+## Acknowledgements
+
+<p align="center">
+  <img
+    alt="i3m logo"
+    src="https://i3m.csic.upv.es/wp-content/uploads/2023/09/logo-web-i3m.png"
+  >
+</p>
+
+ChameleonIQ is an open-source project developed as part of my research activities at the Institute for [Institute for Instrumentation in Molecular Imaging (i3M)](https://i3m.csic.upv.es/). I gratefully acknowledge the support of the [Detectors for Molecular Imaging Laboratory (DMIL)](https://i3m.csic.upv.es/research/stim/dmil/), i3M, and the Spanish National Research Council (CSIC). The i3M is a joint research center established in 2010 by the Universitat Politècnica de València (UPV) and CSIC, located on the Vera Campus in Valencia, Spain.
 
 [//]: # (- [Ignore label]&#40;documentation/ignore_label.md&#41;)
