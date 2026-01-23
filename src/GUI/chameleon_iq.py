@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Union
 
 from PyQt5.QtCore import Qt, QTimer
@@ -84,6 +85,28 @@ COMMANDS: Dict[str, Dict[str, Any]] = {
         ],
     },
 }
+
+
+def resolve_banner_path() -> Path:
+    """Return the most likely location for banner.png in different installs."""
+
+    candidates = []
+
+    # PyInstaller bundle
+    if hasattr(sys, "_MEIPASS"):
+        candidates.append(Path(sys._MEIPASS) / "data" / "banner.png")
+
+    current_dir = Path(__file__).resolve().parent
+    # Source checkout: repo_root/data/banner.png
+    candidates.append(current_dir.parent.parent / "data" / "banner.png")
+    # Installed via data-files: <sys.prefix>/data/banner.png
+    candidates.append(Path(sys.prefix) / "data" / "banner.png")
+
+    for path in candidates:
+        if path.is_file():
+            return path
+
+    return candidates[0]
 
 
 class CommandLauncher(QWidget):
@@ -226,11 +249,8 @@ class CommandLauncher(QWidget):
 
         # Banner image
         banner_label = QLabel()
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Navigate from src/GUI to project root
-        project_root = os.path.dirname(os.path.dirname(current_dir))
-        banner_path = os.path.join(project_root, "data", "banner.png")
-        banner_pixmap = QPixmap(banner_path)
+        banner_path = resolve_banner_path()
+        banner_pixmap = QPixmap(str(banner_path))
         if not banner_pixmap.isNull():
             scaled_pixmap = banner_pixmap.scaledToWidth(
                 500, Qt.TransformationMode.SmoothTransformation
