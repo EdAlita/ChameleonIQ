@@ -5,11 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [](https://github.com/EdAlita/nema_analysis_tool/compare/v1.0.5...HEAD) - 2026-01-16T14:17:20.400Z
+## [](https://github.com/EdAlita/nema_analysis_tool/compare/v2.0.0...HEAD) - 2026-01-19T10:56:24.218Z
+
+## [v2.0.0](https://github.com/EdAlita/nema_analysis_tool/compare/v1.0.5...v2.0.0) - 2026-01-19
 
 ### Commits
+- feat(GUI): addition of GUI interface ([5617126](https://github.com/EdAlita/nema_analysis_tool/commit/561712617985342d5ec479ce8975b2420b0ab0da))
+- feat(nema_quant): Adding ROIs center interative window ([38a3f26](https://github.com/EdAlita/nema_analysis_tool/commit/38a3f26884d2c748af0701c76f022cbbffe05c43))
+- fix(test_cli_comprehensive.py, test_cli_missing_lines.py, test_cli_remaining_coverage.py): Various test fixes and improvements for comprehensive testing of CLI functionality. ([3f6cf07](https://github.com/EdAlita/nema_analysis_tool/commit/3f6cf07828ccd18647e12ca3897311b953da9305))
 - docs(README): minor change to comply with pipy ([33ad263](https://github.com/EdAlita/nema_analysis_tool/commit/33ad263cb3d61b8509399b8c2af2bf6e54b87caa))
+- fix(nema_quant): Improve Nema analysis with thresholding for finding phanthom center ([f83ffea](https://github.com/EdAlita/nema_analysis_tool/commit/f83ffeaa09892e34589760bbbe6a1d5f4d3a1076))
+- fix(nema_quant): Moidfy ROIs center interative window to comply with mypy and flake8 test ([2ecb1ea](https://github.com/EdAlita/nema_analysis_tool/commit/2ecb1eaeec680005b17eb603efe4d897431ec9a4))
 - feat(pyproject): minor change to comply with pipy ([aac7a68](https://github.com/EdAlita/nema_analysis_tool/commit/aac7a683c7b046e9a34df6bae29aaf0761092ec7))
+- docs(CHANGELOG): update latest changes to stable branch ([ed5108f](https://github.com/EdAlita/nema_analysis_tool/commit/ed5108f92af81cdc3a8414e86f74c13fd7a783ba))
+- Update src/GUI/chameleon_iq.py ([1a40871](https://github.com/EdAlita/nema_analysis_tool/commit/1a40871edcd0b6adf04518ba4c7e5fac70d68642))
+- docs(pyproject): Update tool configuration with new packages and modules ([fd89979](https://github.com/EdAlita/nema_analysis_tool/commit/fd89979d0aa58589d2fecd1202564f77283cf550))
+- Update src/GUI/chameleon_iq.py ([6fe31fe](https://github.com/EdAlita/nema_analysis_tool/commit/6fe31fec91b36685c007ee02b128a214e1365996))
+- fix(nema_quant_iter): Update tool description and rename to ChameleonIQ ([b153448](https://github.com/EdAlita/nema_analysis_tool/commit/b153448c935ba23696deb5af72c081ac4542d506))
+- fix(dependencies): update dependencies to include statsmodels and PyQt5 ([e477883](https://github.com/EdAlita/nema_analysis_tool/commit/e4778836f4d1a9393e51ed420532549709b0b31e))
+- Change logger import to use venv module ([81fde0e](https://github.com/EdAlita/nema_analysis_tool/commit/81fde0ea68b7144660e91611f96c1b6f72ac3c43))
+- Update src/nema_quant/cli.py ([4b37ae3](https://github.com/EdAlita/nema_analysis_tool/commit/4b37ae35d3cb900b7f7bb02de6f18ad4c69538f1))
+- Update src/nema_quant/cli.py ([c7a5dd3](https://github.com/EdAlita/nema_analysis_tool/commit/c7a5dd323f6fd5ea9693c2e3534d97c67f9052d6))
+- Update src/nema_quant/utils.py ([a25b613](https://github.com/EdAlita/nema_analysis_tool/commit/a25b613443f395da7013c8647ce9fd5b805959c9))
+- Update pyproject.toml ([67981ef](https://github.com/EdAlita/nema_analysis_tool/commit/67981ef0c10084ee54da726f406788b28a5ae3d1))
+- Update pyproject.toml ([7c599ba](https://github.com/EdAlita/nema_analysis_tool/commit/7c599ba218fba6e20286433b0b8a849f073a673b))
+- feat(cli): Update tool name to ChameleonIQ Quant Tool ([a8b22f0](https://github.com/EdAlita/nema_analysis_tool/commit/a8b22f0187bcbb54a122219390d86c87fd6d80a7))
+- fix(nema_quant): In analysis adjusted phanthom center calculation threshold ([9b95b6f](https://github.com/EdAlita/nema_analysis_tool/commit/9b95b6fec89b7a73c5cc1f8df49f5cd773046f0e))
 - docs(INSTALLATION): minor change to comply with pipy ([4655a57](https://github.com/EdAlita/nema_analysis_tool/commit/4655a57583d5bcbfd816bccab8173e98363a25a4))
 - chore(.gitignore): Update of ignore data directory ([0116b4c](https://github.com/EdAlita/nema_analysis_tool/commit/0116b4cf57bc266c96a58e6f3fcfc8938e31b683))
 - chore(LICENSE): minor change in name to comply with pipy ([beecf78](https://github.com/EdAlita/nema_analysis_tool/commit/beecf78048cad00e980bc8b3704a6bbf00d446ad))
