@@ -23,6 +23,7 @@ from scipy.ndimage import center_of_mass
 from scipy.ndimage import label as ndimage_label
 
 from nema_quant.io import load_nii_image
+from nema_quant.utils import find_phantom_center
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -427,8 +428,20 @@ def main() -> None:
 
     # Determine initial slice
     if args.slice is None:
-        initial_slice = image_array_3d.shape[0] // 2
-        logger.info(f"Auto-detected middle slice: {initial_slice}")
+        try:
+            z_com, _, _ = find_phantom_center(
+                image_array_3d, threshold=np.max(image_array_3d) * 0.41
+            )
+            initial_slice = int(np.ceil(z_com))
+            logger.info(
+                f"Auto-detected phantom COM slice: {initial_slice} (z={z_com:.3f})"
+            )
+        except (ValueError, RuntimeError) as exc:
+            initial_slice = image_array_3d.shape[0] // 2
+            logger.warning(
+                "Phantom COM could not be computed. Falling back to middle slice: "
+                f"{initial_slice}. Reason: {exc}"
+            )
     else:
         initial_slice = args.slice
 
