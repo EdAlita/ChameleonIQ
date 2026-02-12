@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ChameleonIQ"
-version = "2.0.0"
+version = "2.1.0"
 authors = [
   { name="EdAlita", email="eyulibri@i3m.upv.es" },
 ]
@@ -72,6 +72,10 @@ data = ["data/banner.png"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pdoc]
+docformat = "numpy"
+readme = true
 
 [project.optional-dependencies]
 dev = [
