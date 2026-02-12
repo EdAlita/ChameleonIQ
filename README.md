@@ -61,6 +61,7 @@ This project is licensed under the Apache Lincese 2.0 - see the [LICENSE.md](Lht
   <img
     alt="i3m logo"
     src="https://i3m.csic.upv.es/wp-content/uploads/2023/09/logo-web-i3m.png"
+    width="800"
   >
 </p>
 
