@@ -1,3 +1,7 @@
+"""
+Input/output utilities for loading images and saving analysis results.
+"""
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -13,37 +17,32 @@ from . import analysis, utils
 def load_nii_image(
     filepath: Path, return_affine: bool = False
 ) -> Tuple[npt.NDArray[Any], Optional[npt.NDArray[Any]]]:
-    """
-    Loads a NIfTI image file into a NumPy array using SimpleITK.
+    """Load a NIfTI image into a NumPy array.
 
-    Reads a NIfTI file (.nii or .nii.gz) and returns the image data as a NumPy array. Optionally returns the affine matrix for spatial
-    transformations.
+    Reads a .nii or .nii.gz file using SimpleITK and returns the image data as a
+    3D NumPy array. Optionally returns a 4x4 affine matrix derived from spacing,
+    origin, and direction.
 
     Parameters
     ----------
     filepath : pathlib.Path
-        Path to the NIfTI image file (.nii or .nii.gz).
+        Path to the NIfTI image file.
     return_affine : bool, optional
-        If True, also returns the affine transformation matrix. Default is False.
+        If True, also return the 4x4 affine matrix. Default is False.
 
     Returns
     -------
     numpy.ndarray
-        3D array of image data.
-    numpy.ndarray, optional
-        Affine transformation matrix (if return_affine=True).
+        3D image array (z, y, x) in float32.
+    numpy.ndarray or None
+        4x4 affine matrix if `return_affine` is True, otherwise None.
 
     Raises
     ------
     FileNotFoundError
-        If the specified file does not exist.
+        If `filepath` does not exist.
     ValueError
         If the file cannot be loaded as a NIfTI image.
-
-    Notes
-    -----
-    Author: EdAlita
-    Date: 2025-07-15
     """
     if not filepath.exists():
         raise FileNotFoundError(f"The file was not found at: {filepath}")
