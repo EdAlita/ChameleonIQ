@@ -1,3 +1,7 @@
+"""
+Phantom models and automatic segmentation algorithms for NEMA phantoms.
+"""
+
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -7,29 +11,77 @@ from config.defaults import get_cfg_defaults
 
 
 class NemaPhantom:
-    """
-    Defines the geometry of the NEMA NU 2-2018 phantom and its ROIs.
+    image_dims: Tuple[int, int, int]
+    """Image dimensions in voxels."""
 
-    Translates physical dimensions (in mm) of the phantom's features (hot spheres, lung insert, background ROIs)
-    into voxel-based coordinates and sizes using the properties of a PET image.
+    voxel_spacing: Tuple[float, float, float]
+    """Voxel spacing in mm."""
+
+    phantom_center_voxels: np.ndarray
+    """Center of the phantom in voxel coordinates."""
+
+    roi_definitions_mm: Any
+    """ROI definitions in physical coordinates (mm)."""
+
+    rois: Dict[str, Dict[str, Any]]
+    """Processed ROIs with voxel coordinates."""
+
+    __pdoc__ = {
+        "image_dims": False,
+        "voxel_spacing": False,
+        "phantom_center_voxels": False,
+        "roi_definitions_mm": False,
+        "rois": False,
+    }
+    """NEMA NU 2-2018 phantom geometry and ROI definitions.
+
+    Defines the physical structure and regions-of-interest (ROIs) of the NEMA NU 2-2018
+    image quality phantom. Converts between physical coordinates (mm) and voxel coordinates
+    using image dimensions and spacing.
+
+    The phantom contains:
+
+    - **Hot spheres**: 4-37mm diameter spheres at known locations
+    - **Lung insert**: Simulated lung region for spillover assessment
+    - **Background region**: Uniform region for background variability measurement
 
     Parameters
     ----------
-    image_dims : tuple of int, shape (3,)
-        Dimensions of the image (x, y, z) in voxels.
-    voxel_spacing : tuple of float, shape (3,)
-        Voxel size (x, y, z) in mm.
+    cfg : yacs.config.CfgNode
+        Configuration object with PHANTOM_CONFIG path and other settings.
+    image_dims : tuple[int, int, int]
+        Image dimensions as (x, y, z) in voxels.
+    voxel_spacing : tuple[float, float, float]
+        Voxel size as (x, y, z) in millimeters.
 
     Attributes
     ----------
-    image_dims : tuple of int
+    image_dims : tuple[int, int, int]
         Image dimensions in voxels.
-    voxel_spacing : tuple of float
+    voxel_spacing : tuple[float, float, float]
         Voxel spacing in mm.
-    phantom_center_voxels : np.ndarray
-        Center of the phantom in voxel coordinates.
-    rois : list of dict
-        List of dictionaries defining each ROI: name, center (voxels), and radius (voxels).
+    phantom_center_voxels : numpy.ndarray
+        Center position of phantom in voxel coordinates.
+    rois : list[dict]
+        Defined regions-of-interest with metadata.
+
+    Examples
+    --------
+    Initialize a phantom from a NEMA image:
+
+    >>> from nema_quant.phantom import NemaPhantom
+    >>> phantom = NemaPhantom(
+    ...     cfg,
+    ...     image_dims=(256, 256, 88),
+    ...     voxel_spacing=(2.7, 2.7, 2.8)
+    ... )
+    >>> roi = phantom.get_roi('sphere_37mm')
+    >>> roi['diameter']
+    37.0
+
+    References
+    ----------
+    - NEMA NU 2-2018: Performance Measurements of Positron Emission Tomographs
     """
 
     def __init__(
