@@ -1,3 +1,7 @@
+"""
+Utility functions for image processing and data manipulation.
+"""
+
 import argparse
 import logging
 import sys
@@ -9,39 +13,58 @@ import numpy.typing as npt
 from scipy.ndimage import binary_fill_holes, center_of_mass, gaussian_filter
 from scipy.ndimage import label as ndimage_label
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 def find_phantom_center(
     image_data_3d: npt.NDArray[Any], threshold: float = 0.003
 ) -> Tuple[float, float, float]:
-    """
-    Finds the center of the phantom using a robust morphological approach.
+    """Find the center of mass of the NEMA phantom in a 3D PET image.
+
+    Automatically locates the phantom's center using morphological operations
+    and connected component analysis. Robust to noise and artifacts.
 
     Parameters
     ----------
-    image_data_3d : np.ndarray
-        The image data as a 3D NumPy array (z, y, x).
+    image_data_3d : numpy.ndarray
+        3D PET image array with shape (z, y, x).
     threshold : float, optional
-        Value used to determine the threshold for segmentation. Default is 0.003.
+        Threshold value for binary segmentation (as fraction of max intensity).
+        Default is 0.003.
 
     Returns
     -------
-    tuple of float
-        The centroid coordinates (z, y, x) of the phantom.
+    tuple[float, float, float]
+        Center-of-mass coordinates as (z, y, x) in voxels.
+
+    Raises
+    ------
+    ValueError
+        If input is not 3D array.
+    RuntimeError
+        If no objects found above threshold.
+
+    Examples
+    --------
+    Find phantom center in a loaded image:
+
+    >>> import numpy as np
+    >>> image = np.random.rand(88, 256, 256)
+    >>> center = find_phantom_center(image, threshold=0.01)
+    >>> print(f"Center at: {center}")
 
     Notes
     -----
-    Author: EdAlita
-    Date: 2025-07-08 09:32:08
+    Uses scipy.ndimage.center_of_mass to compute the centroid of the largest
+    connected component in the binary mask above the threshold.
     """
     if image_data_3d.ndim != 3:
         raise ValueError("La imagen de entrada debe ser un array 3D (z,y,x).")
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f" Binary th: {threshold:06f}")
+    if _logger.isEnabledFor(logging.DEBUG):
+        _logger.debug(f" Binary th: {threshold:06f}")
     binary_mask = image_data_3d > threshold
     labeled_mask, num_features = ndimage_label(binary_mask)  # type: ignore[misc]
-    logger.info(f" Number of objects found: {num_features}")
+    _logger.info(f" Number of objects found: {num_features}")
     if num_features == 0:
         raise RuntimeError(
             "No se pudo encontrar ningún objeto en la imagen con el umbral actual."
@@ -51,7 +74,7 @@ def find_phantom_center(
         region_mask = labeled_mask == i
         com = center_of_mass(region_mask)
         com_rounded = (round(com[0]), round(com[1]), round(com[2]))
-        logger.debug(f" Region {i}: center of mass = {com_rounded}")
+        _logger.debug(f" Region {i}: center of mass = {com_rounded}")
 
     largest_label = np.argmax(np.bincount(labeled_mask.ravel())[1:]) + 1
     phantom_mask = labeled_mask == largest_label
@@ -184,7 +207,7 @@ def extract_canny_mask(
         fantoma_z_center + pixel_distance,
     )
 
-    if logger.isEnabledFor(logging.DEBUG):
+    if _logger.isEnabledFor(logging.DEBUG):
         logging.debug(f" Image size {image.shape}")
         logging.debug(f" Expected lung insert Z range: {lung_insert_pixel_distance}")
 
@@ -195,7 +218,7 @@ def extract_canny_mask(
         phantom_center_raw = center_of_mass(phantom_mask)
         phantom_center_yx = (int(phantom_center_raw[0]), int(phantom_center_raw[1]))
 
-    if logger.isEnabledFor(logging.DEBUG):
+    if _logger.isEnabledFor(logging.DEBUG):
         logging.debug(f" Phantom center (Y, X): {phantom_center_yx}")
 
     lung_centers = []
@@ -290,7 +313,7 @@ def extract_canny_mask(
                             centroid_y = int(best_centroid[0]) + y_min
                             centroid_x = int(best_centroid[1]) + x_min
                             lung_insert_detected = True
-                            if logger.isEnabledFor(logging.DEBUG):
+                            if _logger.isEnabledFor(logging.DEBUG):
                                 logging.debug(
                                     f"  Slice {z}: Lung insert detected at ({centroid_y}, {centroid_x}), score: {best_score:.3f}"
                                 )
@@ -298,7 +321,7 @@ def extract_canny_mask(
         if lung_insert_detected and centroid_y is not None and centroid_x is not None:
             lung_centers.append((z, centroid_y, centroid_x))
         else:
-            if logger.isEnabledFor(logging.DEBUG):
+            if _logger.isEnabledFor(logging.DEBUG):
                 logging.debug(f"  Slice {z}: No valid lung insert detected")
 
     if lung_centers:
@@ -321,7 +344,7 @@ def extract_canny_mask(
             final_avg_y = int(np.mean([center[1] for center in filtered_centers]))
             final_avg_x = int(np.mean([center[2] for center in filtered_centers]))
 
-            if logger.isEnabledFor(logging.DEBUG):
+            if _logger.isEnabledFor(logging.DEBUG):
                 logging.debug(
                     f"  Filtered {len(lung_centers) - len(filtered_centers)} outliers"
                 )
@@ -344,6 +367,26 @@ def extract_canny_mask(
 
 
 def calculate_weighted_cbr_fom(results):
+    """
+    Extracts the lung insert mask using Canny edge detection, with anatomically consistent positioning.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        3D image array.
+    voxel_size : float
+        Voxel size in millimeters. Default is 2.0644.
+    fantoma_z_center : int
+        Z-coordinate of the phantom center. Default is 157.
+    phantom_center_yx : Tuple[int, int], optional
+        Y, X coordinates of the phantom center for reference.
+
+    Returns
+    -------
+    np.ndarray
+        Binary mask array corresponding to the lung insert region.
+    """
+
     """
     Calcula el CBR y FOM ponderados para una lista de resultados tipo:
     {
@@ -386,7 +429,7 @@ def calculate_weighted_cbr_fom(results):
     }
 
 
-def main() -> None:
+def _main() -> None:
     """Command-line interface for coordinate conversion utilities."""
     parser = argparse.ArgumentParser(
         description="Convert between mm coordinates and voxel indices.",
@@ -469,4 +512,4 @@ Examples:
 
 
 if __name__ == "__main__":
-    main()
+    _main()
