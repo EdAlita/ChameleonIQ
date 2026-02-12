@@ -1,3 +1,10 @@
+"""
+Core analysis functions for image quality quantification.
+
+Author: Edwing Ulin-Briseno
+Date: 2025-07-16
+"""
+
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -12,7 +19,7 @@ from .metrics import get_values
 from .phantom import NemaPhantom
 from .utils import extract_canny_mask, find_phantom_center
 
-logger = logging.getLogger(__name__)
+_logger = logging.getLogger(__name__)
 
 
 def extract_circular_mask_2d(
@@ -20,25 +27,41 @@ def extract_circular_mask_2d(
     roi_center_vox: Tuple[float, float],
     roi_radius_vox: float,
 ) -> npt.NDArray[np.bool_]:
-    """
-    Creates a 2D boolean mask for a circular ROI on a slice.
+    """Create a 2D circular region-of-interest (ROI) mask.
 
-    Highly efficient: avoids loops by leveraging NumPy vectorization. It generates arrays for y and x coordinates,
-    computes the squared distance from each pixel to the center, and returns a boolean array marking pixels inside the circle.
+    Generates a 2D boolean mask for a circular ROI using efficient NumPy vectorization
+    instead of loops. Computes the Euclidean distance from each pixel to the circle's
+    center and marks pixels within the radius as True.
 
     Parameters
     ----------
-    slice_dims : tuple of int, shape (2,)
-        (y, x) dimensions of the 2D slice.
-    roi_center_vox : tuple of float, shape (2,)
+    slice_dims : tuple[int, int]
+        (height, width) dimensions of the 2D slice.
+    roi_center_vox : tuple[float, float]
         (y, x) coordinates of the circle's center in voxels.
     roi_radius_vox : float
-        Radius of the circle in voxels.
+        Radius of the circular ROI in voxels.
 
     Returns
     -------
     numpy.ndarray
-        2D boolean array: True for pixels inside the circle, False otherwise.
+        2D boolean mask with shape matching slice_dims. True marks pixels inside
+        the circular ROI, False outside.
+
+    Examples
+    --------
+    Create a mask for a 100x100 pixel slice with a circle of radius 20 at center (50, 50):
+
+    >>> mask = extract_circular_mask_2d((100, 100), (50.0, 50.0), 20.0)
+    >>> mask.shape
+    (100, 100)
+    >>> mask.sum()  # Number of pixels inside circle
+    1257
+
+    Notes
+    -----
+    Uses NumPy's ogrid for efficient coordinate generation and vectorized distance
+    computation for optimal performance on large images.
     """
     y_coords, x_coords = np.ogrid[: slice_dims[0], : slice_dims[1]]
     center_y, center_x = roi_center_vox
@@ -183,8 +206,8 @@ def _calculate_hot_sphere_counts_offset_zxy(
                 if mean_count > max_mean:
                     max_mean = mean_count
                     best_offset_zyx = (dz, offset[0], offset[1])
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(
+        if _logger.isEnabledFor(logging.DEBUG):
+            _logger.debug(
                 f"  Found the best average counts for {name} with offset {best_offset_zyx}: {max_mean:.2f}"
             )
         hot_sphere_counts[name] = max_mean
@@ -286,40 +309,86 @@ def calculate_nema_metrics(
     save_visualizations: bool = False,
     visualizations_dir: str = "visualizations",
 ) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
-    """
-    Calculates NEMA Image Quality metrics: Percent Contrast (Q_H) and Background Variability (N).
+    """Calculate NEMA NU 2-2018 image quality metrics.
 
-    Orchestrates metric analysis by calling helper functions to measure background and hot sphere regions, then computes
-    final metrics as defined in the NEMA NU 2-2018 standard.
+    Orchestrates the complete NEMA image quality analysis pipeline:
+
+    1. Identifies background regions at multiple slice positions
+    2. Extracts hot sphere region counts
+    3. Computes Percent Contrast (Q_H) and Background Variability (N)
+    4. Analyzes lung insert counts for spillover ratio assessment
+
+    This is the primary function for quantifying image quality according to the
+    NEMA NU 2-2018 standard.
 
     Parameters
     ----------
-    image_data : np.ndarray
-        3D image data array, shape (z, y, x).
+    image_data : numpy.ndarray
+        3D PET image array with shape (z, y, x) in voxel units.
     phantom : NemaPhantom
-        Initialized NemaPhantom object with ROI definitions.
+        Initialized phantom model with ROI definitions and coordinate transforms.
     cfg : yacs.config.CfgNode
-        Configuration settings for dataset processing.
+        Configuration object containing:
+
+        - ACTIVITY.RATIO: Hot/background activity ratio (a_H / a_B)
+        - ROIS.CENTRAL_SLICE: Central slice index in z-axis
+        - ROIS.BACKGROUND_OFFSET_YX: Background region offsets
+        - ROIS.ORIENTATION_YX: Orientation multipliers for background regions
+        - ROIS.SPACING: Voxel spacing in mm
+
     save_visualizations : bool, optional
-        If True, saves visualizations of ROI masks. Default is False.
+        If True, saves ROI mask visualizations to disk. Default is False.
     visualizations_dir : str, optional
-        Directory for saving ROI mask images. Default is "visualizations".
+        Directory path for saving visualization images. Default is "visualizations".
 
     Returns
     -------
-    list of dict
-        List of calculated metrics for each sphere.
+    results : list[dict]
+        List of metric dictionaries for each hot sphere:
+
+        - diameter_mm: Sphere diameter in mm
+        - percentaje_constrast_QH: Percent contrast (%)
+        - background_variability_N: Background variability (%)
+        - avg_hot_counts_CH: Average hot sphere counts
+        - avg_bkg_counts_CB: Average background counts
+        - bkg_std_dev_SD: Background standard deviation
+
+    results_lung : dict[int, float]
+        Lung insert spillover ratios indexed by slice number.
+
+    Raises
+    ------
+    ValueError
+        If activity ratio is not greater than 1.
 
     Notes
     -----
-    Author: EdAlita
-    Date: 2025-07-08 06:47:01
+    The function analyzes multiple slice positions (±10mm and ±20mm from central slice)
+    to account for axial variation in the phantom and image statistics.
+
+    References
+    ----------
+    - NEMA NU 2-2018: Performance Measurements of Positron Emission Tomographs
+
+    Examples
+    --------
+    Calculate NEMA metrics for a loaded image:
+
+    >>> from nema_quant.phantom import NemaPhantom
+    >>> from nema_quant.config import CfgNode
+    >>> phantom = NemaPhantom(image_path='pet_image.nii.gz')
+    >>> cfg = get_default_config()
+    >>> metrics, lung_results = calculate_nema_metrics(
+    ...     image_data, phantom, cfg, save_visualizations=True
+    ... )
+    >>> for m in metrics:
+    ...     print(f"Sphere {m['diameter_mm']}mm: Q_H={m['percentaje_constrast_QH']:.1f}%")
     """
     viz_dir = None
     if save_visualizations:
         viz_dir = Path(visualizations_dir)
         viz_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f" Saving visualizations to: {viz_dir}")
+        _logger.info(f" Saving visualizations to: {viz_dir}")
 
     activity_ratio = cfg.ACTIVITY.RATIO
 
@@ -397,8 +466,8 @@ def calculate_nema_metrics(
         image_data, threshold=(np.max(image_data) * 0.41)
     )
 
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f" Phantom Center found at (z,y,x) : {phantom_center_zyx}")
+    if _logger.isEnabledFor(logging.DEBUG):
+        _logger.debug(f" Phantom Center found at (z,y,x) : {phantom_center_zyx}")
 
     lung_insert_centers = extract_canny_mask(
         image_data, cfg.ROIS.SPACING, int(phantom_center_zyx[0])
@@ -408,10 +477,10 @@ def calculate_nema_metrics(
         image_data, lung_insert_centers, CB_37, cfg.ROIS.SPACING
     )
 
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(" Lung Insert Results")
+    if _logger.isEnabledFor(logging.DEBUG):
+        _logger.debug(" Lung Insert Results")
         for k, v in results_lung.items():
-            logger.debug(f"  Slice {int(k)}: {float(v):.3f}")
+            _logger.debug(f"  Slice {int(k)}: {float(v):.3f}")
 
     return results, results_lung
 
@@ -590,6 +659,28 @@ def calculate_advanced_metrics(
     measures: Tuple[str, ...],
     cfg: yacs.config.CfgNode,
 ) -> Dict[str, Any]:
+    """Compute advanced image-quality metrics against a reference mask.
+
+    Parameters
+    ----------
+    image_data : npt.NDArray[Any]
+        3D reconstructed image volume.
+    gt_data : npt.NDArray[Any]
+        Ground-truth or reference mask aligned with `image_data`.
+    measures : Tuple[str, ...]
+        Metric names to compute (passed to `get_values()`).
+    cfg : yacs.config.CfgNode
+        Configuration containing `ROIS.SPACING` (voxel size in mm).
+
+    Returns
+    -------
+    Dict[str, Any]
+        Mapping of metric names to computed values.
+
+    Notes
+    -----
+    Logs each computed metric at INFO level.
+    """
 
     values = dict(
         get_values(
@@ -599,7 +690,7 @@ def calculate_advanced_metrics(
             voxelspacing=(cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
         )
     )
-    logger.info("Advanced Metrics:")
+    _logger.info("Advanced Metrics:")
     for k, v in values.items():
-        logger.info(f" {k}: {v:.7f}")
+        _logger.info(f" {k}: {v:.7f}")
     return values
