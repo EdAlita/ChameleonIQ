@@ -1,5 +1,6 @@
 """
-Additional reporting functions for text output and command-line usage.
+Report generation and data export tools for analysis results.
+
 
 Provides utilities for generating and formatting textual reports, intended for use in CLI workflows.
 
@@ -172,7 +173,7 @@ def save_results_to_txt(
         f.write("=" * 80 + "\n")
 
 
-def header(canvas, doc, logo_path=None):
+def _header(canvas, doc, logo_path=None):
     canvas.saveState()
     if logo_path and Path(logo_path).exists():
         original_width = 1608
@@ -254,7 +255,7 @@ def generate_reportlab_report(
     template = PageTemplate(
         id="with-header",
         frames=frame,
-        onPage=lambda c, d: header(c, d, "data/logosimbolocontexto_principal.jpg"),
+        onPage=lambda c, d: _header(c, d, "data/logosimbolocontexto_principal.jpg"),
     )
     doc.addPageTemplates([template])
 
