@@ -1,0 +1,258 @@
+/* Catppuccin Mocha Color Scheme for Furo Theme */
+
+:root {
+    /* Light mode - using Catppuccin Latte for contrast */
+    --ctp-latte-rosewater: #dc8d78;
+    --ctp-latte-flamingo: #dd7878;
+    --ctp-latte-pink: #ea76cb;
+    --ctp-latte-mauve: #8839ef;
+    --ctp-latte-red: #d20f39;
+    --ctp-latte-maroon: #e64553;
+    --ctp-latte-peach: #fe640b;
+    --ctp-latte-yellow: #df8e1d;
+    --ctp-latte-green: #40a02b;
+    --ctp-latte-teal: #17969e;
+    --ctp-latte-blue: #1e66f5;
+    --ctp-latte-sapphire: #209fb5;
+    --ctp-latte-sky: #04a5e5;
+    --ctp-latte-lavender: #7287fd;
+    --ctp-latte-text: #4c4f69;
+    --ctp-latte-subtext1: #5c5f77;
+    --ctp-latte-subtext0: #6c6f85;
+    --ctp-latte-overlay2: #9ca0b0;
+    --ctp-latte-overlay1: #bcc0cc;
+    --ctp-latte-overlay0: #cec9c3;
+    --ctp-latte-surface2: #dce0e8;
+    --ctp-latte-surface1: #e6e9f5;
+    --ctp-latte-surface0: #eff1f5;
+    --ctp-latte-base: #faf8f3;
+    --ctp-latte-mantle: #f5f2ed;
+    --ctp-latte-crust: #efebe9;
+
+    /* Dark mode - Catppuccin Mocha */
+    --ctp-mocha-rosewater: #f5e0dc;
+    --ctp-mocha-flamingo: #f2cdcd;
+    --ctp-mocha-pink: #f5c2e7;
+    --ctp-mocha-mauve: #cba6f7;
+    --ctp-mocha-red: #f38ba8;
+    --ctp-mocha-maroon: #eba0ac;
+    --ctp-mocha-peach: #fab387;
+    --ctp-mocha-yellow: #f9e2af;
+    --ctp-mocha-green: #a6e3a1;
+    --ctp-mocha-teal: #94e2d5;
+    --ctp-mocha-blue: #89b4fa;
+    --ctp-mocha-sapphire: #74c7ec;
+    --ctp-mocha-sky: #89dceb;
+    --ctp-mocha-lavender: #b4befe;
+    --ctp-mocha-text: #cdd6f4;
+    --ctp-mocha-subtext1: #bac2de;
+    --ctp-mocha-subtext0: #a6adc8;
+    --ctp-mocha-overlay2: #9399b2;
+    --ctp-mocha-overlay1: #7f849c;
+    --ctp-mocha-overlay0: #6c7086;
+    --ctp-mocha-surface2: #585b70;
+    --ctp-mocha-surface1: #45475a;
+    --ctp-mocha-surface0: #313244;
+    --ctp-mocha-base: #1e1e2e;
+    --ctp-mocha-mantle: #181825;
+    --ctp-mocha-crust: #11111b;
+}
+
+/* Dark mode (default for Furo) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-brand-primary: var(--ctp-mocha-teal);
+        --color-brand-content: var(--ctp-mocha-teal);
+        --color-background-primary: var(--ctp-mocha-base);
+        --color-background-secondary: var(--ctp-mocha-surface0);
+        --color-background-border: var(--ctp-mocha-surface1);
+        --color-foreground-primary: var(--ctp-mocha-text);
+        --color-foreground-secondary: var(--ctp-mocha-subtext1);
+        --color-foreground-muted: var(--ctp-mocha-subtext0);
+        --color-foreground-label: var(--ctp-mocha-subtext0);
+
+        --color-link: var(--ctp-mocha-teal);
+        --color-link--visited: var(--ctp-mocha-mauve);
+        --color-link--hover: var(--ctp-mocha-peach);
+        --color-link--active: var(--ctp-mocha-peach);
+
+        --color-admonition-background: rgba(49, 50, 68, 0.5);
+        --color-admonition-title--background: var(--ctp-mocha-surface1);
+        --color-admonition-title--foreground: var(--ctp-mocha-text);
+
+        --color-highlight-background: var(--ctp-mocha-surface1);
+        --color-highlight-on-new: rgba(148, 226, 213, 0.3);
+        --color-highlight-on-old: rgba(243, 139, 168, 0.3);
+
+        --color-code-background: var(--ctp-mocha-surface0);
+        --color-code-foreground: var(--ctp-mocha-text);
+    }
+}
+
+/* Light mode */
+@media (prefers-color-scheme: light) {
+    :root {
+        --color-brand-primary: var(--ctp-latte-blue);
+        --color-brand-content: var(--ctp-latte-blue);
+        --color-background-primary: var(--ctp-latte-base);
+        --color-background-secondary: var(--ctp-latte-surface1);
+        --color-background-border: var(--ctp-latte-surface2);
+        --color-foreground-primary: var(--ctp-latte-text);
+        --color-foreground-secondary: var(--ctp-latte-subtext1);
+        --color-foreground-muted: var(--ctp-latte-subtext0);
+
+        --color-link: var(--ctp-latte-blue);
+        --color-link--visited: var(--ctp-latte-mauve);
+        --color-link--hover: var(--ctp-latte-peach);
+        --color-link--active: var(--ctp-latte-peach);
+    }
+}
+
+/* Sidebar styling */
+.sidebar-drawer {
+    background-color: var(--color-background-secondary) !important;
+}
+
+.sidebar-sticky {
+    background-color: var(--color-background-secondary) !important;
+}
+
+/* Logo sizing */
+.sidebar-logo img {
+    width: 100px;
+    max-width: 100px;
+    height: auto;
+    margin: 10px auto;
+    display: block;
+}
+
+/* Headings with Catppuccin colors */
+h1 {
+    color: var(--color-brand-primary) !important;
+    border-bottom: 3px solid var(--color-brand-primary) !important;
+}
+
+h2 {
+    color: var(--ctp-mocha-peach) !important;
+    border-bottom: 2px solid var(--ctp-mocha-peach) !important;
+}
+
+h3 {
+    color: var(--color-brand-primary) !important;
+}
+
+/* Code styling */
+code {
+    background-color: var(--color-code-background) !important;
+    color: var(--ctp-mocha-peach) !important;
+}
+
+pre {
+    background-color: var(--color-code-background) !important;
+    border: 2px solid var(--color-brand-primary) !important;
+}
+
+/* Admonition boxes */
+.admonition {
+    background-color: var(--color-admonition-background) !important;
+    border-left: 4px solid var(--color-brand-primary) !important;
+}
+
+.admonition-title {
+    color: var(--color-brand-primary) !important;
+    background-color: transparent !important;
+}
+
+.note {
+    border-left-color: var(--ctp-mocha-sky) !important;
+}
+
+.warning {
+    border-left-color: var(--ctp-mocha-yellow) !important;
+}
+
+.danger {
+    border-left-color: var(--ctp-mocha-red) !important;
+}
+
+/* Table styling */
+table {
+    border-color: var(--color-background-border) !important;
+}
+
+table thead {
+    background: linear-gradient(135deg, var(--color-brand-primary), var(--ctp-mocha-sky)) !important;
+    color: white !important;
+}
+
+table tbody tr:nth-child(odd) {
+    background-color: rgba(49, 50, 68, 0.3) !important;
+}
+
+table tbody tr:hover {
+    background-color: rgba(148, 226, 213, 0.15) !important;
+}
+
+/* Button styling */
+button {
+    background-color: var(--color-brand-primary) !important;
+    color: white !important;
+}
+
+button:hover {
+    background-color: var(--ctp-mocha-peach) !important;
+}
+
+/* Footer buttons */
+.footer-button {
+    background: linear-gradient(135deg, var(--color-brand-primary), var(--ctp-mocha-sky)) !important;
+    color: white !important;
+}
+
+.footer-button:hover {
+    background: linear-gradient(135deg, var(--ctp-mocha-peach), var(--color-brand-primary)) !important;
+}
+
+/* Strong and emphasis */
+strong {
+    color: var(--ctp-mocha-text) !important;
+}
+
+em {
+    color: var(--ctp-mocha-subtext1) !important;
+}
+
+/* Blockquotes */
+blockquote {
+    border-left: 4px solid var(--ctp-mocha-peach) !important;
+    color: var(--ctp-mocha-subtext1) !important;
+}
+
+/* Definition lists */
+dt {
+    background-color: rgba(148, 226, 213, 0.1) !important;
+    border-left: 3px solid var(--color-brand-primary) !important;
+    color: var(--color-brand-primary) !important;
+}
+
+dd {
+    border-left: 1px solid var(--color-background-border) !important;
+}
+
+/* Links in different states */
+a {
+    color: var(--color-link) !important;
+}
+
+a:visited {
+    color: var(--color-link--visited) !important;
+}
+
+a:hover {
+    color: var(--color-link--hover) !important;
+}
+
+/* Search highlighting */
+.highlight {
+    background-color: rgba(249, 226, 175, 0.2) !important;
+}
