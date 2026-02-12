@@ -33,7 +33,7 @@ This project is a Python-based tool for the automated analysis of PET image qual
 
 Please use this cite when using the sofware:
 
-     Ulin-Briseno, E. (2026). ChameleonIQ (Version 2.0.0) [Computer software]. https://github.com/EdAlita/ChameleonIQ
+     Ulin-Briseno, E. (2026). ChameleonIQ (Version 2.1.0) [Computer software]. https://github.com/EdAlita/ChameleonIQ
 
 
 ## Features
