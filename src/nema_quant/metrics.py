@@ -30,7 +30,23 @@ from scipy.ndimage.morphology import (
 
 
 def get_truepos(A, B):
-    """Return true positive"""
+    """Calculate true positives from two binary masks.
+
+    Counts the number of voxels that are 1 (positive) in both the reference
+    and result images. Used as basis for computing various segmentation metrics.
+
+    Parameters
+    ----------
+    A : array_like
+        Reference (ground truth) binary mask.
+    B : array_like
+        Result (predicted) binary mask.
+
+    Returns
+    -------
+    numpy.float64
+        Number of voxels with value 1 in both A and B.
+    """
     return np.float64(np.sum(np.logical_and((B == 1), (A == 1)).astype(int)))
 
 
@@ -50,7 +66,23 @@ def get_falseneg(A, B):
 
 
 def get_dice(A, B):
-    """Return Dice coefficient"""
+    """Calculate Dice similarity coefficient.
+
+    The Dice coefficient measures the overlap between two binary images.
+    Ranges from 0 (no overlap) to 1 (perfect agreement).
+
+    Parameters
+    ----------
+    A : array_like
+        Reference (ground truth) binary mask.
+    B : array_like
+        Result (predicted) binary mask.
+
+    Returns
+    -------
+    float
+        Dice coefficient in range [0, 1], or NaN if denominator is zero.
+    """
     TP = get_truepos(A, B)
     FP = get_falsepos(A, B)
     FN = get_falseneg(A, B)
@@ -64,7 +96,23 @@ def get_dice(A, B):
 
 
 def get_jaccard(A, B):
-    """Return Jaccard index"""
+    """Calculate Jaccard similarity coefficient.
+
+    Also known as Intersection over Union (IoU). Measures the ratio of intersection
+    to union of two binary masks. More conservative than Dice coefficient.
+
+    Parameters
+    ----------
+    A : array_like
+        Reference (ground truth) binary mask.
+    B : array_like
+        Result (predicted) binary mask.
+
+    Returns
+    -------
+    float
+        Jaccard coefficient in range [0, 1], or NaN if union is empty.
+    """
     TP = get_truepos(A, B)
     FP = get_falsepos(A, B)
     FN = get_falseneg(A, B)
@@ -368,7 +416,68 @@ def calculate_metrics(label_arr, sub_arr, metrics, num_classes):
 
 
 def get_values(A, B, measures, background=False, voxelspacing=None):
-    """Return all similarity metric values binary maps"""
+    """Compute multiple similarity metrics for two binary masks.
+
+    Calculates a comprehensive set of image segmentation quality metrics comparing
+    a reference mask to a result mask. Metrics include overlap measures (Dice, Jaccard),
+    distance-based metrics (HD, ASSD), and statistical measures (ICC, Cohen's kappa).
+
+    Parameters
+    ----------
+    A : array_like
+        Reference (ground truth) binary mask.
+    B : array_like
+        Result (predicted) binary mask.
+    measures : list[str]
+        Names of metrics to compute. Supported metrics:
+
+        - Dice: Dice similarity coefficient
+        - Jaccard: Jaccard/IoU coefficient
+        - 1-GCE: 1 minus Global Consistency Error
+        - VS: Volumetric Similarity
+        - MI: Mutual Information
+        - 1-VOI: 1 minus Variation of Information
+        - ICC: Intraclass Correlation Coefficient
+        - KAP: Cohen's Kappa
+        - AUC: Area Under Curve
+        - RI: Rand Index
+        - ARI: Adjusted Rand Index
+        - AVD: Average Hausdorff Distance
+        - 1/(1+AVD): Normalized average distance
+        - HD: Hausdorff Distance
+        - HD95: 95th percentile Hausdorff Distance
+        - F1: F1 Score
+        - Recall: Sensitivity/Recall
+        - ASSD: Average Symmetric Surface Distance
+
+    background : bool, optional
+        If True, background class metrics (AVD, HD, F1, Recall) are NaN. Default is False.
+    voxelspacing : float or tuple[float, ...], optional
+        Voxel spacing in mm for distance-based metrics. Default is None (unity spacing).
+
+    Returns
+    -------
+    collections.OrderedDict
+        Dictionary mapping metric names to computed values.
+
+    Examples
+    --------
+    Compute Dice and Jaccard for two masks:
+
+    >>> import numpy as np
+    >>> mask_ref = np.array([[[1, 1], [0, 0]], [[0, 0], [0, 0]]])
+    >>> mask_pred = np.array([[[1, 1], [1, 0]], [[0, 0], [0, 0]]])
+    >>> metrics = get_values(mask_ref, mask_pred, ['Dice', 'Jaccard'])
+    >>> metrics['Dice']
+    0.8
+    >>> metrics['Jaccard']
+    0.666...
+
+    Notes
+    -----
+    Some metrics return NaN values in edge cases (e.g., empty masks). Distance-based
+    metrics may be slow on large 3D volumes.
+    """
     # initialise
     values = OrderedDict()
     # run through list of implementations
@@ -648,14 +757,17 @@ def asd(result, reference, voxelspacing=None, connectivity=1):
     result : array_like
         Input data containing objects. Can be any type but will be converted
         into binary: background where 0, object everywhere else.
+
     reference : array_like
         Input data containing objects. Can be any type but will be converted
         into binary: background where 0, object everywhere else.
+
     voxelspacing : float or sequence of floats, optional
         The voxelspacing in a distance unit i.e. spacing of elements
         along each dimension. If a sequence, must be of length equal to
         the input rank; if a single number, this is used for all axes. If
         not specified, a grid spacing of unity is implied.
+
     connectivity : int
         The neighbourhood/connectivity considered when determining the surface
         of the binary objects. This value is passed to
