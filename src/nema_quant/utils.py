@@ -64,7 +64,8 @@ def find_phantom_center(
         _logger.debug(f" Binary th: {threshold:06f}")
     binary_mask = image_data_3d > threshold
     labeled_mask, num_features = ndimage_label(binary_mask)  # type: ignore[misc]
-    _logger.info(f" Number of objects found: {num_features}")
+    if _logger.isEnabledFor(logging.DEBUG):
+        _logger.debug(f" Number of objects found: {num_features}")
     if num_features == 0:
         raise RuntimeError(
             "No se pudo encontrar ningún objeto en la imagen con el umbral actual."
@@ -91,6 +92,94 @@ def find_phantom_center(
     )
 
     return centroid_zyx
+
+
+def find_phantom_center_cv2_threshold(
+    image_data_3d: npt.NDArray[Any],
+    threshold_fraction: float = 0.41,
+    method: str = "weighted_slices",
+) -> Tuple[float, float, float]:
+    """Find phantom center using a fixed max-fraction threshold and cv2 moments.
+
+    Parameters
+    ----------
+    image_data_3d : numpy.ndarray
+        3D PET image array with shape (z, y, x).
+    threshold_fraction : float, optional
+        Fraction of the max intensity used for binarization (0-1). Default is 0.41.
+    method : str, optional
+        Strategy for determinism. Options:
+        - "weighted_slices": area-weighted average of per-slice centroids.
+        - "max_slice": centroid of the slice with the largest mask area.
+
+    Returns
+    -------
+    tuple[float, float, float]
+        Center coordinates as (z, y, x) in voxels.
+    """
+    if image_data_3d.ndim != 3:
+        raise ValueError("La imagen de entrada debe ser un array 3D (z,y,x).")
+    if not 0.0 < threshold_fraction <= 1.0:
+        raise ValueError("threshold_fraction debe estar en el rango (0, 1].")
+
+    max_value = float(np.max(image_data_3d))
+    threshold_value = max_value * float(threshold_fraction)
+    if _logger.isEnabledFor(logging.DEBUG):
+        _logger.debug(
+            " CV2 center: max=%.6f, threshold_fraction=%.3f, threshold_value=%.6f",
+            max_value,
+            threshold_fraction,
+            threshold_value,
+        )
+
+    binary_mask = image_data_3d > threshold_value
+    if not np.any(binary_mask):
+        raise RuntimeError(
+            "No se pudo encontrar ningún objeto en la imagen con el umbral actual."
+        )
+
+    if method not in {"weighted_slices", "max_slice"}:
+        raise ValueError("method debe ser 'weighted_slices' o 'max_slice'.")
+
+    best_center = None
+    best_area = 0.0
+    sum_area = 0.0
+    sum_z = 0.0
+    sum_y = 0.0
+    sum_x = 0.0
+
+    for z in range(binary_mask.shape[0]):
+        slice_mask = binary_mask[z].astype(np.uint8)
+        area = float(np.sum(slice_mask))
+        if area <= 0:
+            continue
+
+        moments = cv2.moments(slice_mask, binaryImage=True)
+        if moments["m00"] == 0:
+            continue
+
+        center_y = float(moments["m01"] / moments["m00"])
+        center_x = float(moments["m10"] / moments["m00"])
+
+        if method == "max_slice":
+            if area > best_area:
+                best_area = area
+                best_center = (float(z), center_y, center_x)
+        else:
+            sum_area += area
+            sum_z += area * float(z)
+            sum_y += area * center_y
+            sum_x += area * center_x
+
+    if method == "max_slice":
+        if best_center is None:
+            raise RuntimeError("No se pudo calcular el centro con el umbral actual.")
+        return best_center
+
+    if sum_area == 0.0:
+        raise RuntimeError("No se pudo calcular el centro con el umbral actual.")
+
+    return (sum_z / sum_area, sum_y / sum_area, sum_x / sum_area)
 
 
 def voxel_to_mm(
