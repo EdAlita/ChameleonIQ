@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import yacs.config
+from numpy.typing import NDArray
 
 from config.defaults import get_cfg_defaults
 
@@ -17,7 +18,7 @@ class NemaPhantom:
     voxel_spacing: Tuple[float, float, float]
     """Voxel spacing in mm."""
 
-    phantom_center_voxels: np.ndarray
+    phantom_center_voxels: NDArray[np.float64]
     """Center of the phantom in voxel coordinates."""
 
     roi_definitions_mm: Any
