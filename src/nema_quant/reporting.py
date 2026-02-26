@@ -19,7 +19,8 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import yacs.config
-from matplotlib.patches import Circle
+from matplotlib.lines import Line2D
+from matplotlib.patches import Circle, Patch
 from PIL import Image as pilimage
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -36,6 +37,9 @@ from reportlab.platypus import (
     TableStyle,
 )
 from reportlab.platypus.doctemplate import BaseDocTemplate, PageTemplate
+
+from .analysis import create_cylindrical_mask
+from .utils import find_phantom_center_cv2_threshold
 
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("PIL").setLevel(logging.WARNING)
@@ -173,9 +177,161 @@ def save_results_to_txt(
         f.write("=" * 80 + "\n")
 
 
-def _header(canvas, doc, logo_path=None):
+def save_results_to_txt_nu4(
+    crc_results: Dict[str, Dict[str, Any]],
+    spillover_results: Dict[str, Any],
+    uniformity_results: Dict[str, Any],
+    output_path: Path,
+    cfg: yacs.config.CfgNode,
+    input_image_path: Path,
+    voxel_spacing: Tuple[float, float, float],
+) -> None:
+    """
+    Saves NEMA analysis results to a formatted text file.
+
+    Writes analysis results for each sphere, along with configuration and metadata, to the specified output path.
+
+    Parameters
+    ----------
+    crc_results : Dict[str, Dict[str, Any]]
+        Dictionary of CRC results for each rod.
+    spillover_results : Dict[str, Any]
+        Dictionary of spillover results for each rod.
+    uniformity_results : Dict[str, Any]
+        Dictionary of uniformity results for the phantom.
+    output_path : Path
+        Destination path for saving the results file.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+    input_image_path : Path
+        Path to the input image file.
+    voxel_spacing : Tuple[float, float, float]
+        Voxel spacing used during analysis.
+
+    Returns
+    -------
+    None
+        This function does not return a value; results are saved to disk.
+    """
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("=" * 80 + "\n")
+        f.write("NEMA NU 4-2008 IMAGE QUALITY ANALYSIS RESULTS\n")
+        f.write("=" * 80 + "\n")
+        f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Input image: {input_image_path}\n")
+        f.write(
+            f"Voxel spacing: {voxel_spacing[0]:.4f} x {voxel_spacing[1]:.4f} x {voxel_spacing[2]:.4f} mm\n"
+        )
+        f.write("\n")
+
+        f.write("ANALYSIS CONFIGURATION:\n")
+        f.write(" " * 40 + "\n")
+        f.write("IMAGE RECONSTRUCTION PARAMETERS:\n")
+        f.write("-" * 40 + "\n")
+        f.write(f"Algorithm: {cfg.RECONSTRUCTION.ALGORITHM}\n")
+        f.write(f"Number of iterations: {cfg.RECONSTRUCTION.ITERATIONS}\n")
+        f.write(f"Filter: {cfg.RECONSTRUCTION.FILTER}\n")
+        f.write("\n")
+        f.write("ACTIVITY CONCENTRATIONS:\n")
+        f.write("-" * 40 + "\n")
+        f.write(
+            f"Phantom activity {cfg.ACTIVITY.PHANTOM_ACTIVITY} at {cfg.ACTIVITY.ACTIVITY_TIME}\n"
+        )
+
+        f.write("\n")
+
+        f.write("ANALYSIS RESULTS:\n")
+        f.write("-" * 40 + "\n")
+        f.write("Sphere Analysis Results (NEMA NU 4-2008 Section 7.4.1)\n\n")
+
+        f.write("CRC RESULTS (NU 4-2008):\n")
+        f.write("-" * 40 + "\n")
+        f.write(f"{'ROD Diameter':<14} {'RC':<10} {'%STD':<10}\n")
+        f.write(f"{'(mm)':<14} {'':<10} {'':<10}\n")
+        f.write("-" * 36 + "\n")
+
+        roi_defs = {roi["name"]: roi for roi in cfg.PHANTHOM.ROI_DEFINITIONS_MM}
+        rows: List[Tuple[float, float, float]] = []
+        for name, metrics in crc_results.items():
+            roi = roi_defs.get(name)
+            if roi is None:
+                continue
+            rows.append(
+                (
+                    float(roi["diameter_mm"]),
+                    float(metrics.get("recovery_coeff", 0.0)),
+                    float(metrics.get("percentage_STD_rc", 0.0)),
+                )
+            )
+
+        for diameter_mm, rc, pct_std in sorted(rows, key=lambda x: x[0], reverse=True):
+            f.write(f"{diameter_mm:<14.1f} {rc:<10.3f} {pct_std:<10.2f}\n")
+        f.write("\n")
+
+        f.write("SPILLOVER RATIOS (NU 4-2008):\n")
+        f.write("-" * 40 + "\n")
+        f.write(f"{'Region':<10} {'SOR':<10} {'%STD':<10}\n")
+        f.write("-" * 32 + "\n")
+        for region_name in ("air", "water"):
+            spillover_metrics: Dict[str, Any] = spillover_results.get(region_name, {})
+            if not spillover_metrics:
+                continue
+            sor = float(spillover_metrics.get("SOR", 0.0))
+            pct_std = float(spillover_metrics.get("%STD", 0.0))
+            f.write(f"{region_name.capitalize():<10} {sor:<10.3f} {pct_std:<10.2f}\n")
+            f.write("\n")
+
+        f.write("UNIFORMITY RESULTS (NU 4-2008):\n")
+        f.write("-" * 40 + "\n")
+        f.write(f"{'Metric':<15} {'Value':<15}\n")
+        f.write("-" * 32 + "\n")
+        if uniformity_results:
+            mean_val = float(uniformity_results.get("mean", 0.0))
+            max_val = float(uniformity_results.get("maximum", 0.0))
+            min_val = float(uniformity_results.get("minimum", 0.0))
+            pct_std = float(uniformity_results.get("%STD", 0.0))
+            f.write(f"{'Mean':<15} {mean_val:<15.3f}\n")
+            f.write(f"{'Maximum':<15} {max_val:<15.3f}\n")
+            f.write(f"{'Minimum':<15} {min_val:<15.3f}\n")
+            f.write(f"{'%STD':<15} {pct_std:<15.2f}\n")
+        f.write("\n")
+
+        f.write("=" * 80 + "\n")
+        f.write("End of Report\n")
+        f.write("=" * 80 + "\n")
+
+
+def _header(
+    canvas, doc, logo_left_path=None, logo_right_path=None, Name="NEMA NU 2-2018 Report"
+):
     canvas.saveState()
-    if logo_path and Path(logo_path).exists():
+
+    # Draw left logo
+    if logo_left_path and Path(logo_left_path).exists():
+        original_width = 1608
+        original_height = 251
+        max_width = 160
+        max_height = 100
+
+        width_ratio = max_width / original_width
+        height_ratio = max_height / original_height
+        scale = min(width_ratio, height_ratio)
+
+        draw_width = original_width * scale
+        draw_height = original_height * scale
+
+        canvas.drawImage(
+            str(logo_left_path),
+            40,
+            740,
+            width=draw_width,
+            height=draw_height,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+
+    # Draw right logo
+    if logo_right_path and Path(logo_right_path).exists():
         original_width = 1608
         original_height = 251
         max_width = 260
@@ -188,17 +344,22 @@ def _header(canvas, doc, logo_path=None):
         draw_width = original_width * scale
         draw_height = original_height * scale
 
+        # Position on the right side (letter page width is ~612, minus logo width and margin)
+        x_position = 612 - draw_width - 40
+
         canvas.drawImage(
-            str(logo_path),
-            40,
+            str(logo_right_path),
+            x_position,
             740,
             width=draw_width,
             height=draw_height,
             preserveAspectRatio=True,
             mask="auto",
         )
+
+    # Draw centered text
     canvas.setFont("Helvetica-Bold", 10)
-    canvas.drawRightString(550, 760, "NEMA NU 2-2018 Report")
+    canvas.drawCentredString(306, 760, Name)
     canvas.restoreState()
 
 
@@ -255,7 +416,12 @@ def generate_reportlab_report(
     template = PageTemplate(
         id="with-header",
         frames=frame,
-        onPage=lambda c, d: _header(c, d, "data/logosimbolocontexto_principal.jpg"),
+        onPage=lambda c, d: _header(
+            c,
+            d,
+            logo_left_path="data/logosimbolocontexto_principal.jpg",
+            logo_right_path="data/logo.png",
+        ),
     )
     doc.addPageTemplates([template])
 
@@ -382,7 +548,7 @@ def generate_reportlab_report(
 
     if plot_path and Path(plot_path).exists():
         elements.append(Paragraph("<b>Hot Sphere Plot</b>", header_style))
-        elements.append(Image(str(plot_path), width=8 * inch, height=4 * inch))
+        elements.append(Image(str(plot_path), width=6.2 * inch, height=2.583 * inch))
         elements.append(Spacer(1, 0.2 * inch))
 
     elements.append(PageBreak())
@@ -468,6 +634,249 @@ def generate_reportlab_report(
     doc.build(elements)
 
 
+def generate_reportlab_report_nu4(
+    crc_results: Dict[str, Dict[str, Any]],
+    spillover_results: Dict[str, Any],
+    uniformity_results: Dict[str, Any],
+    output_path: Path,
+    cfg: yacs.config.CfgNode,
+    input_image_path: Path,
+    voxel_spacing: Tuple[float, float, float],
+    plot_path: Optional[Path] = None,
+    rois_loc_path: Optional[Path] = None,
+    spillover_ratio_path: Optional[Path] = None,
+) -> None:
+    """
+    Generates a PDF report for NEMA NU 4-2008 quality analysis results using ReportLab.
+
+    Creates a formatted PDF summarizing CRC, spillover, and uniformity results, configuration, and relevant plots.
+
+    Parameters
+    ----------
+    crc_results : Dict[str, Dict[str, Any]]
+        Dictionary of CRC results for each rod.
+    spillover_results : Dict[str, Any]
+        Dictionary of spillover results for each rod.
+    uniformity_results : Dict[str, Any]
+        Dictionary of uniformity results for the phantom.
+    output_path : Path
+        Destination path for saving the PDF report.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+    input_image_path : Path
+        Path to the input image file.
+    voxel_spacing : Tuple[float, float, float]
+        Voxel spacing used during analysis.
+    plot_path : Path
+        Path to the summary plot image file.
+    rois_loc_path : Path
+        Path to the ROIs plot image file.
+    spillover_ratio_path : Path
+        Path to the spillover ratio image file.
+
+    Returns
+    -------
+    None
+        This function does not return a value; it writes the PDF report to disk.
+    """
+    # Implementation would be similar to generate_reportlab_report but with sections for CRC, spillover, and uniformity results.
+    # For brevity, this function is not fully implemented here. The structure would follow the same pattern as generate_reportlab_report,
+    # with additional sections and tables for the specific results of NU 4-2008 analysis.
+    doc = BaseDocTemplate(str(output_path), pagesize=letter)
+    frame = Frame(
+        doc.leftMargin,
+        doc.bottomMargin,
+        doc.width,
+        doc.height - 0.5 * inch,
+        id="normal",
+    )
+    template = PageTemplate(
+        id="with-header",
+        frames=frame,
+        onPage=lambda c, d: _header(
+            c,
+            d,
+            logo_left_path="data/logosimbolocontexto_principal.jpg",
+            logo_right_path="data/logo.png",
+            Name="NEMA NU 4-2008 Report",
+        ),
+    )
+    doc.addPageTemplates([template])
+
+    elements: List[Flowable] = []
+
+    styles = getSampleStyleSheet()
+    title_style = styles["Title"]
+    header_style = styles["Heading2"]
+    body_style = styles["BodyText"]
+
+    elements.append(
+        Paragraph("NEMA NU 4-2008 Image Quality Analysis Report", title_style)
+    )
+    elements.append(Spacer(1, 0.2 * inch))
+
+    summary = (
+        f"<b>Summary of Analysis</b><br/>"
+        f"\u2022 Date of Generation: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br/>"
+        f"\u2022 Input Image: <font face='Courier'>{str(input_image_path)}</font><br/>"
+        f"\u2022 Voxel Spacing: {voxel_spacing[0]:.4f} × {voxel_spacing[1]:.4f} × {voxel_spacing[2]:.4f} mm"
+    )
+    elements.append(Paragraph(summary, body_style))
+    elements.append(Spacer(1, 0.18 * inch))
+
+    # Configuration section
+    config_text = (
+        "<b>Reconstruction Parameters</b><br/>"
+        f"\u2022 Algorithm: {cfg.RECONSTRUCTION.ALGORITHM}<br/>"
+        f"\u2022 Number of iterations: {cfg.RECONSTRUCTION.ITERATIONS}<br/>"
+        f"\u2022 Filter: {cfg.RECONSTRUCTION.FILTER}"
+    )
+    elements.append(Paragraph(config_text, body_style))
+    elements.append(Spacer(1, 0.18 * inch))
+
+    activity_text = (
+        "<b>Activity Concentrations</b><br/>"
+        f"\u2022 Phantom activity: {cfg.ACTIVITY.PHANTOM_ACTIVITY} at {cfg.ACTIVITY.ACTIVITY_TIME}"
+    )
+    elements.append(Paragraph(activity_text, body_style))
+    elements.append(Spacer(1, 0.25 * inch))
+
+    # Uniformity Results table on first page
+    elements.append(Paragraph("<b>Uniformity Results</b>", header_style))
+    elements.append(Spacer(1, 0.1 * inch))
+
+    uniformity_table_data = [["Metric", "Value"]]
+    if uniformity_results:
+        mean_val = float(uniformity_results.get("mean", 0.0))
+        max_val = float(uniformity_results.get("maximum", 0.0))
+        min_val = float(uniformity_results.get("minimum", 0.0))
+        pct_std = float(uniformity_results.get("%STD", 0.0))
+        uniformity_table_data.append(["Mean", f"{mean_val:.3f}"])
+        uniformity_table_data.append(["Maximum", f"{max_val:.3f}"])
+        uniformity_table_data.append(["Minimum", f"{min_val:.3f}"])
+        uniformity_table_data.append(["%STD", f"{pct_std:.2f}"])
+
+    col_widths = [3.0 * inch, 3.0 * inch]
+    uniformity_table = Table(uniformity_table_data, colWidths=col_widths)
+    uniformity_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ]
+        )
+    )
+    elements.append(uniformity_table)
+
+    elements.append(PageBreak())
+
+    # Recovery Coefficient Plot and CRC Results table
+    if plot_path and Path(plot_path).exists():
+        elements.append(Paragraph("<b>Recovery Coefficient Plot</b>", header_style))
+        img = Image(str(plot_path), width=6.2 * inch, height=2.583 * inch)
+        img.hAlign = "CENTER"
+        elements.append(img)
+        elements.append(Spacer(1, 0.2 * inch))
+
+    elements.append(Paragraph("<b>Recovery Coefficient (RC) Results</b>", header_style))
+    elements.append(Spacer(1, 0.1 * inch))
+
+    roi_defs = {roi["name"]: roi for roi in cfg.PHANTHOM.ROI_DEFINITIONS_MM}
+    crc_table_data = [["Rod Diameter (mm)", "Recovery Coefficient", "%STD"]]
+
+    rows: List[Tuple[float, float, float]] = []
+    for name, metrics in crc_results.items():
+        roi = roi_defs.get(name)
+        if roi is None:
+            continue
+        rows.append(
+            (
+                float(roi["diameter_mm"]),
+                float(metrics.get("recovery_coeff", 0.0)),
+                float(metrics.get("percentage_STD_rc", 0.0)),
+            )
+        )
+
+    for diameter_mm, rc, pct_std in sorted(rows, key=lambda x: x[0], reverse=True):
+        crc_table_data.append([f"{diameter_mm:.1f}", f"{rc:.3f}", f"{pct_std:.2f}"])
+
+    col_widths = [2.0 * inch, 2.5 * inch, 2.0 * inch]
+    crc_table = Table(crc_table_data, colWidths=col_widths)
+    crc_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ]
+        )
+    )
+    elements.append(crc_table)
+
+    elements.append(PageBreak())
+
+    # Spillover Ratio Plot and Spillover Ratios table
+    if spillover_ratio_path and Path(spillover_ratio_path).exists():
+        elements.append(Paragraph("<b>Spillover Ratio Plot</b>", header_style))
+        img = Image(str(spillover_ratio_path), width=4.2 * inch, height=3.3 * inch)
+        img.hAlign = "CENTER"
+        elements.append(img)
+        elements.append(Spacer(1, 0.2 * inch))
+
+    elements.append(Paragraph("<b>Spillover Ratios</b>", header_style))
+    elements.append(Spacer(1, 0.1 * inch))
+
+    spillover_table_data = [["Region", "SOR", "%STD"]]
+    for region_name in ("air", "water"):
+        spillover_metrics: Dict[str, Any] = spillover_results.get(region_name, {})
+        if spillover_metrics:
+            sor = float(spillover_metrics.get("SOR", 0.0))
+            pct_std = float(spillover_metrics.get("%STD", 0.0))
+            spillover_table_data.append(
+                [region_name.capitalize(), f"{sor:.3f}", f"{pct_std:.2f}"]
+            )
+
+    col_widths = [2.0 * inch, 2.0 * inch, 2.0 * inch]
+    spillover_table = Table(spillover_table_data, colWidths=col_widths)
+    spillover_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+            ]
+        )
+    )
+    elements.append(spillover_table)
+
+    # ROIs Location plot on new page
+    if rois_loc_path and Path(rois_loc_path).exists():
+        elements.append(PageBreak())
+        elements.append(Paragraph("<b>ROIs Location</b>", header_style))
+        img = Image(str(rois_loc_path), width=6 * inch, height=3 * inch)
+        img.hAlign = "CENTER"
+        elements.append(img)
+        elements.append(Spacer(1, 0.2 * inch))
+
+    doc.build(elements)
+
+
 def generate_plots(
     results: List[Dict[str, Any]],
     output_dir: Path,
@@ -499,71 +908,171 @@ def generate_plots(
     logging.info(f"Results saved to CSV at: {csv_path}")
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
-    plt.rcParams.update(cfg.STYLE.RCPARAMS)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
-    fig, axes = plt.subplots(1, 2, figsize=(22, 10), sharex=True)
+    fig, axes = plt.subplots(1, 2, figsize=(24, 10), sharex=True)
 
-    for ax, yvar, title, ylabel in zip(
+    for ax, yvar, ylabel in zip(
         axes,
         ["percentaje_constrast_QH", "background_variability_N"],
-        ["Percent Contrast by Diameter", "Percent Background Variability by Diameter"],
-        ["Percent Contrast (Hot sphere) [%]", "Percent Background Variability [%]"],
+        ["CR (Hot sphere) [%]", "BV [%]"],
     ):
-        ax.plot(
-            df["diameter_mm"],
-            df[yvar],
-            marker="o",
-            color="#023743FF",
-            linestyle="-",
-            alpha=1.0,
-            linewidth=4.0,
-            markersize=10,
-            markeredgecolor="white",
-            markeredgewidth=2.0,
-        )
-
-        ax.set_title(title, fontsize=16, weight=cfg.STYLE.LEGEND.FONTWEIGHT)
-        ax.set_ylabel(
-            ylabel,
-            fontsize=14,
-            weight=cfg.STYLE.LEGEND.FONTWEIGHT,
-            labelpad=cfg.STYLE.LEGEND.LABELPAD,
-        )
-        ax.set_xlabel(
-            "Sphere Diameter [mm]",
-            fontsize=14,
-            weight=cfg.STYLE.LEGEND.FONTWEIGHT,
-            labelpad=cfg.STYLE.LEGEND.LABELPAD,
-        )
-
-        ax.grid(
-            True,
-            linestyle=cfg.STYLE.GRID.LINESTYLE,
-            alpha=cfg.STYLE.GRID.ALPHA,
-            color=cfg.STYLE.GRID.COLOR,
-            linewidth=cfg.STYLE.GRID.LINEWIDTH,
-        )
-
+        ax.plot(df["diameter_mm"], df[yvar], color=cfg.STYLE.COLORS[0])
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel("Sphere Diameter [mm]")
         ax.tick_params(axis="both", labelsize=20, width=1.2)
         ax.tick_params(axis="x", rotation=0)
-
+        ax.set_xticks(sorted(df["diameter_mm"].unique()))
         ax.set_axisbelow(True)
 
-        ax.set_xticks(sorted(df["diameter_mm"].unique()))
+    plt.tight_layout(rect=(0, 0.1, 1, 0.92))
+    output_path = output_dir / "analysis_plot.png"
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
+    plt.close()
 
-        ax.set_facecolor("#fafafa")
+
+def generate_crc_plots_nu4(
+    crc_results: Dict[str, Dict[str, Any]],
+    output_dir: Path,
+    cfg: yacs.config.CfgNode,
+) -> None:
+    """
+    Generates CRC plots for NEMA NU 4-2008 results.
+
+    Creates and saves a figure summarizing CRC and %STD by sphere diameter.
+
+    Parameters
+    ----------
+    crc_results : Dict[str, Dict[str, Any]]
+        CRC results keyed by sphere name.
+    output_dir : Path
+        Directory to save outputs.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+
+    Returns
+    -------
+    None
+        This function does not return a value; the plot is saved to disk.
+    """
+    roi_defs = {roi["name"]: roi for roi in cfg.PHANTHOM.ROI_DEFINITIONS_MM}
+    rows: List[Dict[str, Any]] = []
+    for name, metrics in crc_results.items():
+        roi = roi_defs.get(name)
+        if roi is None:
+            continue
+        rows.append(
+            {
+                "name": name,
+                "diameter_mm": float(roi["diameter_mm"]),
+                "RC": float(metrics.get("recovery_coeff", 0.0)),
+                "percent_std": float(metrics.get("percentage_STD_rc", 0.0)),
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        logging.warning("No RC results to plot.")
+        return
+
+    csv_path = output_dir.parent / "csv" / "rc_results.csv"
+    df.to_csv(csv_path, index=False)
+    logging.info(f"RC results saved to CSV at: {csv_path}")
+
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
+
+    fig, axes = plt.subplots(1, 2, figsize=(24, 10), sharex=True)
+
+    for ax, yvar, ylabel in zip(
+        axes,
+        ["RC", "percent_std"],
+        ["RC (a. u.)", "Percent STD (%)"],
+    ):
+        ax.plot(df["diameter_mm"], df[yvar], color=cfg.STYLE.COLORS[0])
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel("Sphere Diameter [mm]")
+        ax.tick_params(axis="both", width=1.2)
+        ax.tick_params(axis="x", rotation=0)
+        ax.set_xticks(sorted(df["diameter_mm"].unique()))
+        ax.set_axisbelow(True)
 
     plt.tight_layout(rect=(0, 0.1, 1, 0.92))
 
-    output_path = output_dir / "analysis_plot.png"
-    plt.savefig(
-        str(output_path),
-        dpi=600,
-        bbox_inches="tight",
-        facecolor="white",
-        edgecolor="none",
-        format="png",
+    output_path = output_dir / "rc_plot.png"
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
+    plt.close()
+
+
+def generate_spillover_barplot_nu4(
+    spillover_ratio: Dict[str, Dict[str, float]],
+    output_dir: Path,
+    cfg: yacs.config.CfgNode,
+) -> None:
+    """
+    Generates a bar plot for NU 4-2008 spill-over ratios with %STD error bars.
+
+    Parameters
+    ----------
+    spillover_ratio : Dict[str, Dict[str, float]]
+        Dictionary with keys "air" and "water" containing "SOR" and "%STD".
+    output_dir : Path
+        Directory to save outputs.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+
+    Returns
+    -------
+    None
+        This function does not return a value; the plot is saved to disk.
+    """
+    categories = ["air", "water"]
+    labels = ["Air", "Water"]
+    sors = [float(spillover_ratio.get(k, {}).get("SOR", 0.0)) for k in categories]
+    pct_stds = [float(spillover_ratio.get(k, {}).get("%STD", 0.0)) for k in categories]
+    yerr = [sor * (pct / 100.0) for sor, pct in zip(sors, pct_stds)]
+
+    df = pd.DataFrame(
+        {
+            "region": labels,
+            "SOR": sors,
+            "percent_std": pct_stds,
+            "abs_std": yerr,
+        }
     )
+    csv_path = output_dir.parent / "csv" / "spillover_ratio.csv"
+    df.to_csv(csv_path, index=False)
+    logging.info(f"Spillover ratio saved to CSV at: {csv_path}")
+
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
+
+    fig, ax = plt.subplots(figsize=(7, 5.5))
+    bars = ax.bar(
+        labels,
+        sors,
+        yerr=yerr,
+        color=cfg.STYLE.COLORS[0:2],
+        edgecolor="black",
+        capsize=6,
+    )
+    ax.set_ylabel("Spill-Over Ratio")
+    ax.set_xlabel("Region")
+    ax.set_axisbelow(True)
+
+    for bar, sor, pct in zip(bars, sors, pct_stds):
+        ax.text(
+            bar.get_x() + 2 * bar.get_width() / 2,
+            bar.get_height(),
+            f"{sor:.3f}\n({pct:.1f}%)",
+            ha="center",
+            va="bottom",
+        )
+
+    plt.tight_layout()
+
+    output_path = output_dir / "spillover_ratio.png"
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
     plt.close()
 
 
@@ -592,7 +1101,7 @@ def generate_boxplot_with_mean_std(
         This function does not return a value; the plot is saved to disk.
     """
     plt.style.use(cfg.STYLE.PLT_STYLE)
-    plt.rcParams.update(cfg.STYLE.RCPARAMS)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     data = list(data_dict.values())
     std_dev = float(np.std(data))
@@ -607,7 +1116,7 @@ def generate_boxplot_with_mean_std(
     if label == "Png":
         label = ""
 
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(14, 10))
     bp = plt.violinplot(
         data,
         positions=[1],
@@ -618,7 +1127,7 @@ def generate_boxplot_with_mean_std(
 
     violin_bodies = cast(List[Any], bp["bodies"])
     for patch in violin_bodies:
-        patch.set_facecolor("#023743FF")
+        patch.set_facecolor(cfg.STYLE.COLORS[0])
         patch.set_alpha(0.7)
         patch.set_linewidth(1)
         patch.set_edgecolor("black")
@@ -627,7 +1136,7 @@ def generate_boxplot_with_mean_std(
     bp["cmeans"].set_linewidth(3)
 
     exp_values = df["data"].values
-    color = "#023743FF"
+    color = cfg.STYLE.COLORS[0]
 
     jitter = np.random.normal(0, 0.04, size=len(exp_values))
     positions = np.full(len(exp_values), 1) + jitter
@@ -663,41 +1172,20 @@ def generate_boxplot_with_mean_std(
     plt.xticks([1], [label])
     plt.xlabel(
         "Lung Insert Accuracy Distribution",
-        fontsize=14,
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
     )
     plt.ylabel(
         "Accuracy of Correction in Lung Insert (%)",
-        fontsize=14,
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
     )
 
     plt.tick_params(axis="both", labelsize=12, width=1.2)
     plt.tick_params(axis="x", rotation=0)
 
-    plt.grid(
-        True,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        alpha=cfg.STYLE.GRID.ALPHA,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
     plt.gca().set_axisbelow(True)
-
-    plt.gca().set_facecolor("#fafafa")
 
     plt.tight_layout()
 
     output_path = output_dir / "boxplot_with_mean_std.png"
-    plt.savefig(
-        str(output_path),
-        dpi=600,
-        bbox_inches="tight",
-        facecolor="white",
-        edgecolor="none",
-    )
+    plt.savefig(str(output_path))
     plt.close()
 
 
@@ -750,6 +1238,21 @@ def generate_rois_plots(
         ax2.plot(x, y, "+", color=roi["color"], markersize=12)
 
     background_radius = (37 / 2) / pixel_spacing
+
+    # Find the 37mm sphere center, use it as reference for background ROIs
+    centro_37 = None
+    for roi in rois:
+        if roi["name"] == "hot_sphere_37mm":
+            centro_37 = roi["center_yx"]
+            break
+
+    # If 37mm sphere not found, use first ROI or default center
+    if centro_37 is None:
+        if rois:
+            centro_37 = rois[0]["center_yx"]
+        else:
+            centro_37 = (0, 0)
+
     for dy, dx in background_offset:
         background_y, background_x = centro_37[0] + dy, centro_37[1] + dx
         circle = Circle(
@@ -908,5 +1411,201 @@ def generate_torso_plot(
     plt.tight_layout()
 
     output_path = output_dir / "torso.png"
-    plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
+    plt.close()
+
+
+def generate_iq_plot(
+    image: npt.NDArray[Any], output_dir: Path, cfg: yacs.config.CfgNode
+) -> None:
+    """Generates plot of IQ Rois for NEMA NU 4 2008
+
+    Parameters
+    ----------
+    image : npt.NDArray[Any]
+        PET image of phatom to show
+    output_dir : Path
+        Directory path for saving the resulting plot.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+
+    Returns
+    -------
+    None
+        This function does not return a value; the plot is saved to disk.
+    """
+
+    center_method = getattr(cfg.ROIS, "PHANTOM_CENTER_METHOD", "weighted_slices")
+    center_threshold = getattr(cfg.ROIS, "PHANTOM_CENTER_THRESHOLD_FRACTION", 0.41)
+    ce_z, ce_y, ce_x = find_phantom_center_cv2_threshold(
+        image,
+        threshold_fraction=center_threshold,
+        method=center_method,
+    )
+    phantom_center_x = int(ce_x)
+    phantom_center_y = int(ce_y)
+    phantom_center_z = int(ce_z)
+    uniform_region_mask = create_cylindrical_mask(
+        shape_zyx=(image.shape[0], image.shape[1], image.shape[2]),  # type: ignore[arg-type]
+        center_zyx=(
+            phantom_center_z
+            + cfg.ROIS.ORIENTATION_Z * (cfg.ROIS.UNIFORM_OFFSET_MM / cfg.ROIS.SPACING),
+            phantom_center_y,
+            phantom_center_x,
+        ),
+        radius_mm=cfg.ROIS.UNIFORM_RADIUS_MM,
+        height_mm=cfg.ROIS.UNIFORM_HEIGHT_MM,
+        spacing_xyz=np.array([cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING]),  # type: ignore[arg-type]
+    )
+
+    air_region_mask = create_cylindrical_mask(
+        shape_zyx=(image.shape[0], image.shape[1], image.shape[2]),  # type: ignore[arg-type]
+        center_zyx=(
+            phantom_center_z
+            - cfg.ROIS.ORIENTATION_Z * (cfg.ROIS.AIRWATER_OFFSET_MM / cfg.ROIS.SPACING),
+            phantom_center_y
+            - cfg.ROIS.ORIENTATION_YX[0]
+            * (cfg.ROIS.AIRWATER_SEPARATION_MM / cfg.ROIS.SPACING),
+            phantom_center_x,
+        ),
+        radius_mm=cfg.ROIS.AIR_RADIUS_MM,
+        height_mm=cfg.ROIS.AIR_HEIGHT_MM,
+        spacing_xyz=np.array([cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING]),  # type: ignore[arg-type]
+    )
+
+    water_region_mask = create_cylindrical_mask(
+        shape_zyx=(image.shape[0], image.shape[1], image.shape[2]),  # type: ignore[arg-type]
+        center_zyx=(
+            phantom_center_z
+            - cfg.ROIS.ORIENTATION_Z * (cfg.ROIS.AIRWATER_OFFSET_MM / cfg.ROIS.SPACING),
+            phantom_center_y
+            + cfg.ROIS.ORIENTATION_YX[0]
+            * (cfg.ROIS.AIRWATER_SEPARATION_MM / cfg.ROIS.SPACING),
+            phantom_center_x,
+        ),
+        radius_mm=cfg.ROIS.WATER_RADIUS_MM,
+        height_mm=cfg.ROIS.WATER_HEIGHT_MM,
+        spacing_xyz=np.array([cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING]),  # type: ignore[arg-type]
+    )
+
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
+
+    fig, axes = plt.subplots(1, 2, figsize=(20, 10))
+    fig.suptitle("NEMA NU 4-2008 IQ ROIs")
+
+    axes[0].imshow(image[cfg.ROIS.CENTRAL_SLICE], cmap="binary", origin="lower")
+    axes[0].plot(
+        phantom_center_x,
+        phantom_center_y,
+        "x",
+        color="red",
+        markersize=14,
+        markeredgewidth=2,
+        zorder=5,
+        label="Phantom Center",
+    )
+
+    for rois in cfg.PHANTHOM.ROI_DEFINITIONS_MM:
+        y, x = rois["center_yx"]
+        radius_pix = (rois["diameter_mm"] / 2) / cfg.ROIS.SPACING
+        circle = Circle(
+            (x, y),
+            radius_pix,
+            edgecolor=rois["color"],
+            alpha=rois["alpha"],
+            lw=2,
+            label=rois["name"],
+        )
+        axes[0].add_patch(circle)
+        axes[0].plot(x, y, "+", color=rois["color"], markersize=12)
+
+    axes[0].set_title(f"Axial z={cfg.ROIS.CENTRAL_SLICE}")
+    axes[0].set_xlabel("X (pixels)")
+    axes[0].set_ylabel("Y (pixels)")
+    axes[0].legend(loc="lower right", fontsize=10, framealpha=0.7)
+    axes[0].set_aspect("equal")
+    axes[0].grid(False)
+
+    axes[1].imshow(image[:, :, phantom_center_x], cmap="binary", origin="lower")
+    axes[1].plot(
+        phantom_center_y,
+        phantom_center_z,
+        "x",
+        color="red",
+        markersize=14,
+        markeredgewidth=2,
+        zorder=5,
+        label="Phantom Center",
+    )
+    axes[1].imshow(
+        uniform_region_mask[:, :, phantom_center_x],
+        cmap="Reds",
+        alpha=0.5,
+        label="Uniformity Cylinder",
+    )
+    axes[1].imshow(
+        air_region_mask[:, :, phantom_center_x],
+        cmap="Blues",
+        alpha=0.5,
+        label="Air Cylinder",
+    )
+    axes[1].imshow(
+        water_region_mask[:, :, phantom_center_x],
+        cmap="Greens",
+        alpha=0.5,
+        label="Water Cylinder",
+    )
+    axes[1].contour(
+        air_region_mask[:, :, phantom_center_x],
+        colors="blue",
+        alpha=0.8,
+        linewidths=1.5,
+    )
+    axes[1].contour(
+        water_region_mask[:, :, phantom_center_x],
+        colors="green",
+        alpha=0.8,
+        linewidths=1.5,
+    )
+    axes[1].contour(
+        uniform_region_mask[:, :, phantom_center_x],
+        colors="red",
+        alpha=0.8,
+        linewidths=1.5,
+    )
+    uniform_handle = Patch(
+        facecolor="red", edgecolor="red", alpha=0.5, label="Uniformity Cylinder"
+    )
+    air_handle = Patch(
+        facecolor="blue", edgecolor="blue", alpha=0.5, label="Air Cylinder"
+    )
+    water_handle = Patch(
+        facecolor="green", edgecolor="green", alpha=0.5, label="Water Cylinder"
+    )
+    center_handle = Line2D(
+        [0],
+        [0],
+        marker="x",
+        color="red",
+        markersize=10,
+        linewidth=0,
+        markeredgewidth=2,
+        label="Phantom Center",
+    )
+    axes[1].set_title(f"Saggital x={phantom_center_x}")
+    axes[1].set_xlabel("Y (pixels)")
+    axes[1].set_ylabel("Z (pixels)")
+    axes[1].legend(
+        handles=[center_handle, uniform_handle, air_handle, water_handle],
+        loc="lower right",
+        fontsize=10,
+        framealpha=0.7,
+    )
+    axes[1].set_aspect("equal")
+    axes[1].grid(False)
+
+    plt.tight_layout(rect=(0, 0.1, 1, 0.95))
+    output_path = output_dir / "iq_rois.png"
+    plt.savefig(str(output_path), dpi=600, bbox_inches="tight")
     plt.close()
