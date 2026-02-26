@@ -1,0 +1,98 @@
+# Template configuration for NEMA NU 4-2008 (small animal).
+# TODO: Replace placeholder values with NU 4-2008 phantom definitions.
+
+RECONSTRUCTION:
+  ALGORITHM: "OSEM"
+  ITERATIONS: 2
+  FILTER: "Gaussian"
+
+ACTIVITY:
+  PHANTOM_ACTIVITY: "10 MBq"
+  ACTIVITY_TIME: "16:20:00"
+
+PHANTHOM:
+  ROI_DEFINITIONS_MM:
+    - center_yx: [67, 87]
+      diameter_mm: 5
+      color: "red"
+      alpha: 0.18
+      name: "hot_sphere_5mm"
+    - center_yx: [83, 88]
+      diameter_mm: 4
+      color: "orange"
+      alpha: 0.18
+      name: "hot_sphere_4mm"
+    - center_yx: [89, 73]
+      diameter_mm: 3
+      color: "gold"
+      alpha: 0.18
+      name: "hot_sphere_3mm"
+    - center_yx: [77, 62]
+      diameter_mm: 2
+      color: "lime"
+      alpha: 0.18
+      name: "hot_sphere_2mm"
+    - center_yx: [63, 71]
+      diameter_mm: 1
+      color: "cyan"
+      alpha: 0.18
+      name: "hot_sphere_1mm"
+
+ROIS:
+  CENTRAL_SLICE: 90
+  ORIENTATION_YX: [1, 1]
+  ORIENTATION_Z: 1
+  SPACING: 0.5
+  UNIFORM_RADIUS_MM: 11.25
+  UNIFORM_HEIGHT_MM: 10.0
+  AIR_RADIUS_MM: 2.0
+  AIR_HEIGHT_MM: 7.5
+  WATER_RADIUS_MM: 2.0
+  WATER_HEIGHT_MM: 7.5
+  UNIFORM_OFFSET_MM: 5.0
+  AIRWATER_OFFSET_MM: 10.0
+  AIRWATER_SEPARATION_MM: 7.5
+
+FILE:
+  USER_PATTERN: "frame(\\d+)"
+  CASE: "NU4_2008"
+
+STYLE:
+  RCPARAMS:
+    - ["figure.dpi", 600]
+    - ["figure.facecolor", "white"]
+    - ["savefig.facecolor", "white"]
+    - ["savefig.edgecolor", "none"]
+    - ["font.size", 24]
+    - ["axes.titlesize", 24]
+    - ["axes.titleweight", "bold"]
+    - ["axes.labelsize", 24]
+    - ["axes.labelweight", "bold"]
+    - ["axes.labelpad", 20]
+    - ["xtick.labelsize", 24]
+    - ["ytick.labelsize", 24]
+    - ["legend.fontsize", 24]
+    - ["legend.title_fontsize", 24]
+    - ["lines.linewidth", 4.0]
+    - ["lines.linestyle", "-"]
+    - ["lines.marker", "o"]
+    - ["lines.markersize", 10]
+    - ["lines.markerfacecolor", "white"]
+    - ["lines.markeredgewidth", 2.0]
+    - ["axes.linewidth", 1.2]
+    - ["font.family", "DejaVu Sans"]
+    - ["axes.grid", true]
+    - ["grid.linestyle", "--"]
+    - ["grid.linewidth", 2.0]
+    - ["grid.alpha", 0.5]
+    - ["grid.color", "gray"]
+  PLT_STYLE: "seaborn-v0_8-talk"
+  COLORS:
+    - "#023743FF"
+    - "#72874EFF"
+    - "#476F84FF"
+    - "#A4BED5FF"
+    - "#453947FF"
+    - "#8C7A6BFF"
+    - "#C97D60FF"
+    - "#F0B533FF"
