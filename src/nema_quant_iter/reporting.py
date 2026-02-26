@@ -108,18 +108,24 @@ def generate_plots(
     key_iterations = list(dict.fromkeys(key_iterations))
 
     publication_colors = {
-        first_iter: "#72874EFF",
-        highest_cbr_iter: "#F0B533FF",
-        final_iter: "#453947FF",
+        first_iter: cfg.STYLE.COLORS[0],
+        highest_cbr_iter: cfg.STYLE.COLORS[-1],
+        final_iter: cfg.STYLE.COLORS[2],
     }
 
     if len(key_iterations) == 2:
         if first_iter == best_cbr_iter:
-            publication_colors = {first_iter: "#72874EFF", final_iter: "#453947FF"}
+            publication_colors = {
+                first_iter: cfg.STYLE.COLORS[0],
+                final_iter: cfg.STYLE.COLORS[2],
+            }
         elif final_iter == best_cbr_iter:
-            publication_colors = {first_iter: "#72874EFF", final_iter: "#F0B533FF"}
+            publication_colors = {
+                first_iter: cfg.STYLE.COLORS[0],
+                final_iter: cfg.STYLE.COLORS[-1],
+            }
     elif len(key_iterations) == 1:
-        publication_colors = {first_iter: "#F0B533FF"}
+        publication_colors = {first_iter: cfg.STYLE.COLORS[-1]}
     iteration_styles = {}
 
     for iteration in iterations:
@@ -160,9 +166,9 @@ def generate_plots(
         }
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
-    plt.rcParams.update(cfg.STYLE.RCPARAMS)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
-    fig, axes = plt.subplots(1, 2, figsize=(25, 10), sharex=True)
+    fig, axes = plt.subplots(1, 2, figsize=(24, 10), sharex=True)
 
     plot_configs = [
         (
@@ -223,32 +229,16 @@ def generate_plots(
                     solid_capstyle="round",
                 )
 
-        ax.set_ylabel(
-            ylabel,
-            fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-            labelpad=cfg.STYLE.LEGEND.LABELPAD,
-        )
-        ax.set_xlabel(
-            "Sphere Diameter [mm]",
-            fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-            labelpad=cfg.STYLE.LEGEND.LABELPAD,
-        )
-        ax.tick_params(axis="both", width=1.2)
+        ax.set_ylabel(ylabel)
+        ax.set_xlabel("Sphere Diameter [mm]")
+        ax.tick_params(axis="both", labelsize=20, width=1.2)
         ax.tick_params(axis="x", rotation=0)
 
-        ax.grid(
-            True,
-            linestyle=cfg.STYLE.GRID.LINESTYLE,
-            alpha=cfg.STYLE.GRID.ALPHA,
-            color=cfg.STYLE.GRID.COLOR,
-            linewidth=cfg.STYLE.GRID.LINEWIDTH,
-        )
         ax.set_axisbelow(True)
 
         unique_diameters = sorted(df_filtered["diameter_mm"].unique())
         ax.set_xticks(unique_diameters)
 
-        ax.set_facecolor("#fafafa")
         for spine in ax.spines:
             ax.spines[spine].set_linewidth(1.2)
             ax.spines[spine].set_color("#333333")
@@ -278,14 +268,7 @@ def generate_plots(
     plt.tight_layout(rect=(0, 0.1, 1, 0.92))
 
     output_path = output_dir / "analysis_plot_iterations.png"
-    plt.savefig(
-        str(output_path),
-        dpi=600,
-        bbox_inches="tight",
-        facecolor="white",
-        edgecolor="none",
-        format="png",
-    )
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
 
     plt.close()
 
@@ -362,7 +345,7 @@ def generate_pc_vs_bg_plot(
         diameter_color_map[diameter] = diameter_colors[i % len(diameter_colors)]
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
-    plt.rcParams.update(cfg.STYLE.RCPARAMS)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     fig, ax = plt.subplots(1, 1, figsize=(15, 10))
 
@@ -440,31 +423,14 @@ def generate_pc_vs_bg_plot(
                             zorder=20,
                         )
 
-    ax.set_ylabel(
-        "Contrast Recovery (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax.set_xlabel(
-        "Background Variability (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
+    ax.set_ylabel("Contrast Recovery (%)")
+    ax.set_xlabel("Background Variability (%)")
 
-    ax.tick_params(axis="both", width=1.2)
+    ax.tick_params(axis="both", labelsize=20, width=1.2)
     ax.tick_params(axis="x", rotation=0)
     ax.tick_params(axis="y", rotation=0)
-
-    ax.grid(
-        True,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        alpha=cfg.STYLE.GRID.ALPHA,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
     ax.set_axisbelow(True)
 
-    ax.set_facecolor("#fafafa")
     for spine in ax.spines:
         ax.spines[spine].set_linewidth(1.2)
         ax.spines[spine].set_color("#333333")
@@ -502,13 +468,7 @@ def generate_pc_vs_bg_plot(
     plt.tight_layout()
 
     output_path = output_dir / "bg_vs_pc_plot.png"
-    plt.savefig(
-        str(output_path),
-        dpi=600,
-        bbox_inches="tight",
-        facecolor="white",
-        edgecolor="none",
-    )
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
 
     plt.close()
 
@@ -598,18 +558,18 @@ def generate_wcbr_convergence_plot(
                 break
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
-    plt.rcParams.update(cfg.STYLE.RCPARAMS)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
 
     ax.plot(
         cbr_stats["iteration"],
         cbr_stats["mean"],
-        color="#023743FF",
+        color=cfg.STYLE.COLORS[0],
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#023743FF",
+        markerfacecolor=cfg.STYLE.COLORS[0],
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -623,15 +583,15 @@ def generate_wcbr_convergence_plot(
     key_iterations = list(dict.fromkeys(key_iterations))
 
     key_colors = {
-        first_iter: "#72874EFF",
-        max_cbr_iter: "#F0B533FF",
-        final_iter: "#453947FF",
+        first_iter: cfg.STYLE.COLORS[1],
+        max_cbr_iter: cfg.STYLE.COLORS[-1],
+        final_iter: cfg.STYLE.COLORS[2],
     }
 
     for iteration in key_iterations:
         iter_data = cbr_stats[cbr_stats["iteration"] == iteration]
         if not iter_data.empty:
-            color = key_colors.get(iteration, "#666666")
+            color = key_colors.get(iteration, cfg.STYLE.COLORS[-3])
             ax.scatter(
                 iteration,
                 iter_data["mean"].iloc[0],
@@ -681,32 +641,15 @@ def generate_wcbr_convergence_plot(
     improvement = ((max_cbr_value - first_cbr) / first_cbr) * 100
     final_vs_peak = ((final_cbr - max_cbr_value) / max_cbr_value) * 100
 
-    ax.set_xlabel(
-        "Iterations",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax.set_ylabel(
-        "Weighted CBR",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
+    ax.set_xlabel("Iterations")
+    ax.set_ylabel("Weighted CBR")
 
-    ax.tick_params(axis="both", width=1.2)
+    ax.tick_params(axis="both", labelsize=20, width=1.2)
     ax.tick_params(axis="x", rotation=0)
 
     ax.set_xticks(range(int(min(iterations)), int(max(iterations)) + 1, 1))
-
-    ax.grid(
-        True,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        alpha=cfg.STYLE.GRID.ALPHA,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
     ax.set_axisbelow(True)
 
-    ax.set_facecolor("#fafafa")
     for spine in ax.spines:
         ax.spines[spine].set_linewidth(1.2)
         ax.spines[spine].set_color("#333333")
@@ -715,13 +658,7 @@ def generate_wcbr_convergence_plot(
 
     output_path = output_dir / "weighted_cbr_convergence_analysis.png"
 
-    plt.savefig(
-        str(output_path),
-        dpi=600,
-        bbox_inches="tight",
-        facecolor="white",
-        edgecolor="none",
-    )
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
 
     plt.close()
 
@@ -844,18 +781,18 @@ def generate_cbr_convergence_plot(
     iterations = sorted(cbr37_stats["iteration"].unique())
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
-    plt.rcParams.update(cfg.STYLE.RCPARAMS)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
 
     ax.plot(
         cbr37_stats["iteration"],
         cbr37_stats["mean"],
-        color="#8C7A6BFF",
+        color=cfg.STYLE.COLORS[5],
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#8C7A6BFF",
+        markerfacecolor=cfg.STYLE.COLORS[5],
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -866,11 +803,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr28_stats["iteration"],
         cbr28_stats["mean"],
-        color="#453947FF",
+        color=cfg.STYLE.COLORS[4],
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#453947FF",
+        markerfacecolor=cfg.STYLE.COLORS[4],
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -881,11 +818,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr22_stats["iteration"],
         cbr22_stats["mean"],
-        color="#A4BED5FF",
+        color=cfg.STYLE.COLORS[3],
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#A4BED5FF",
+        markerfacecolor=cfg.STYLE.COLORS[3],
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -896,11 +833,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr17_stats["iteration"],
         cbr17_stats["mean"],
-        color="#476F84FF",
+        color=cfg.STYLE.COLORS[2],
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#476F84FF",
+        markerfacecolor=cfg.STYLE.COLORS[2],
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -911,11 +848,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr13_stats["iteration"],
         cbr13_stats["mean"],
-        color="#72874EFF",
+        color=cfg.STYLE.COLORS[1],
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#72874EFF",
+        markerfacecolor=cfg.STYLE.COLORS[1],
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -926,11 +863,11 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr10_stats["iteration"],
         cbr10_stats["mean"],
-        color="#023743FF",
+        color=cfg.STYLE.COLORS[0],
         linewidth=4.0,
         marker="o",
         markersize=8,
-        markerfacecolor="#023743FF",
+        markerfacecolor=cfg.STYLE.COLORS[0],
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -941,12 +878,12 @@ def generate_cbr_convergence_plot(
     ax.plot(
         cbr_stats["iteration"],
         cbr_stats["mean"],
-        color="#C97D60FF",
+        color=cfg.STYLE.COLORS[-2],
         linewidth=4.0,
         linestyle="--",
         marker="o",
         markersize=8,
-        markerfacecolor="#C97D60FF",
+        markerfacecolor=cfg.STYLE.COLORS[-2],
         markeredgecolor="white",
         markeredgewidth=2,
         alpha=0.9,
@@ -960,7 +897,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_37_iter,
         max_37_value,
-        color="#F0B533FF",
+        color=cfg.STYLE.COLORS[-1],
         s=100,
         zorder=20,
         edgecolors="white",
@@ -973,7 +910,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_28_iter,
         max_28_value,
-        color="#F0B533FF",
+        color=cfg.STYLE.COLORS[-1],
         s=100,
         zorder=20,
         edgecolors="white",
@@ -986,7 +923,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_22_iter,
         max_22_value,
-        color="#F0B533FF",
+        color=cfg.STYLE.COLORS[-1],
         s=100,
         zorder=20,
         edgecolors="white",
@@ -999,7 +936,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_13_iter,
         max_13_value,
-        color="#F0B533FF",
+        color=cfg.STYLE.COLORS[-1],
         s=100,
         zorder=20,
         edgecolors="white",
@@ -1012,7 +949,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_17_iter,
         max_17_value,
-        color="#F0B533FF",
+        color=cfg.STYLE.COLORS[-1],
         s=100,
         zorder=20,
         edgecolors="white",
@@ -1025,7 +962,7 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_10_iter,
         max_10_value,
-        color="#F0B533FF",
+        color=cfg.STYLE.COLORS[-1],
         s=100,
         zorder=20,
         edgecolors="white",
@@ -1038,36 +975,20 @@ def generate_cbr_convergence_plot(
     ax.scatter(
         max_weighted_iter,
         max_weighted_value,
-        color="#F0B533FF",
+        color=cfg.STYLE.COLORS[-1],
         s=100,
         zorder=20,
         edgecolors="white",
         linewidths=2,
     )
 
-    ax.set_xlabel(
-        "Iterations",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax.set_ylabel(
-        "CBR",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
+    ax.set_xlabel("Iterations")
+    ax.set_ylabel("CBR")
 
-    ax.tick_params(axis="both", width=1.2)
+    ax.tick_params(axis="both", labelsize=20, width=1.2)
     ax.tick_params(axis="x", rotation=0)
 
     ax.set_xticks(range(int(min(iterations)), int(max(iterations)) + 1, 1))
-
-    ax.grid(
-        True,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        alpha=cfg.STYLE.GRID.ALPHA,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
     ax.set_axisbelow(True)
 
     from matplotlib.lines import Line2D
@@ -1076,7 +997,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#8C7A6BFF",
+            color=cfg.STYLE.COLORS[5],
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1087,7 +1008,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#453947FF",
+            color=cfg.STYLE.COLORS[4],
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1098,7 +1019,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#A4BED5FF",
+            color=cfg.STYLE.COLORS[3],
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1109,7 +1030,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#476F84FF",
+            color=cfg.STYLE.COLORS[2],
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1120,7 +1041,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#72874EFF",
+            color=cfg.STYLE.COLORS[1],
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1131,7 +1052,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#023743FF",
+            color=cfg.STYLE.COLORS[0],
             linewidth=4,
             marker="o",
             markersize=8,
@@ -1142,7 +1063,7 @@ def generate_cbr_convergence_plot(
         Line2D(
             [0],
             [0],
-            color="#C97D60FF",
+            color=cfg.STYLE.COLORS[-2],
             linewidth=4,
             linestyle="--",
             marker="o",
@@ -1155,7 +1076,7 @@ def generate_cbr_convergence_plot(
             [0],
             [0],
             marker="o",
-            color="#F0B533FF",
+            color=cfg.STYLE.COLORS[-1],
             linestyle="None",
             markersize=10,
             markeredgecolor="white",
@@ -1184,13 +1105,7 @@ def generate_cbr_convergence_plot(
     plt.tight_layout(rect=(0.0, 0.0, 0.85, 1.0))
 
     output_path = output_dir / "cbr_convergence_analysis.png"
-    plt.savefig(
-        str(output_path),
-        dpi=600,
-        bbox_inches="tight",
-        facecolor="white",
-        edgecolor="none",
-    )
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
 
     plt.close()
 
@@ -1257,21 +1172,27 @@ def generate_boxplot_with_mean_std(
     key_iterations = list(dict.fromkeys(key_iterations))
 
     publication_colors = {
-        first_iter: "#72874EFF",
-        best_cbr_iter: "#F0B533FF",
-        final_iter: "#453947FF",
+        first_iter: cfg.STYLE.COLORS[1],
+        best_cbr_iter: cfg.STYLE.COLORS[-1],
+        final_iter: cfg.STYLE.COLORS[4],
     }
 
     if len(key_iterations) == 2:
         if first_iter == best_cbr_iter:
-            publication_colors = {first_iter: "#72874EFF", final_iter: "#453947FF"}
+            publication_colors = {
+                first_iter: cfg.STYLE.COLORS[1],
+                final_iter: cfg.STYLE.COLORS[4],
+            }
         elif final_iter == best_cbr_iter:
-            publication_colors = {first_iter: "#72874EFF", final_iter: "#F0B533FF"}
+            publication_colors = {
+                first_iter: cfg.STYLE.COLORS[1],
+                final_iter: cfg.STYLE.COLORS[-1],
+            }
     elif len(key_iterations) == 1:
-        publication_colors = {first_iter: "#F0B533FF"}
+        publication_colors = {first_iter: cfg.STYLE.COLORS[-1]}
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
-    plt.rcParams.update(cfg.STYLE.RCPARAMS)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     fig, ax = plt.subplots(1, 1, figsize=(12, 10))
 
@@ -1375,42 +1296,17 @@ def generate_boxplot_with_mean_std(
 
     ax.set_xticks(range(1, len(box_labels) + 1))
     ax.set_xticklabels(box_labels)
-    ax.set_xlabel(
-        "Key Iterations",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax.set_ylabel(
-        "Accuracy of Correction in Lung Insert (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
+    ax.set_xlabel("Key Iterations")
+    ax.set_ylabel("Accuracy of Correction in Lung Insert (%)")
 
-    ax.tick_params(axis="both", width=1.2)
+    ax.tick_params(axis="both", labelsize=20, width=1.2)
     ax.tick_params(axis="x", rotation=0)
-
-    ax.grid(
-        True,
-        axis="y",
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        alpha=cfg.STYLE.GRID.ALPHA,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
     ax.set_axisbelow(True)
-
-    ax.set_facecolor("#fafafa")
 
     plt.tight_layout()
 
     output_path = output_dir / "lung_boxplot_iterations.png"
-    plt.savefig(
-        str(output_path),
-        dpi=600,
-        bbox_inches="tight",
-        facecolor="white",
-        edgecolor="none",
-    )
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
 
     plt.close()
 
@@ -1438,9 +1334,35 @@ def generate_boxplot_with_mean_std(
         )
 
 
-def header(canvas, doc, logo_path=None):
+def _header(
+    canvas, doc, logo_left_path=None, logo_right_path=None, Name="NEMA NU 2-2018 Report"
+):
     canvas.saveState()
-    if logo_path and Path(logo_path).exists():
+
+    if logo_left_path and Path(logo_left_path).exists():
+        original_width = 1608
+        original_height = 251
+        max_width = 160
+        max_height = 100
+
+        width_ratio = max_width / original_width
+        height_ratio = max_height / original_height
+        scale = min(width_ratio, height_ratio)
+
+        draw_width = original_width * scale
+        draw_height = original_height * scale
+
+        canvas.drawImage(
+            str(logo_left_path),
+            40,
+            740,
+            width=draw_width,
+            height=draw_height,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+
+    if logo_right_path and Path(logo_right_path).exists():
         original_width = 1608
         original_height = 251
         max_width = 260
@@ -1453,17 +1375,21 @@ def header(canvas, doc, logo_path=None):
         draw_width = original_width * scale
         draw_height = original_height * scale
 
+        # Position on the right side (letter page width is ~612, minus logo width and margin)
+        x_position = 612 - draw_width - 40
+
         canvas.drawImage(
-            str(logo_path),
-            40,
+            str(logo_right_path),
+            x_position,
             740,
             width=draw_width,
             height=draw_height,
             preserveAspectRatio=True,
             mask="auto",
         )
+
     canvas.setFont("Helvetica-Bold", 10)
-    canvas.drawRightString(550, 760, "NEMA NU 2-2018 Report")
+    canvas.drawCentredString(306, 760, Name)
     canvas.restoreState()
 
 
@@ -1535,7 +1461,12 @@ def generate_reportlab_report(
     template = PageTemplate(
         id="with-header",
         frames=frame,
-        onPage=lambda c, d: header(c, d, "data/logosimbolocontexto_principal.jpg"),
+        onPage=lambda c, d: _header(
+            canvas=c,
+            doc=d,
+            logo_left_path="data/logosimbolocontexto_principal.jpg",
+            logo_right_path="data/logo.png",
+        ),
     )
     doc.addPageTemplates([template])
 
@@ -1547,7 +1478,9 @@ def generate_reportlab_report(
     body_style = styles["BodyText"]
 
     elements.append(
-        Paragraph("NEMA Analysis Report - Multi-Iteration Results", title_style)
+        Paragraph(
+            "NEMA NU 2-2018 Analysis Report - Multi-Iteration Results", title_style
+        )
     )
     elements.append(Spacer(1, 0.2 * inch))
 
@@ -1842,6 +1775,7 @@ def generate_reportlab_report(
         elements.append(Paragraph(line, body_style))
 
     doc.build(elements)
+    logger.info(f"NEMA NU 2-2018 PDF report generated: {output_path}")
 
 
 def save_results_to_txt(
@@ -2136,5 +2070,651 @@ def save_results_to_txt(
         f.write("\n")
 
         f.write("=" * 90 + "\n")
-        f.write("End of Multi-Iteration Report\n")
+        f.write("End of Multi-Iteration NU 2-2018 Report\n")
         f.write("=" * 90 + "\n")
+
+    logger.info(f"NEMA NU 2-2018 results saved to: {output_path}")
+
+
+# ============================================================================
+# NU 4-2008 ITERATION-BASED REPORTING FUNCTIONS
+# ============================================================================
+
+
+def generate_crc_convergence_plot_nu4_iter(
+    all_crc_results: Dict[int, List[Dict[str, Any]]],
+    output_dir: Path,
+    cfg: yacs.config.CfgNode,
+) -> Path:
+    """
+    Generates a publication-quality CRC convergence plot across iterations for NU 4-2008.
+
+    Creates and saves a line plot showing the Recovery Coefficient progression through iterations.
+
+    Parameters
+    ----------
+    all_crc_results : Dict[int, List[Dict[str, Any]]]
+        Dictionary mapping iteration numbers to CRC results.
+    output_dir : Path
+        Destination path for saving the plot.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+
+    Returns
+    -------
+    Path
+        Path to the saved plot image.
+    """
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
+
+    fig, ax = plt.subplots(1, 1, figsize=(14, 8))
+
+    iterations = sorted(all_crc_results.keys())
+    crc_means = []
+    crc_stds = []
+
+    for iteration in iterations:
+        crc_list = all_crc_results[iteration]
+        if crc_list:
+            rcs = [item.get("recovery_coeff", 0.0) for item in crc_list]
+            crc_means.append(np.mean(rcs))
+            crc_stds.append(np.std(rcs))
+        else:
+            crc_means.append(0.0)
+            crc_stds.append(0.0)
+
+    ax.errorbar(
+        iterations,
+        crc_means,
+        yerr=crc_stds,
+        color=cfg.STYLE.COLORS[0],
+        linewidth=4.0,
+        marker="o",
+        markersize=8,
+        markerfacecolor=cfg.STYLE.COLORS[0],
+        markeredgecolor="white",
+        markeredgewidth=2,
+        capsize=5,
+        capthick=2,
+        alpha=0.9,
+        zorder=10,
+        label="Mean Recovery Coefficient",
+    )
+
+    ax.set_xlabel("Iteration", fontsize=14, fontweight="bold")
+    ax.set_ylabel("Recovery Coefficient (RC)", fontsize=14, fontweight="bold")
+    ax.set_title(
+        "CRC Convergence Across Iterations - NU 4-2008",
+        fontsize=16,
+        fontweight="bold",
+        pad=20,
+    )
+
+    ax.legend(fontsize=12, loc="best")
+
+    plt.tight_layout()
+    output_path = output_dir / "crc_convergence_nu4_iter.png"
+    plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    logger.info(f"CRC convergence plot saved: {output_path}")
+    return output_path
+
+
+def generate_spillover_convergence_plot_nu4_iter(
+    all_spillover_results: Dict[int, Dict[str, Any]],
+    output_dir: Path,
+    cfg: yacs.config.CfgNode,
+) -> Path:
+    """
+    Generates a publication-quality spillover convergence plot across iterations for NU 4-2008.
+
+    Parameters
+    ----------
+    all_spillover_results : Dict[int, Dict[str, Any]]
+        Dictionary mapping iteration numbers to spillover results.
+    output_dir : Path
+        Destination path for saving the plot.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+
+    Returns
+    -------
+    Path
+        Path to the saved plot image.
+    """
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
+
+    fig, ax = plt.subplots(1, 1, figsize=(14, 8))
+
+    iterations = sorted(all_spillover_results.keys())
+    air_sor = []
+    water_sor = []
+
+    for iteration in iterations:
+        spillover = all_spillover_results[iteration]
+        air_sor.append(spillover.get("air", {}).get("SOR", 0.0))
+        water_sor.append(spillover.get("water", {}).get("SOR", 0.0))
+
+    ax.plot(
+        iterations,
+        air_sor,
+        color=cfg.STYLE.COLORS[5],
+        linewidth=4.0,
+        marker="o",
+        markersize=8,
+        markerfacecolor=cfg.STYLE.COLORS[5],
+        markeredgecolor="white",
+        markeredgewidth=2,
+        alpha=0.9,
+        zorder=10,
+        label="Air SOR",
+    )
+
+    ax.plot(
+        iterations,
+        water_sor,
+        color=cfg.STYLE.COLORS[1],
+        linewidth=4.0,
+        marker="s",
+        markersize=8,
+        markerfacecolor=cfg.STYLE.COLORS[1],
+        markeredgecolor="white",
+        markeredgewidth=2,
+        alpha=0.9,
+        zorder=10,
+        label="Water SOR",
+    )
+
+    ax.set_xlabel("Iteration", fontsize=14, fontweight="bold")
+    ax.set_ylabel("Spillover Ratio (SOR)", fontsize=14, fontweight="bold")
+    ax.set_title(
+        "Spillover Convergence Across Iterations - NU 4-2008",
+        fontsize=16,
+        fontweight="bold",
+        pad=20,
+    )
+
+    ax.legend(fontsize=12, loc="best")
+
+    plt.tight_layout()
+    output_path = output_dir / "spillover_convergence_nu4_iter.png"
+    plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    logger.info(f"Spillover convergence plot saved: {output_path}")
+    return output_path
+
+
+def generate_uniformity_convergence_plot_nu4_iter(
+    all_uniformity_results: Dict[int, Dict[str, Any]],
+    output_dir: Path,
+    cfg: yacs.config.CfgNode,
+) -> Path:
+    """
+    Generates a publication-quality uniformity convergence plot across iterations for NU 4-2008.
+
+    Parameters
+    ----------
+    all_uniformity_results : Dict[int, Dict[str, Any]]
+        Dictionary mapping iteration numbers to uniformity results.
+    output_dir : Path
+        Destination path for saving the plot.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+
+    Returns
+    -------
+    Path
+        Path to the saved plot image.
+    """
+    plt.style.use(cfg.STYLE.PLT_STYLE)
+    plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
+
+    fig, ax = plt.subplots(1, 1, figsize=(14, 8))
+
+    iterations = sorted(all_uniformity_results.keys())
+    means = []
+    maxs = []
+    mins = []
+
+    for iteration in iterations:
+        uniformity = all_uniformity_results[iteration]
+        means.append(uniformity.get("mean", 0.0))
+        maxs.append(uniformity.get("maximum", 0.0))
+        mins.append(uniformity.get("minimum", 0.0))
+
+    ax.plot(
+        iterations,
+        means,
+        color=cfg.STYLE.COLORS[0],
+        linewidth=4.0,
+        marker="o",
+        markersize=8,
+        markerfacecolor=cfg.STYLE.COLORS[0],
+        markeredgecolor="white",
+        markeredgewidth=2,
+        alpha=0.9,
+        zorder=10,
+        label="Mean Uniformity",
+    )
+
+    ax.fill_between(
+        iterations,
+        mins,
+        maxs,
+        alpha=0.2,
+        color=cfg.STYLE.COLORS[0],
+        label="Min-Max Range",
+    )
+
+    ax.set_xlabel("Iteration", fontsize=14, fontweight="bold")
+    ax.set_ylabel("Uniformity Value", fontsize=14, fontweight="bold")
+    ax.set_title(
+        "Uniformity Convergence Across Iterations - NU 4-2008",
+        fontsize=16,
+        fontweight="bold",
+        pad=20,
+    )
+
+    ax.legend(fontsize=12, loc="best")
+
+    plt.tight_layout()
+    output_path = output_dir / "uniformity_convergence_nu4_iter.png"
+    plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.close()
+
+    logger.info(f"Uniformity convergence plot saved: {output_path}")
+    return output_path
+
+
+def save_results_to_txt_nu4_iter(
+    all_crc_results: Dict[int, List[Dict[str, Any]]],
+    all_spillover_results: Dict[int, Dict[str, Any]],
+    all_uniformity_results: Dict[int, Dict[str, Any]],
+    output_path: Path,
+    cfg: yacs.config.CfgNode,
+    input_path: Path,
+    voxel_spacing: Tuple[float, float, float],
+) -> None:
+    """
+    Saves NU 4-2008 multi-iteration analysis results to a formatted text file.
+
+    Parameters
+    ----------
+    all_crc_results : Dict[int, List[Dict[str, Any]]]
+        Dictionary mapping iteration numbers to CRC results.
+    all_spillover_results : Dict[int, Dict[str, Any]]
+        Dictionary mapping iteration numbers to spillover results.
+    all_uniformity_results : Dict[int, Dict[str, Any]]
+        Dictionary mapping iteration numbers to uniformity results.
+    output_path : Path
+        Destination path for saving the results file.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+    input_path : Path
+        Path to the input directory or image file.
+    voxel_spacing : Tuple[float, float, float]
+        Voxel spacing used during analysis.
+
+    Returns
+    -------
+    None
+    """
+    iterations = sorted(all_crc_results.keys())
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("=" * 90 + "\n")
+        f.write("NEMA NU 4-2008 IMAGE QUALITY ANALYSIS RESULTS - MULTI-ITERATION\n")
+        f.write("=" * 90 + "\n")
+        f.write(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Input directory: {input_path}\n")
+        f.write(
+            f"Voxel spacing: {voxel_spacing[0]:.4f} x {voxel_spacing[1]:.4f} x {voxel_spacing[2]:.4f} mm\n"
+        )
+        f.write("Iterations analyzed: {}\n".format(", ".join(map(str, iterations))))
+        f.write(
+            "Final iteration: {}\n".format(max(iterations) if iterations else "N/A")
+        )
+        f.write("\n")
+
+        f.write("ANALYSIS CONFIGURATION:\n")
+        f.write("-" * 50 + "\n")
+        f.write(
+            f"Phantom activity: {getattr(cfg.ACTIVITY, 'PHANTOM_ACTIVITY', 'N/A')}\n"
+        )
+        f.write(f"Activity time: {getattr(cfg.ACTIVITY, 'ACTIVITY_TIME', 'N/A')}\n")
+        f.write(f"Central slice: {cfg.ROIS.CENTRAL_SLICE}\n")
+        f.write(f"Case name: {getattr(cfg.FILE, 'CASE', 'N/A')}\n")
+        f.write("\n")
+
+        f.write("CRC RESULTS SUMMARY (NU 4-2008 Section 7.4.1):\n")
+        f.write("-" * 50 + "\n")
+        f.write(
+            f"{'Iteration':<12} {'Rod Diameter (mm)':<18} {'RC Mean':<12} {'RC Std':<12}\n"
+        )
+        f.write("-" * 60 + "\n")
+
+        for iteration in iterations:
+            crc_list = all_crc_results.get(iteration, [])
+            for crc_item in crc_list:
+                diameter = crc_item.get("diameter_mm", 0.0)
+                rc = crc_item.get("recovery_coeff", 0.0)
+                rc_std = crc_item.get("percentage_STD_rc", 0.0)
+                f.write(
+                    f"{iteration:<12} {diameter:<18.1f} {rc:<12.3f} {rc_std:<12.2f}\n"
+                )
+
+        f.write("\n")
+        f.write("SPILLOVER RATIOS SUMMARY (NU 4-2008 Section 7.4.2):\n")
+        f.write("-" * 50 + "\n")
+        f.write(f"{'Iteration':<12} {'Region':<12} {'SOR':<12} {'%STD':<12}\n")
+        f.write("-" * 50 + "\n")
+
+        for iteration in iterations:
+            spillover = all_spillover_results.get(iteration, {})
+            for region_name in ("air", "water"):
+                metrics = spillover.get(region_name, {})
+                sor = metrics.get("SOR", 0.0)
+                pct_std = metrics.get("%STD", 0.0)
+                f.write(
+                    f"{iteration:<12} {region_name:<12} {sor:<12.3f} {pct_std:<12.2f}\n"
+                )
+
+        f.write("\n")
+        f.write("UNIFORMITY RESULTS SUMMARY (NU 4-2008 Section 7.4.3):\n")
+        f.write("-" * 50 + "\n")
+        f.write(
+            f"{'Iteration':<12} {'Mean':<12} {'Maximum':<12} {'Minimum':<12} {'%STD':<12}\n"
+        )
+        f.write("-" * 60 + "\n")
+
+        for iteration in iterations:
+            uniformity = all_uniformity_results.get(iteration, {})
+            mean_val = uniformity.get("mean", 0.0)
+            max_val = uniformity.get("maximum", 0.0)
+            min_val = uniformity.get("minimum", 0.0)
+            pct_std = uniformity.get("%STD", 0.0)
+            f.write(
+                f"{iteration:<12} {mean_val:<12.3f} {max_val:<12.3f} {min_val:<12.3f} {pct_std:<12.2f}\n"
+            )
+
+        f.write("\n")
+        f.write("CONVERGENCE ANALYSIS:\n")
+        f.write("-" * 50 + "\n")
+
+        if len(iterations) > 1:
+            first_rc = (
+                all_crc_results[iterations[0]][0].get("recovery_coeff", 0.0)
+                if all_crc_results[iterations[0]]
+                else 0.0
+            )
+            last_rc = (
+                all_crc_results[iterations[-1]][0].get("recovery_coeff", 0.0)
+                if all_crc_results[iterations[-1]]
+                else 0.0
+            )
+            rc_change = last_rc - first_rc
+
+            f.write(f"First iteration RC: {first_rc:.3f}\n")
+            f.write(f"Final iteration RC: {last_rc:.3f}\n")
+            f.write(f"RC Change: {rc_change:+.3f}\n")
+            f.write("\n")
+
+        f.write("LEGEND:\n")
+        f.write("-" * 50 + "\n")
+        f.write("RC       : Recovery Coefficient\n")
+        f.write("SOR      : Spillover Ratio\n")
+        f.write("%STD     : Percent Standard Deviation\n")
+        f.write("\n")
+
+        f.write("=" * 90 + "\n")
+        f.write("End of Multi-Iteration NU 4-2008 Report\n")
+        f.write("=" * 90 + "\n")
+
+    logger.info(f"NEMA NU 4-2008 results saved to: {output_path}")
+
+
+def generate_reportlab_report_nu4_iter(
+    all_crc_results: Dict[int, List[Dict[str, Any]]],
+    all_spillover_results: Dict[int, Dict[str, Any]],
+    all_uniformity_results: Dict[int, Dict[str, Any]],
+    output_path: Path,
+    cfg: yacs.config.CfgNode,
+    input_path: Path,
+    voxel_spacing: Tuple[float, float, float],
+    crc_plot_path: Optional[Path] = None,
+    spillover_plot_path: Optional[Path] = None,
+    uniformity_plot_path: Optional[Path] = None,
+) -> None:
+    """
+    Generates a PDF report for NU 4-2008 multi-iteration analysis results using ReportLab.
+
+    Parameters
+    ----------
+    all_crc_results : Dict[int, List[Dict[str, Any]]]
+        Dictionary mapping iteration numbers to CRC results.
+    all_spillover_results : Dict[int, Dict[str, Any]]
+        Dictionary mapping iteration numbers to spillover results.
+    all_uniformity_results : Dict[int, Dict[str, Any]]
+        Dictionary mapping iteration numbers to uniformity results.
+    output_path : Path
+        Destination path for saving the PDF report.
+    cfg : yacs.config.CfgNode
+        Configuration object used for the analysis.
+    input_path : Path
+        Path to the input directory.
+    voxel_spacing : Tuple[float, float, float]
+        Voxel spacing used during analysis.
+    crc_plot_path : Path, optional
+        Path to the CRC convergence plot image file.
+    spillover_plot_path : Path, optional
+        Path to the spillover convergence plot image file.
+    uniformity_plot_path : Path, optional
+        Path to the uniformity convergence plot image file.
+
+    Returns
+    -------
+    None
+    """
+    iterations = sorted(all_crc_results.keys())
+
+    doc = BaseDocTemplate(str(output_path), pagesize=letter)
+    frame = Frame(
+        doc.leftMargin,
+        doc.bottomMargin,
+        doc.width,
+        doc.height - 0.5 * inch,
+        id="normal",
+    )
+    template = PageTemplate(
+        id="with-header",
+        frames=frame,
+        onPage=lambda c, d: _header(
+            canvas=c,
+            doc=d,
+            logo_left_path="data/logosimbolocontexto_principal.jpg",
+            logo_right_path="data/logo.png",
+            Name="NEMA NU 4-2008 Report",
+        ),
+    )
+    doc.addPageTemplates([template])
+
+    elements: List[Flowable] = []
+    styles = getSampleStyleSheet()
+    title_style = styles["Title"]
+    header_style = styles["Heading2"]
+    body_style = styles["BodyText"]
+
+    elements.append(
+        Paragraph(
+            "NEMA NU 4-2008 Analysis Report - Multi-Iteration Results", title_style
+        )
+    )
+    elements.append(Spacer(1, 0.2 * inch))
+
+    summary = (
+        f"<b>Summary of Analysis</b><br/>"
+        f"\u2022 Date of Generation: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br/>"
+        f"\u2022 Input Directory: <font face='Courier'>{str(input_path)}</font><br/>"
+        f"\u2022 Voxel Spacing: {voxel_spacing[0]:.4f} × {voxel_spacing[1]:.4f} × {voxel_spacing[2]:.4f} mm<br/>"
+        f"\u2022 Iterations Analyzed: {', '.join(map(str, iterations))}<br/>"
+        f"\u2022 Final Iteration: {max(iterations) if iterations else 'N/A'}"
+    )
+    elements.append(Paragraph(summary, body_style))
+    elements.append(Spacer(1, 0.2 * inch))
+
+    acq_info = (
+        "<b>Acquisition Information</b><br/>"
+        f"\u2022 Phantom Activity: {getattr(cfg.ACTIVITY, 'PHANTOM_ACTIVITY', 'N/A')}<br/>"
+        f"\u2022 Activity Time: {getattr(cfg.ACTIVITY, 'ACTIVITY_TIME', 'N/A')}<br/>"
+        f"\u2022 Central Slice: {cfg.ROIS.CENTRAL_SLICE}"
+    )
+    elements.append(Paragraph(acq_info, body_style))
+    elements.append(Spacer(1, 0.2 * inch))
+
+    elements.append(Paragraph("<b>CRC Results Summary</b>", header_style))
+    crc_table_data = [
+        ["Iteration", "Diameter (mm)", "RC Mean", "RC Std"],
+    ]
+    for iteration in iterations:
+        crc_list = all_crc_results.get(iteration, [])
+        for crc_item in crc_list:
+            diameter = crc_item.get("diameter_mm", 0.0)
+            rc = crc_item.get("recovery_coeff", 0.0)
+            rc_std = crc_item.get("percentage_STD_rc", 0.0)
+            crc_table_data.append(
+                [
+                    str(iteration),
+                    f"{diameter:.1f}",
+                    f"{rc:.3f}",
+                    f"{rc_std:.2f}",
+                ]
+            )
+
+    crc_table = Table(
+        crc_table_data, colWidths=[1.2 * inch, 1.5 * inch, 1.0 * inch, 1.0 * inch]
+    )
+    crc_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]
+        )
+    )
+    elements.append(crc_table)
+    elements.append(Spacer(1, 0.2 * inch))
+
+    if crc_plot_path and Path(crc_plot_path).exists():
+        elements.append(Paragraph("<b>CRC Convergence Plot</b>", header_style))
+        img = Image(str(crc_plot_path), width=6.0 * inch, height=3.5 * inch)
+        elements.append(img)
+        elements.append(Spacer(1, 0.2 * inch))
+
+    elements.append(PageBreak())
+
+    elements.append(Paragraph("<b>Spillover Ratios Summary</b>", header_style))
+    spillover_table_data = [
+        ["Iteration", "Region", "SOR", "%STD"],
+    ]
+    for iteration in iterations:
+        spillover = all_spillover_results.get(iteration, {})
+        for region_name in ("air", "water"):
+            metrics = spillover.get(region_name, {})
+            sor = metrics.get("SOR", 0.0)
+            pct_std = metrics.get("%STD", 0.0)
+            spillover_table_data.append(
+                [
+                    str(iteration),
+                    region_name.capitalize(),
+                    f"{sor:.3f}",
+                    f"{pct_std:.2f}",
+                ]
+            )
+
+    spillover_table = Table(
+        spillover_table_data, colWidths=[1.2 * inch, 1.2 * inch, 1.2 * inch, 1.2 * inch]
+    )
+    spillover_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]
+        )
+    )
+    elements.append(spillover_table)
+    elements.append(Spacer(1, 0.2 * inch))
+
+    if spillover_plot_path and Path(spillover_plot_path).exists():
+        elements.append(Paragraph("<b>Spillover Convergence Plot</b>", header_style))
+        img = Image(str(spillover_plot_path), width=6.0 * inch, height=3.5 * inch)
+        elements.append(img)
+        elements.append(Spacer(1, 0.2 * inch))
+
+    elements.append(PageBreak())
+
+    elements.append(Paragraph("<b>Uniformity Results Summary</b>", header_style))
+    uniformity_table_data = [
+        ["Iteration", "Mean", "Maximum", "Minimum", "%STD"],
+    ]
+    for iteration in iterations:
+        uniformity = all_uniformity_results.get(iteration, {})
+        mean_val = uniformity.get("mean", 0.0)
+        max_val = uniformity.get("maximum", 0.0)
+        min_val = uniformity.get("minimum", 0.0)
+        pct_std = uniformity.get("%STD", 0.0)
+        uniformity_table_data.append(
+            [
+                str(iteration),
+                f"{mean_val:.3f}",
+                f"{max_val:.3f}",
+                f"{min_val:.3f}",
+                f"{pct_std:.2f}",
+            ]
+        )
+
+    uniformity_table = Table(
+        uniformity_table_data,
+        colWidths=[1.0 * inch, 1.0 * inch, 1.2 * inch, 1.2 * inch, 1.0 * inch],
+    )
+    uniformity_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ]
+        )
+    )
+    elements.append(uniformity_table)
+    elements.append(Spacer(1, 0.2 * inch))
+
+    if uniformity_plot_path and Path(uniformity_plot_path).exists():
+        elements.append(Paragraph("<b>Uniformity Convergence Plot</b>", header_style))
+        img = Image(str(uniformity_plot_path), width=6.0 * inch, height=3.5 * inch)
+        elements.append(img)
+        elements.append(Spacer(1, 0.2 * inch))
+
+    doc.build(elements)
+    logger.info(f"NEMA NU 4-2008 PDF report generated: {output_path}")
