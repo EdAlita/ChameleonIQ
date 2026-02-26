@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -6,6 +7,7 @@ import numpy.typing as npt
 import pytest
 from yacs.config import CfgNode
 
+from src.config.defaults import get_cfg_defaults
 from src.nema_quant import analysis
 
 
@@ -25,6 +27,13 @@ def mock_cfg() -> CfgNode:
     cfg.ROIS.ORIENTATION_YX = [1, 1]  # Add required ORIENTATION_YX
     cfg.ROIS.SPACING = 2.0644  # Add required SPACING
 
+    cfg.STATISTICS = CfgNode()
+    cfg.STATISTICS.MODE = "empirical"
+    cfg.STATISTICS.ESTIMATE_COVARIANCE = False
+    cfg.STATISTICS.SD_VARIANCE_MODEL = "gaussian"
+    cfg.STATISTICS.EPSILON = 1e-12
+    cfg.STATISTICS.FAST_ROI_SHIFT = True
+
     return cfg
 
 
@@ -33,8 +42,8 @@ def mock_phantom() -> MagicMock:
     """Create a mock NemaPhantom object for testing."""
     phantom = MagicMock()
 
-    # Mock the rois dictionary with all expected spheres
-    phantom.rois = {
+    # Use a real dict for rois, not a MagicMock
+    rois_dict = {
         "hot_sphere_10mm": {
             "name": "hot_sphere_10mm",
             "diameter": 10.0,
@@ -48,10 +57,11 @@ def mock_phantom() -> MagicMock:
             "radius_vox": 8.96,  # 37mm / 2 / 2.0644
         },
     }
+    phantom.rois = rois_dict
 
     # Mock the get_roi method
     def get_roi_side_effect(name):
-        roi_data = phantom.rois.get(name)
+        roi_data = rois_dict.get(name)
         if roi_data:
             return {
                 "diameter": roi_data["diameter"],
@@ -62,7 +72,6 @@ def mock_phantom() -> MagicMock:
 
     phantom.get_roi.side_effect = get_roi_side_effect
     phantom._mm_to_voxels.return_value = 4.84  # 10mm / 2.0644
-    phantom.list_hot_spheres.return_value = list(phantom.rois.keys())
 
     return phantom
 
@@ -337,8 +346,17 @@ def test_calculate_hot_sphere_counts():
     if "hot_sphere_10mm" not in counts:
         pytest.fail("Expected 'hot_sphere_10mm' in counts")
 
-    if not (counts["hot_sphere_10mm"] > 700):
-        pytest.fail(f"Expected counts > 700, got {counts['hot_sphere_10mm']}")
+    # The function returns a nested dict with "mean", "std_H", "n_H"
+    sphere_data = counts["hot_sphere_10mm"]
+    if not isinstance(sphere_data, dict):
+        pytest.fail(f"Expected sphere_data to be dict, got {type(sphere_data)}")
+
+    if "mean" not in sphere_data:
+        pytest.fail("Expected 'mean' key in sphere_data")
+
+    sphere_mean = sphere_data["mean"]
+    if not (sphere_mean > 700):
+        pytest.fail(f"Expected mean > 700, got {sphere_mean}")
 
 
 def test_calculate_lung_insert_counts():
@@ -377,3 +395,116 @@ def test_calculate_lung_insert_counts():
 
         if not (float(count) > 0):
             pytest.fail(f"Expected count to be positive, got {float(count)}")
+
+
+def test_calculate_advanced_metrics_basic(mock_cfg):
+    """Test advanced metrics with simple binary masks."""
+    image_data = np.zeros((3, 3, 3), dtype=np.uint8)
+    gt_data = np.zeros((3, 3, 3), dtype=np.uint8)
+    image_data[1, 1, 1] = 1
+    gt_data[1, 1, 1] = 1
+    gt_data[1, 1, 2] = 1
+
+    metrics = analysis.calculate_advanced_metrics(
+        image_data,
+        gt_data,
+        measures=("Dice", "Jaccard"),
+        cfg=mock_cfg,
+    )
+
+    assert "Dice" in metrics
+    assert "Jaccard" in metrics
+    assert metrics["Dice"] > 0
+
+
+@patch("src.nema_quant.analysis.plt.savefig")
+@patch("src.nema_quant.analysis.plt.close")
+def test_save_sphere_visualization(mock_close, mock_savefig, tmp_path: Path):
+    """Test sphere visualization output."""
+    image_slice = np.zeros((10, 10), dtype=np.float32)
+    roi_mask = np.zeros((10, 10), dtype=bool)
+    roi_mask[4:6, 4:6] = True
+
+    analysis.save_sphere_visualization(
+        image_slice=image_slice,
+        sphere_name="hot_sphere_10mm",
+        center_yx=(5.0, 5.0),
+        radius_vox=2.0,
+        roi_mask=roi_mask,
+        output_dir=tmp_path,
+        slice_idx=3,
+    )
+
+    assert mock_savefig.called
+
+
+@patch("src.nema_quant.analysis.plt.savefig")
+@patch("src.nema_quant.analysis.plt.close")
+def test_save_background_visualization(mock_close, mock_savefig, tmp_path: Path):
+    """Test background visualization output."""
+    image_slice = np.zeros((10, 10), dtype=np.float32)
+
+    analysis.save_background_visualization(
+        image_slice=image_slice,
+        centers_offset=[(-1, -1), (1, 1)],
+        pivot_point_yx=(5.0, 5.0),
+        radius_vox=2.0,
+        output_dir=tmp_path,
+        slice_idx=2,
+    )
+
+    assert mock_savefig.called
+
+
+@patch("src.nema_quant.analysis._calculate_crc_std")
+@patch("src.nema_quant.analysis._calculate_spillover_ratio")
+@patch("src.nema_quant.analysis.find_phantom_center_cv2_threshold")
+def test_calculate_nema_metrics_nu4_2008_basic(
+    mock_find_center,
+    mock_spillover,
+    mock_crc,
+):
+    """Test NU4 analysis path with patched helpers."""
+    cfg = get_cfg_defaults()
+    cfg.ROIS.CENTRAL_SLICE = 5
+    cfg.ROIS.SPACING = 2.0
+    cfg.ROIS.ORIENTATION_Z = 1
+    cfg.ROIS.ORIENTATION_YX = [1, 1]
+
+    image_data = np.ones((10, 10, 10), dtype=np.float32)
+    phantom = MagicMock()
+
+    mock_find_center.return_value = (5.0, 5.0, 5.0)
+    mock_spillover.return_value = {"air": {"SOR": 0.01, "SOR_error": 0.0, "%STD": 1.0}}
+    mock_crc.return_value = {
+        "rod_1": {"recovery_coeff": 1.0, "cError": 0.0, "percentage_STD_rc": 0.0}
+    }
+
+    crc_results, spillover_results, uniformity_results = (
+        analysis.calculate_nema_metrics_nu4_2008(
+            image_data=image_data,
+            phantom=phantom,
+            cfg=cfg,
+            save_visualizations=False,
+        )
+    )
+
+    assert isinstance(crc_results, dict)
+    assert isinstance(spillover_results, dict)
+    assert isinstance(uniformity_results, dict)
+
+
+def test_propagate_ratio_stddev():
+    """Test error propagation for ratio calculation."""
+    mu1, mu2 = 10.0, 5.0
+    var1, var2 = 1.0, 0.25
+    cov12 = 0.0
+
+    stddev = analysis._propagate_ratio(mu1, mu2, var1, var2, cov12)
+
+    assert stddev >= 0.0
+    assert isinstance(stddev, float)
+
+    # Test with near-zero denominator
+    stddev_zero = analysis._propagate_ratio(10.0, 0.0, 1.0, 0.0, 0.0, eps=1e-6)
+    assert stddev_zero == 0.0

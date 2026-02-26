@@ -258,6 +258,29 @@ def test_load_nii_image_path_types():
             tmp_path.unlink()
 
 
+def test_load_nii_image_gzipped():
+    """Test loading a gzipped NIfTI file."""
+    test_data = np.zeros((4, 4, 4), dtype=np.float32)
+    test_data[1, 1, 1] = 42.0
+    test_affine = np.eye(4)
+    nii_img = Nifti1Image(test_data, test_affine)
+
+    with tempfile.NamedTemporaryFile(suffix=".nii.gz", delete=False) as tmp_file:
+        tmp_path = Path(tmp_file.name)
+
+    try:
+        save(nii_img, str(tmp_path))
+
+        loaded_data, affine = load_nii_image(tmp_path, return_affine=True)
+
+        assert loaded_data.shape == test_data.shape
+        assert np.isclose(float(loaded_data[1, 1, 1]), 42.0)
+        assert affine is not None
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
 def test_load_nii_image_function_signature():
     """
     Test that the function properly handles different parameter combinations.
@@ -300,3 +323,22 @@ def test_load_nii_image_function_signature():
     finally:
         if tmp_path.exists():
             tmp_path.unlink()
+
+
+def test_create_cylindrical_mask():
+    """Test cylindrical mask creation."""
+    from src.nema_quant.io import create_cylindrical_mask
+
+    shape_zyx = (20, 50, 50)
+    center_zyx = (10.0, 25.0, 25.0)
+    radius_mm = 50.0
+    height_mm = 40.0
+    spacing_xyz = np.array([2.0, 2.0, 2.0])
+
+    mask = create_cylindrical_mask(
+        shape_zyx, center_zyx, radius_mm, height_mm, spacing_xyz
+    )
+
+    assert mask.shape == shape_zyx
+    assert mask.dtype == bool
+    assert np.sum(mask) > 0  # Should have some True values
