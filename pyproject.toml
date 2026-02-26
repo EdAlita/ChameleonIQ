@@ -28,7 +28,7 @@ dependencies = [
     "scipy==1.16.0",
     "scipy-stubs==1.16.0.2",
     "nibabel==5.3.2",
-    "matplotlib==3.10.3",
+    "matplotlib==3.10.8",
     "seaborn==0.13.2",
     "pandas==2.3.1",
     "yacs==0.1.8",
@@ -40,11 +40,12 @@ dependencies = [
     "scikit-image==0.25.2",
     "rich==14.2.0",
     "statsmodels==0.14.5",
-    "PyQt5==5.15.11"
+    "PyQt5==5.15.11",
+    "pyqtgraph==0.14.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/EdAlita/ChameleonIQ/wiki"
+Documentation = "https://chameleoniq.readthedocs.io/en/latest/"
 GitHub = "https://github.com/EdAlita/ChameleonIQ"
 Changelog = "https://github.com/EdAlita/ChameleonIQ/wiki/Changelog"
 Issues = "https://github.com/EdAlita/ChameleonIQ/issues"
@@ -55,11 +56,11 @@ Download = "https://pypi.org/project/ChameleonIQ/#files"
 nema_quant = "nema_quant.__main__:main"
 nema_quant_iter = "nema_quant_iter.__main__:main"
 nema_merge = "nema_merge.__main__:main"
-nema_coord = "nema_quant.utils:main"
+nema_coord = "nema_quant.utils:_main"
 chameleoniq_quant = "nema_quant.__main__:main"
 chameleoniq_quant_iter = "nema_quant_iter.__main__:main"
 chameleoniq_merge = "nema_merge.__main__:main"
-chameleoniq_coord = "nema_quant.utils:main"
+chameleoniq_coord = "nema_quant.utils:_main"
 chameleoniq_roi_detector = "nema_quant.interactive_roi_editor:main"
 chameleoniq_gui = "GUI.chameleon_iq:main"
 
@@ -99,6 +100,26 @@ filterwarnings = [
     "ignore:builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
     "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
     "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning"
+]
+
+[tool.coverage.run]
+omit = [
+    "src/nema_merge/*",
+    "src/nema_quant_iter/*",
+    "src/nema_quant/interactive_roi_editor.py",
+    "src/nema_quant/__main__.py",
+    "src/*/__main__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
 ]
 
 [tool.mypy]
