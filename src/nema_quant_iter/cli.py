@@ -23,18 +23,27 @@ import yacs.config
 from rich.logging import RichHandler
 
 from config.defaults import get_cfg_defaults
-from nema_quant.analysis import calculate_nema_metrics, calculate_weighted_cbr_from
+from nema_quant.analysis import (
+    calculate_nema_metrics,
+    calculate_nema_metrics_nu4_2008,
+    calculate_weighted_cbr_from,
+)
 from nema_quant.io import load_nii_image
 from nema_quant.phantom import NemaPhantom
 
 from .reporting import (
     generate_boxplot_with_mean_std,
     generate_cbr_convergence_plot,
+    generate_crc_convergence_plot_nu4_iter,
     generate_pc_vs_bg_plot,
     generate_plots,
     generate_reportlab_report,
+    generate_reportlab_report_nu4_iter,
+    generate_spillover_convergence_plot_nu4_iter,
+    generate_uniformity_convergence_plot_nu4_iter,
     generate_wcbr_convergence_plot,
     save_results_to_txt,
+    save_results_to_txt_nu4_iter,
 )
 
 
@@ -68,6 +77,13 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         required=True,
         help="Path to custom YAML configuration file. Check defaults/config.yaml for reference or in HOW IT WORKS section from Documentation.",
+    )
+
+    parser.add_argument(
+        "--standard",
+        choices=["NU_2_2018", "NU_4_2008"],
+        default="NU_2_2018",
+        help="NEMA standard to use for phantom definitions (default: NU_2_2018)",
     )
 
     # Optional arguments
@@ -141,16 +157,37 @@ def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> Non
     logging.info(f"Log file created: {log_file_path}")
 
 
-def load_configuration(config_path: Optional[str]) -> yacs.config.CfgNode:
+def load_configuration(
+    config_path: Optional[str], standard: str = "NU_2_2018"
+) -> yacs.config.CfgNode:
     """Load configuration from file or use defaults."""
     cfg = get_cfg_defaults()
+
+    standard_config_map = {
+        "NU_2_2018": "nema_phantom_config.yaml",
+        "NU_4_2008": "nema_phantom_config_nu4_2008.yaml",
+    }
+    standard_config_name = standard_config_map.get(standard)
+    if standard_config_name:
+        standard_config_path = (
+            Path(__file__).resolve().parents[2] / "config" / standard_config_name
+        )
+        if standard_config_path.exists():
+            logging.info(
+                f"Loading base config for standard {standard}: {standard_config_path}"
+            )
+            cfg.merge_from_file(str(standard_config_path))
+        else:
+            logging.warning(
+                f"Base config for standard {standard} not found at {standard_config_path}"
+            )
 
     if config_path:
         config_file = Path(config_path)
         if not config_file.exists():
-            raise FileNotFoundError(f" Configuration file not found: {config_path}")
+            raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-        logging.info(f" Loading configuration from: {config_path}")
+        logging.info(f"Loading configuration: {config_path}")
         cfg.merge_from_file(config_path)
     else:
         logging.info("Using default configuration")
@@ -228,8 +265,8 @@ def get_nii_iterations(folder_path: Path, pattern: str) -> List[Dict[str, Any]]:
 
 def process_single_iteration(
     iteration_info: Dict[str, Any], cfg, args: argparse.Namespace
-) -> Tuple[Optional[List[Dict[str, Any]]], Optional[Dict[int, float]], Optional[str]]:
-    """Process a single NIfTI iteration and return results."""
+) -> Tuple[Optional[Any], Optional[Any], Optional[Any], Optional[str]]:
+    """Process a single NIfTI iteration and return results based on standard."""
     iteration_num = iteration_info["iteration"]
     file_path = Path(iteration_info["path"])
 
@@ -248,21 +285,37 @@ def process_single_iteration(
         phantom = NemaPhantom(cfg, image_dims, voxel_spacing)
         logging.info(f" Phantom initialized with {len(phantom.rois)} ROIs")
         logging.info(" Performing NEMA analysis...")
-        results, lung_results = calculate_nema_metrics(
-            image_data,
-            phantom,
-            cfg,
-            save_visualizations=args.save_visualizations,
-            visualizations_dir=args.visualizations_dir,
-        )
 
-        values = list(lung_results.values())
-        average = float(np.mean(values)) if values else 0.0
-        logging.info(
-            f" Iteration {iteration_num}: Average Accuracy Correction: {average:.3f}%, Spheres: {len(results)}"
-        )
+        if args.standard == "NU_4_2008":
+            logging.info("Running NU_4_2008 analysis path")
+            crc_results, spillover_results, uniformity_results = (
+                calculate_nema_metrics_nu4_2008(
+                    image_data,
+                    phantom,
+                    cfg,
+                    save_visualizations=args.save_visualizations,
+                    visualizations_dir=args.visualizations_dir,
+                )
+            )
+            logging.info(f" Iteration {iteration_num}: NU_4_2008 analysis completed")
+            return crc_results, spillover_results, uniformity_results, None
+        else:
+            logging.info("Running NU_2_2018 analysis path")
+            results, lung_results = calculate_nema_metrics(
+                image_data,
+                phantom,
+                cfg,
+                save_visualizations=args.save_visualizations,
+                visualizations_dir=args.visualizations_dir,
+            )
 
-        return results, lung_results, None
+            values = list(lung_results.values())
+            average = float(np.mean(values)) if values else 0.0
+            logging.info(
+                f" Iteration {iteration_num}: Average Accuracy Correction: {average:.3f}%, Spheres: {len(results)}"
+            )
+
+            return results, lung_results, None, None
 
     except Exception as e:
         error_msg = f" Failed to process iteration {iteration_num}: {e}"
@@ -271,7 +324,7 @@ def process_single_iteration(
             import traceback
 
             logging.error(traceback.format_exc())
-        return None, None, error_msg
+        return None, None, None, error_msg
 
 
 def run_analysis(args: argparse.Namespace) -> int:
@@ -282,9 +335,10 @@ def run_analysis(args: argparse.Namespace) -> int:
         logging.info("Starting ChameleonIQ for Multiple Iterations")
         logging.info(f" Input folder: {args.input_path}")
         logging.info(f" Output file: {args.output}")
+        logging.info(f" NEMA standard: {args.standard}")
 
         try:
-            cfg = load_configuration(args.config)
+            cfg = load_configuration(args.config, args.standard)
             logging.info(
                 f"Number of ROIs defined: {len(cfg.PHANTHOM.ROI_DEFINITIONS_MM)}"
             )
@@ -323,6 +377,9 @@ def run_analysis(args: argparse.Namespace) -> int:
 
         all_results = []
         all_lung_results: Dict[int, Dict[int, float]] = {}
+        all_crc_results: Dict[int, Any] = {}
+        all_spillover_results: Dict[int, Any] = {}
+        all_uniformity_results: Dict[int, Any] = {}
         failed_iterations: List[Tuple[int, str]] = []
 
         total_iterations = len(nii_iterations)
@@ -333,133 +390,179 @@ def run_analysis(args: argparse.Namespace) -> int:
                 f"Processing iteration {i}/{total_iterations}: {iteration_num}"
             )
 
-            results, lung_results, error = process_single_iteration(
+            result1, result2, result3, error = process_single_iteration(
                 iteration_info, cfg, args
             )
-            metrics = calculate_weighted_cbr_from(results)
-            _cbrs = [float(x) for x in metrics["CBRs"]] if metrics["CBRs"] else []
-            logging.info(f"With the diameters {metrics['diameters']}")
-            logging.info(f"With the CBRs {_cbrs}")
-            logging.info(
-                f"Iteration {iteration_num} Weighted CBR: {metrics['weighted_CBR']:.3f}"
-            )
-            logging.info(
-                f"Iteration {iteration_num} Weighted FOM: {metrics['weighted_FOM']:.3f}"
-            )
 
-            if error is None and results is not None and lung_results is not None:
-                for result in results:
-                    all_results.append(
-                        {
-                            "diameter_mm": result["diameter_mm"],
-                            "percentaje_constrast_QH": result[
-                                "percentaje_constrast_QH"
-                            ],
-                            "background_variability_N": result[
-                                "background_variability_N"
-                            ],
-                            "avg_hot_counts_CH": result["avg_hot_counts_CH"],
-                            "avg_bkg_counts_CB": result["avg_bkg_counts_CB"],
-                            "bkg_std_dev_SD": result["bkg_std_dev_SD"],
-                            "iteration": iteration_num,
-                            "weighted_CBR": metrics["weighted_CBR"],
-                            "weighted_FOM": metrics["weighted_FOM"],
-                            "37_CBR": _cbrs[0] if len(_cbrs) > 0 else 0.0,
-                            "28_CBR": _cbrs[1] if len(_cbrs) > 1 else 0.0,
-                            "22_CBR": _cbrs[2] if len(_cbrs) > 2 else 0.0,
-                            "17_CBR": _cbrs[3] if len(_cbrs) > 3 else 0.0,
-                            "13_CBR": _cbrs[4] if len(_cbrs) > 4 else 0.0,
-                            "10_CBR": _cbrs[5] if len(_cbrs) > 5 else 0.0,
-                        }
+            if args.standard == "NU_4_2008":
+                # Handle NU_4_2008 results
+                crc_results, spillover_results, uniformity_results = (
+                    result1,
+                    result2,
+                    result3,
+                )
+                if error is None and crc_results is not None:
+                    all_crc_results[iteration_num] = crc_results
+                    all_spillover_results[iteration_num] = spillover_results
+                    all_uniformity_results[iteration_num] = uniformity_results
+                    logging.info(
+                        f" Iteration {iteration_num}: NU_4_2008 analysis stored"
                     )
-                all_lung_results[iteration_num] = lung_results
+                else:
+                    failed_iterations.append((iteration_num, error or "Unknown error"))
             else:
-                failed_iterations.append((iteration_num, error or "Unknown error"))
+                # Handle NU_2_2018 results (default)
+                results, lung_results = result1, result2
+                metrics = calculate_weighted_cbr_from(results)
+                _cbrs = [float(x) for x in metrics["CBRs"]] if metrics["CBRs"] else []
+                logging.info(f"With the diameters {metrics['diameters']}")
+                logging.info(f"With the CBRs {_cbrs}")
+                logging.info(
+                    f"Iteration {iteration_num} Weighted CBR: {metrics['weighted_CBR']:.3f}"
+                )
+                logging.info(
+                    f"Iteration {iteration_num} Weighted FOM: {metrics['weighted_FOM']:.3f}"
+                )
 
-        successful_iterations = len(all_results)
+                if error is None and results is not None and lung_results is not None:
+                    for result in results:
+                        all_results.append(
+                            {
+                                "diameter_mm": result["diameter_mm"],
+                                "percentaje_constrast_QH": result[
+                                    "percentaje_constrast_QH"
+                                ],
+                                "background_variability_N": result[
+                                    "background_variability_N"
+                                ],
+                                "avg_hot_counts_CH": result["avg_hot_counts_CH"],
+                                "avg_bkg_counts_CB": result["avg_bkg_counts_CB"],
+                                "bkg_std_dev_SD": result["bkg_std_dev_SD"],
+                                "iteration": iteration_num,
+                                "weighted_CBR": metrics["weighted_CBR"],
+                                "weighted_FOM": metrics["weighted_FOM"],
+                                "37_CBR": _cbrs[0] if len(_cbrs) > 0 else 0.0,
+                                "28_CBR": _cbrs[1] if len(_cbrs) > 1 else 0.0,
+                                "22_CBR": _cbrs[2] if len(_cbrs) > 2 else 0.0,
+                                "17_CBR": _cbrs[3] if len(_cbrs) > 3 else 0.0,
+                                "13_CBR": _cbrs[4] if len(_cbrs) > 4 else 0.0,
+                                "10_CBR": _cbrs[5] if len(_cbrs) > 5 else 0.0,
+                            }
+                        )
+                    all_lung_results[iteration_num] = lung_results
+                else:
+                    failed_iterations.append((iteration_num, error or "Unknown error"))
+
+        successful_iterations = (
+            len(all_results) if args.standard == "NU_2_2018" else len(all_crc_results)
+        )
         failed_count = len(failed_iterations)
 
-        iteration_metrics = {}
-        for result in all_results:
-            iter_num = result["iteration"]
-            if iter_num not in iteration_metrics:
-                iteration_metrics[iter_num] = {
-                    "weighted_CBR": result["weighted_CBR"],
-                    "weighted_FOM": result["weighted_FOM"],
-                }
+        if args.standard == "NU_2_2018":
+            iteration_metrics = {}
+            for result in all_results:
+                iter_num = result["iteration"]
+                if iter_num not in iteration_metrics:
+                    iteration_metrics[iter_num] = {
+                        "weighted_CBR": result["weighted_CBR"],
+                        "weighted_FOM": result["weighted_FOM"],
+                    }
 
-        best_cbr_iter_num, best_cbr_metrics = max(
-            iteration_metrics.items(), key=lambda x: x[1]["weighted_CBR"]
-        )
-        best_fom_iter_num, best_fom_metrics = max(
-            iteration_metrics.items(), key=lambda x: x[1]["weighted_FOM"]
-        )
-        logging.info(
-            f"Iteration with highest weighted CBR: {best_cbr_iter_num} (CBR={best_cbr_metrics['weighted_CBR']:.3f})"
-        )
-        logging.info(
-            f"Iteration with highest weighted FOM: {best_fom_iter_num} (FOM={best_fom_metrics['weighted_FOM']:.3f})"
-        )
-
-        logging.info(
-            f"Processing complete: {successful_iterations // 6} successful, {failed_count // 6} failed"
-        )
-
-        if failed_iterations:
-            logging.warning("Failed iterations:")
-            for iteration_num, error in failed_iterations:
-                logging.warning(f"  Iteration {iteration_num}: {error}")
-
-        if successful_iterations == 0:
-            error_msg = "No iterations were processed successfully"
-            logging.error(error_msg)
-            print(f"ERROR: {error_msg}")
-            return 1
-
-        logging.info("Summary of results:")
-        for iteration_num in sorted(all_lung_results.keys()):
-            sphere_count = len(
-                [r for r in all_results if r["iteration"] == iteration_num]
+            best_cbr_iter_num, best_cbr_metrics = max(
+                iteration_metrics.items(), key=lambda x: x[1]["weighted_CBR"]
             )
-            lung_results = all_lung_results[iteration_num]
-
-            lung_values = list(lung_results.values())
-            avg_lung = float(np.mean(lung_values)) if lung_values else 0.0
+            best_fom_iter_num, best_fom_metrics = max(
+                iteration_metrics.items(), key=lambda x: x[1]["weighted_FOM"]
+            )
+            logging.info(
+                f"Iteration with highest weighted CBR: {best_cbr_iter_num} (CBR={best_cbr_metrics['weighted_CBR']:.3f})"
+            )
+            logging.info(
+                f"Iteration with highest weighted FOM: {best_fom_iter_num} (FOM={best_fom_metrics['weighted_FOM']:.3f})"
+            )
 
             logging.info(
-                f"  Iteration {iteration_num}: {sphere_count} spheres, avg lung correction: {avg_lung:.3f}%"
+                f"Iteration with highest weighted CBR: {best_cbr_iter_num} (CBR={best_cbr_metrics['weighted_CBR']:.3f})"
             )
-
-        logging.info(
-            f"Total sphere measurements across all iterations: {len(all_results)}"
-        )
-        logging.info(f"Results stored for {successful_iterations // 6} iterations")
-
-        from collections import defaultdict
-
-        results_by_iteration = defaultdict(list)
-        for result in all_results:
-            results_by_iteration[result["iteration"]].append(result)
-
-        for iteration_num in sorted(results_by_iteration.keys()):
-            sphere_results = results_by_iteration[iteration_num]
-            lung_results = all_lung_results[iteration_num]
-
-            contrasts = [r["percentaje_constrast_QH"] for r in sphere_results]
-            background = [r["background_variability_N"] for r in sphere_results]
-            avg_contrast = np.mean(contrasts) if contrasts else 0.0
-            avg_background = np.mean(background) if background else 0.0
-
-            lung_values = list(lung_results.values())
-            avg_lung = float(np.mean(lung_values)) if lung_values else 0.0
+            logging.info(
+                f"Iteration with highest weighted FOM: {best_fom_iter_num} (FOM={best_fom_metrics['weighted_FOM']:.3f})"
+            )
 
             logging.info(
-                f"  Iteration {iteration_num}: {len(sphere_results)} spheres, "
-                f"avg contrast: {avg_contrast:.1f}%, avg background varibility: {avg_background:.1f}% "
-                f"avg lung correction: {avg_lung:.3f}%"
+                f"Processing complete: {successful_iterations // 6} successful, {failed_count // 6} failed"
             )
 
-        logging.info("Data ready for plotting and analysis")
+            if failed_iterations:
+                logging.warning("Failed iterations:")
+                for iteration_num, error in failed_iterations:
+                    logging.warning(f"  Iteration {iteration_num}: {error}")
+
+            if successful_iterations == 0:
+                error_msg = "No iterations were processed successfully"
+                logging.error(error_msg)
+                print(f"ERROR: {error_msg}")
+                return 1
+
+            logging.info("Summary of results:")
+            for iteration_num in sorted(all_lung_results.keys()):
+                sphere_count = len(
+                    [r for r in all_results if r["iteration"] == iteration_num]
+                )
+                lung_results = all_lung_results[iteration_num]
+
+                lung_values = list(lung_results.values())
+                avg_lung = float(np.mean(lung_values)) if lung_values else 0.0
+
+                logging.info(
+                    f"  Iteration {iteration_num}: {sphere_count} spheres, avg lung correction: {avg_lung:.3f}%"
+                )
+
+            logging.info(
+                f"Total sphere measurements across all iterations: {len(all_results)}"
+            )
+            logging.info(f"Results stored for {successful_iterations // 6} iterations")
+
+            from collections import defaultdict
+
+            results_by_iteration = defaultdict(list)
+            for result in all_results:
+                results_by_iteration[result["iteration"]].append(result)
+
+            for iteration_num in sorted(results_by_iteration.keys()):
+                sphere_results = results_by_iteration[iteration_num]
+                lung_results = all_lung_results[iteration_num]
+
+                contrasts = [r["percentaje_constrast_QH"] for r in sphere_results]
+                background = [r["background_variability_N"] for r in sphere_results]
+                avg_contrast = np.mean(contrasts) if contrasts else 0.0
+                avg_background = np.mean(background) if background else 0.0
+
+                lung_values = list(lung_results.values())
+                avg_lung = float(np.mean(lung_values)) if lung_values else 0.0
+
+                logging.info(
+                    f"  Iteration {iteration_num}: {len(sphere_results)} spheres, "
+                    f"avg contrast: {avg_contrast:.1f}%, avg background varibility: {avg_background:.1f}% "
+                    f"avg lung correction: {avg_lung:.3f}%"
+                )
+
+            logging.info("Data ready for plotting and analysis")
+        else:
+            logging.info(
+                f"NU_4_2008 Analysis Iterations: {len(all_crc_results)} successful"
+            )
+            if failed_iterations:
+                logging.warning("Failed iterations:")
+                for iteration_num, error in failed_iterations:
+                    logging.warning(f"  Iteration {iteration_num}: {error}")
+
+            if len(all_crc_results) == 0:
+                error_msg = "No iterations were processed successfully"
+                logging.error(error_msg)
+                print(f"ERROR: {error_msg}")
+                return 1
+
+            logging.info("Data ready for plotting and analysis")
 
         try:
             output_path = Path(args.output)
@@ -468,12 +571,35 @@ def run_analysis(args: argparse.Namespace) -> int:
             csv_dir = output_path.parent / "csv"
             csv_dir.mkdir(parents=True, exist_ok=True)
 
-            logging.info("Generating plots...")
-            generate_plots(all_results, png_dir, cfg)
-            generate_pc_vs_bg_plot(all_results, png_dir, cfg)
-            generate_boxplot_with_mean_std(all_lung_results, png_dir, cfg)
-            generate_wcbr_convergence_plot(all_results, png_dir, cfg)
-            generate_cbr_convergence_plot(all_results, png_dir, cfg)
+            if args.standard == "NU_4_2008":
+                logging.info("Generating NU_4_2008 iteration analysis plots...")
+                try:
+                    crc_plot = generate_crc_convergence_plot_nu4_iter(
+                        all_crc_results, png_dir, cfg
+                    )
+                    spillover_plot = generate_spillover_convergence_plot_nu4_iter(
+                        all_spillover_results, png_dir, cfg
+                    )
+                    uniformity_plot = generate_uniformity_convergence_plot_nu4_iter(
+                        all_uniformity_results, png_dir, cfg
+                    )
+                    logging.info("NU_4_2008 iteration plots generated successfully")
+                except Exception as e:
+                    logging.error(f"Failed to generate NU_4_2008 plots: {e}")
+                    crc_plot = None
+                    spillover_plot = None
+                    uniformity_plot = None
+                    if args.verbose:
+                        import traceback
+
+                        logging.error(traceback.format_exc())
+            else:
+                logging.info("Generating NU_2_2018 plots...")
+                generate_plots(all_results, png_dir, cfg)
+                generate_pc_vs_bg_plot(all_results, png_dir, cfg)
+                generate_boxplot_with_mean_std(all_lung_results, png_dir, cfg)
+                generate_wcbr_convergence_plot(all_results, png_dir, cfg)
+                generate_cbr_convergence_plot(all_results, png_dir, cfg)
             logging.info("Plots generated successfully")
         except Exception as e:
             logging.error(f"Failed to generate plots: {e}")
@@ -488,50 +614,109 @@ def run_analysis(args: argparse.Namespace) -> int:
             output_path = Path(args.output)
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
-            plot_path = output_path.parent / "png" / "analysis_plot_iterations.png"
-            rois_loc_path = output_path.parent / "png" / "rois_location.png"
-            pc_vs_bg_path = output_path.parent / "png" / "bg_vs_pc_plot.png"
-            boxplot_path = output_path.parent / "png" / "lung_boxplot_iterations.png"
-            wcbr_conv_path = (
-                output_path.parent / "png" / "weighted_cbr_convergence_analysis.png"
-            )
-            cbr_conv_path = output_path.parent / "png" / "cbr_convergence_analysis.png"
+            if args.standard == "NU_4_2008":
+                logging.info("Saving NU_4_2008 iteration results...")
+                try:
+                    # Save text results
+                    save_results_to_txt_nu4_iter(
+                        all_crc_results,
+                        all_spillover_results,
+                        all_uniformity_results,
+                        output_path,
+                        cfg,
+                        input_path,
+                        (cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
+                    )
+                    logging.info("NU_4_2008 text results saved successfully")
 
-            save_results_to_txt(
-                all_results,
-                all_lung_results,
-                output_path,
-                cfg,
-                input_path,
-                (cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
-            )
-            logging.info("Text results saved successfully")
+                    # Generate PDF report
+                    pdf_output_path = output_path.with_suffix(".pdf")
+                    logging.info(f"Generating NU_4_2008 PDF report: {pdf_output_path}")
 
-            try:
-                pdf_output_path = output_path.with_suffix(".pdf")
-                logging.info(f"Generating PDF report: {pdf_output_path}")
-                generate_reportlab_report(
+                    crc_plot_path = None
+                    spillover_plot_path = None
+                    uniformity_plot_path = None
+
+                    if "crc_plot" in locals() and crc_plot:
+                        crc_plot_path = png_dir / "crc_convergence_nu4_iter.png"
+                    if "spillover_plot" in locals() and spillover_plot:
+                        spillover_plot_path = (
+                            png_dir / "spillover_convergence_nu4_iter.png"
+                        )
+                    if "uniformity_plot" in locals() and uniformity_plot:
+                        uniformity_plot_path = (
+                            png_dir / "uniformity_convergence_nu4_iter.png"
+                        )
+
+                    generate_reportlab_report_nu4_iter(
+                        all_crc_results,
+                        all_spillover_results,
+                        all_uniformity_results,
+                        pdf_output_path,
+                        cfg,
+                        input_path,
+                        (cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
+                        crc_plot_path,
+                        spillover_plot_path,
+                        uniformity_plot_path,
+                    )
+                    logging.info("NU_4_2008 PDF report saved successfully")
+                except Exception as e:
+                    logging.error(f"Failed to save NU_4_2008 results: {e}")
+                    if args.verbose:
+                        import traceback
+
+                        logging.error(traceback.format_exc())
+                    print(f"WARNING: Failed to save NU_4_2008 results: {e}")
+            else:
+                plot_path = output_path.parent / "png" / "analysis_plot_iterations.png"
+                rois_loc_path = output_path.parent / "png" / "rois_location.png"
+                pc_vs_bg_path = output_path.parent / "png" / "bg_vs_pc_plot.png"
+                boxplot_path = (
+                    output_path.parent / "png" / "lung_boxplot_iterations.png"
+                )
+                wcbr_conv_path = (
+                    output_path.parent / "png" / "weighted_cbr_convergence_analysis.png"
+                )
+                cbr_conv_path = (
+                    output_path.parent / "png" / "cbr_convergence_analysis.png"
+                )
+
+                save_results_to_txt(
                     all_results,
                     all_lung_results,
-                    pdf_output_path,
+                    output_path,
                     cfg,
                     input_path,
                     (cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
-                    plot_path,
-                    pc_vs_bg_path,
-                    rois_loc_path,
-                    boxplot_path,
-                    cbr_conv_path,
-                    wcbr_conv_path,
                 )
-                logging.info("PDF report saved successfully")
-            except Exception as e:
-                logging.error(f"Failed to generate PDF report: {e}")
-                if args.verbose:
-                    import traceback
+                logging.info("Text results saved successfully")
 
-                    logging.error(traceback.format_exc())
-                print(f"WARNING: Failed to generate PDF report: {e}")
+                try:
+                    pdf_output_path = output_path.with_suffix(".pdf")
+                    logging.info(f"Generating PDF report: {pdf_output_path}")
+                    generate_reportlab_report(
+                        all_results,
+                        all_lung_results,
+                        pdf_output_path,
+                        cfg,
+                        input_path,
+                        (cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
+                        plot_path,
+                        pc_vs_bg_path,
+                        rois_loc_path,
+                        boxplot_path,
+                        cbr_conv_path,
+                        wcbr_conv_path,
+                    )
+                    logging.info("PDF report saved successfully")
+                except Exception as e:
+                    logging.error(f"Failed to generate PDF report: {e}")
+                    if args.verbose:
+                        import traceback
+
+                        logging.error(traceback.format_exc())
+                    print(f"WARNING: Failed to generate PDF report: {e}")
 
         except Exception as e:
             logging.error(f"Failed to save results: {e}")
