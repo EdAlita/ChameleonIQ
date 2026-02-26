@@ -23,18 +23,23 @@ from rich.logging import RichHandler
 
 from config.defaults import get_cfg_defaults
 
-from .analysis import calculate_nema_metrics
+from .analysis import calculate_nema_metrics, calculate_nema_metrics_nu4_2008
 from .io import load_nii_image
 from .phantom import NemaPhantom
 from .reporting import (
     generate_boxplot_with_mean_std,
     generate_coronal_sphere_plots,
+    generate_crc_plots_nu4,
+    generate_iq_plot,
     generate_plots,
     generate_reportlab_report,
+    generate_reportlab_report_nu4,
     generate_rois_plots,
+    generate_spillover_barplot_nu4,
     generate_torso_plot,
     generate_transverse_sphere_plots,
     save_results_to_txt,
+    save_results_to_txt_nu4,
 )
 
 
@@ -74,6 +79,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="Path to custom YAML configuration file. Check defaults/config.yaml for reference or in HOW IT WORKS section from Documentation.",
     )
 
+    parser.add_argument(
+        "--standard",
+        choices=["NU_2_2018", "NU_4_2008"],
+        default="NU_2_2018",
+        help="NEMA standard to use for phantom definitions (default: NU_2_2018)",
+    )
+
     # Optional arguments
     parser.add_argument(
         "--save-visualizations",
@@ -107,7 +119,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--log_level",
-        default="DEBUG",
+        default="INFO",
         help="Set the logging level (e.g., DEBUG, INFO, WARNING)",
     )
 
@@ -127,6 +139,7 @@ def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> Non
         output_path_obj = Path(output_path)
         run_name = output_path_obj.stem
         log_filename = f"{run_name}_{timestamp}.log"
+        log_dir = output_path_obj.parent / "logs"
     else:
         log_filename = f"{timestamp}.log"
         log_dir = Path("logs")
@@ -151,9 +164,34 @@ def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> Non
     logging.info(f"Logging initialized. Log file: {log_file_path}")
 
 
-def load_configuration(config_path: Optional[str]) -> yacs.config.CfgNode:
+def load_configuration(
+    config_path: Optional[str], standard: str
+) -> yacs.config.CfgNode:
     """Load configuration from file or use defaults."""
     cfg = get_cfg_defaults()
+
+    standard_config_map = {
+        "NU_2_2018": "nema_phantom_config.yaml",
+        "NU_4_2008": "nema_phantom_config_nu4_2008.yaml",
+    }
+    standard_config_name = standard_config_map.get(standard)
+    if standard_config_name:
+        standard_config_path = (
+            Path(__file__).resolve().parents[1] / "config" / standard_config_name
+        )
+        if standard_config_path.exists():
+            logging.info(
+                "Loading base config for standard %s: %s",
+                standard,
+                standard_config_path,
+            )
+            cfg.merge_from_file(str(standard_config_path))
+        else:
+            logging.warning(
+                "Base config for standard %s not found at %s",
+                standard,
+                standard_config_path,
+            )
 
     if config_path:
         config_file = Path(config_path)
@@ -208,6 +246,7 @@ def run_analysis(args: argparse.Namespace) -> int:
         logging.info(f"Input image: {args.input_image}")
         logging.info(f"Output file: {args.output}")
         logging.info(f"Configuration file: {args.config}")
+        logging.info(f"NEMA standard: {args.standard}")
 
         input_path = Path(args.input_image)
         if not input_path.exists():
@@ -225,7 +264,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             return 1
 
         try:
-            cfg = load_configuration(args.config)
+            cfg = load_configuration(args.config, args.standard)
         except Exception as e:
             logging.error(f"Failed to load configuration: {e}")
             if args.log_level == "DEBUG":
@@ -277,20 +316,32 @@ def run_analysis(args: argparse.Namespace) -> int:
         # Perform NEMA analysis
         logging.info("Performing NEMA analysis...")
         try:
-            results, lung_results = calculate_nema_metrics(
-                image_data,
-                phantom,
-                cfg,
-                save_visualizations=args.save_visualizations,
-                visualizations_dir=args.visualizations_dir,
-            )
-            values = list(lung_results.values())
-            average = float(np.mean(values))
-            logging.info(f"Average of Accuracy Corrections: {average:.3f} %")
-            logging.info(
-                f"Analysis completed. Found {len(results)} sphere measurements"
-            )
-
+            if args.standard == "NU_4_2008":
+                logging.info("Running NU_4_2008 analysis path")
+                crc_results, spillover_results, uniformity_results = (
+                    calculate_nema_metrics_nu4_2008(
+                        image_data,
+                        phantom,
+                        cfg,
+                        save_visualizations=args.save_visualizations,
+                        visualizations_dir=args.visualizations_dir,
+                    )
+                )
+            else:
+                logging.info("Running NU_2_2018 analysis path")
+                results, lung_results = calculate_nema_metrics(
+                    image_data,
+                    phantom,
+                    cfg,
+                    save_visualizations=args.save_visualizations,
+                    visualizations_dir=args.visualizations_dir,
+                )
+                values = list(lung_results.values())
+                average = float(np.mean(values))
+                logging.info(f"Average of Accuracy Corrections: {average:.3f} %")
+                logging.info(
+                    f"Analysis completed. Found {len(results)} sphere measurements"
+                )
         except Exception as e:
             logging.error(f"Failed to perform analysis: {e}")
             if args.log_level == "DEBUG":
@@ -306,61 +357,124 @@ def run_analysis(args: argparse.Namespace) -> int:
         csv_dir = output_path.parent / "csv"
         csv_dir.mkdir(parents=True, exist_ok=True)
 
-        logging.info("Saving analysis plots...")
-        try:
-            generate_plots(results=results, output_dir=png_dir, cfg=cfg)
-            generate_rois_plots(image=image_data, output_dir=png_dir, cfg=cfg)
-            generate_transverse_sphere_plots(
-                image=image_data, output_dir=png_dir, cfg=cfg
-            )
-            generate_boxplot_with_mean_std(
-                data_dict=lung_results, output_dir=png_dir, cfg=cfg
-            )
-            generate_coronal_sphere_plots(image=image_data, output_dir=png_dir, cfg=cfg)
-            generate_torso_plot(image=image_data, output_dir=png_dir, cfg=cfg)
-            logging.info("Plots generated successfully")
-        except Exception as e:
-            logging.error(f"Failed to generate plots: {e}")
-            if logger.isEnabledFor(logging.DEBUG):
-                import traceback
+        if args.standard == "NU_4_2008":
+            logging.info("Saving analysis plots...")
+            try:
+                generate_crc_plots_nu4(crc_results=crc_results, output_dir=png_dir, cfg=cfg)  # type: ignore[arg-type]
+                generate_iq_plot(image=image_data, output_dir=png_dir, cfg=cfg)
+                generate_spillover_barplot_nu4(spillover_ratio=spillover_results, output_dir=png_dir, cfg=cfg)  # type: ignore[arg-type]
+                logging.info("Plots generated successfully")
+            except Exception as e:
+                logging.error(f"Failed to generate plots: {e}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    import traceback
 
-                logging.error(traceback.format_exc())
-            print(f"ERROR: Failed to generate plots: {e}")
-            return 1
+                    logging.error(traceback.format_exc())
+                print(f"ERROR: Failed to generate plots: {e}")
+                return 1
+        else:
+            logging.info("Saving analysis plots...")
+            try:
+                generate_plots(results=results, output_dir=png_dir, cfg=cfg)
+                generate_rois_plots(image=image_data, output_dir=png_dir, cfg=cfg)
+                generate_transverse_sphere_plots(
+                    image=image_data, output_dir=png_dir, cfg=cfg
+                )
+                generate_boxplot_with_mean_std(
+                    data_dict=lung_results, output_dir=png_dir, cfg=cfg
+                )
+                generate_coronal_sphere_plots(
+                    image=image_data, output_dir=png_dir, cfg=cfg
+                )
+                generate_torso_plot(image=image_data, output_dir=png_dir, cfg=cfg)
+                logging.info("Plots generated successfully")
+            except Exception as e:
+                logging.error(f"Failed to generate plots: {e}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    import traceback
 
-        logging.info(f"Saving results to: {args.output}")
-        try:
-            output_path = Path(args.output)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            plot_path = output_path.parent / "png" / "analysis_plot.png"
-            rois_loc_path = output_path.parent / "png" / "rois_location.png"
-            boxplot_path = output_path.parent / "png" / "boxplot_with_mean_std.png"
+                    logging.error(traceback.format_exc())
+                print(f"ERROR: Failed to generate plots: {e}")
+                return 1
+        if args.standard == "NU_4_2008":
+            logging.info(f"Saving CRC results to: {args.output}")
+            try:
+                output_path = Path(args.output)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                plot_path = output_path.parent / "png" / "rc_plot.png"
+                iq_rois_path = output_path.parent / "png" / "iq_rois.png"
+                spillover_path = output_path.parent / "png" / "spillover_ratio.png"
 
-            save_results_to_txt(results, output_path, cfg, input_path, voxel_spacing)
+                save_results_to_txt_nu4(
+                    crc_results=crc_results,  # type: ignore[arg-type]
+                    spillover_results=spillover_results,  # type: ignore[arg-type]
+                    uniformity_results=uniformity_results,
+                    output_path=output_path,
+                    cfg=cfg,
+                    input_image_path=input_path,
+                    voxel_spacing=voxel_spacing,
+                )
 
-            lung_results_any = {str(k): v for k, v in lung_results.items()}
+                pdf_output_path = output_path.with_suffix(".pdf")
+                generate_reportlab_report_nu4(
+                    crc_results=crc_results,  # type: ignore[arg-type]
+                    spillover_results=spillover_results,  # type: ignore[arg-type]
+                    uniformity_results=uniformity_results,
+                    output_path=pdf_output_path,
+                    cfg=cfg,
+                    input_image_path=input_path,
+                    voxel_spacing=voxel_spacing,
+                    plot_path=plot_path,
+                    rois_loc_path=iq_rois_path,
+                    spillover_ratio_path=spillover_path,
+                )
+                logging.info("Results saved successfully")
 
-            pdf_output_path = output_path.with_suffix(".pdf")
-            generate_reportlab_report(
-                results,
-                pdf_output_path,
-                cfg,
-                input_path,
-                voxel_spacing,
-                lung_results_any,
-                plot_path,
-                rois_loc_path,
-                boxplot_path,
-            )
-            logging.info("Results saved successfully")
-        except Exception as e:
-            logging.error(f"Failed to save results: {e}")
-            if logger.isEnabledFor(logging.DEBUG):
-                import traceback
+            except Exception as e:
+                logging.error(f"Failed to save Results: {e}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    import traceback
 
-                logging.error(traceback.format_exc())
-            print(f"ERROR: Failed to save results: {e}")
-            return 1
+                    logging.error(traceback.format_exc())
+                print(f"ERROR: Failed to save Results: {e}")
+                return 1
+        else:
+
+            logging.info(f"Saving results to: {args.output}")
+            try:
+                output_path = Path(args.output)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                plot_path = output_path.parent / "png" / "analysis_plot.png"
+                rois_loc_path = output_path.parent / "png" / "rois_location.png"
+                boxplot_path = output_path.parent / "png" / "boxplot_with_mean_std.png"
+
+                save_results_to_txt(
+                    results, output_path, cfg, input_path, voxel_spacing
+                )
+
+                lung_results_any = {str(k): v for k, v in lung_results.items()}
+
+                pdf_output_path = output_path.with_suffix(".pdf")
+                generate_reportlab_report(
+                    results,
+                    pdf_output_path,
+                    cfg,
+                    input_path,
+                    voxel_spacing,
+                    lung_results_any,
+                    plot_path,
+                    rois_loc_path,
+                    boxplot_path,
+                )
+                logging.info("Results saved successfully")
+            except Exception as e:
+                logging.error(f"Failed to save results: {e}")
+                if logger.isEnabledFor(logging.DEBUG):
+                    import traceback
+
+                    logging.error(traceback.format_exc())
+                print(f"ERROR: Failed to save results: {e}")
+                return 1
 
         if args.advanced_metrics:
             if not args.gt_image:
@@ -432,7 +546,8 @@ def run_analysis(args: argparse.Namespace) -> int:
                 return 1
         logging.info(f"  Image dimensions: {image_dims}")
         logging.info(f"  Voxel spacing: {voxel_spacing} mm")
-        logging.info(f"  Number of spheres analyzed: {len(results)}")
+        if args.standard == "NU_2_2018":
+            logging.info(f"  Number of spheres analyzed: {len(results)}")
         logging.info(f"  Results saved to: {args.output}")
 
         if args.save_visualizations:
