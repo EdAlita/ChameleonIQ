@@ -17,9 +17,38 @@ import yacs.config
 
 from .metrics import get_values
 from .phantom import NemaPhantom
-from .utils import extract_canny_mask, find_phantom_center
+from .statistics import Estimator
+from .utils import (
+    extract_canny_mask,
+    find_phantom_center,
+    find_phantom_center_cv2_threshold,
+)
 
 _logger = logging.getLogger(__name__)
+
+
+def _propagate_ratio(
+    mu1: float,
+    mu2: float,
+    var1: float,
+    var2: float,
+    cov12: float = 0.0,
+    eps: float = 1e-12,
+) -> float:
+    """
+    First-order Taylor variance propagation for ratio mu1 / mu2.
+    Returns standard deviation.
+    """
+
+    if abs(mu2) < eps:
+        return 0.0
+
+    grad1 = 1.0 / mu2
+    grad2 = -mu1 / (mu2**2)
+
+    var = grad1**2 * var1 + grad2**2 * var2 + 2.0 * grad1 * grad2 * cov12
+
+    return float(np.sqrt(max(var, 0.0)))
 
 
 def extract_circular_mask_2d(
@@ -71,6 +100,33 @@ def extract_circular_mask_2d(
     return squared_dist <= roi_radius_vox**2
 
 
+def create_cylindrical_mask(
+    shape_zyx: Tuple[int, int, int],
+    center_zyx: Tuple[float, float, float],
+    radius_mm: float,
+    height_mm: float,
+    spacing_xyz: npt.NDArray[np.float64],
+) -> npt.NDArray[np.bool_]:
+    """Create a boolean mask for a cylinder aligned with the z-axis."""
+    center_z, center_y, center_x = center_zyx
+    radius_vox_x = radius_mm / spacing_xyz[0]
+    radius_vox_y = radius_mm / spacing_xyz[1]
+    half_height_vox_z = (height_mm / spacing_xyz[2]) / 2.0
+
+    z_min = max(0, int(np.floor(center_z - half_height_vox_z)))
+    z_max = min(shape_zyx[0] - 1, int(np.ceil(center_z + half_height_vox_z)))
+
+    yy, xx = np.ogrid[: shape_zyx[1], : shape_zyx[2]]
+    ellipse = ((xx - center_x) / radius_vox_x) ** 2 + (
+        (yy - center_y) / radius_vox_y
+    ) ** 2 <= 1.0
+
+    mask = np.zeros(shape_zyx, dtype=bool)
+    mask[slice(z_min, z_max + 1), :, :] = ellipse
+
+    return mask
+
+
 def _calculate_background_stats(
     image_data: npt.NDArray[Any],
     phantom: NemaPhantom,
@@ -95,15 +151,15 @@ def _calculate_background_stats(
     pivot_point_yx = reference_sphere["center_vox"]
     slices_dims_yx = (image_data.shape[1], image_data.shape[2])
 
-    bkg_counts_per_size: Dict[int, List[float]] = {}
+    bkg_voxels_per_size: Dict[int, List[float]] = {}
 
     for name, _ in phantom.rois.items():
         if "sphere" in name:
             sphere_roi = phantom.get_roi(name)
             if sphere_roi:
                 diam_mm = int(round(sphere_roi["diameter"]))
-                if diam_mm not in bkg_counts_per_size:
-                    bkg_counts_per_size[diam_mm] = []
+                if diam_mm not in bkg_voxels_per_size:
+                    bkg_voxels_per_size[diam_mm] = []
 
     if save_visualizations and viz_dir:
         central_slice = image_data[slices_indices[len(slices_indices) // 2], :, :]
@@ -143,19 +199,20 @@ def _calculate_background_stats(
             for slice_idx in slices_indices:
                 if 0 <= slice_idx < image_data.shape[0]:
                     img_slice = image_data[slice_idx, :, :]
-                    avg_count = np.mean(img_slice[roi_mask])
                     sphere_diam_mm = int(round(sphere_roi["diameter"]))
-                    bkg_counts_per_size[sphere_diam_mm].append(avg_count)
-
+                    voxels = img_slice[roi_mask]
+                    bkg_voxels_per_size[sphere_diam_mm].extend(voxels.tolist())  # type: ignore[arg-type]
     bkg_stats = {}
-    for diam, counts_list in bkg_counts_per_size.items():
-        if counts_list:
+    for diam, voxels_list in bkg_voxels_per_size.items():
+        if len(voxels_list) > 0:
+            voxels_array = np.array(voxels_list)  # Convert list of scalars to array
             bkg_stats[diam] = {
-                "C_B": float(np.mean(counts_list)),
-                "SD_B": float(np.std(counts_list)),
+                "C_B": float(np.mean(voxels_array)),
+                "SD_B": float(np.std(voxels_array, ddof=1)),
+                "n_B": len(voxels_list),
             }
         else:
-            bkg_stats[diam] = {"C_B": 100.0, "SD_B": 0.0}
+            bkg_stats[diam] = {"C_B": 100.0, "SD_B": 0.0, "n_B": 0}
 
     return bkg_stats
 
@@ -166,16 +223,18 @@ def _calculate_hot_sphere_counts_offset_zxy(
     central_slice_idx: int,
     save_visualizations: bool = False,
     viz_dir: Optional[Path] = None,
-) -> Dict[str, float]:
+) -> Dict[str, Dict[str, float]]:  # Changed return type
     """Internal function to calculate the mean counts (C_H) for each hot sphere."""
 
-    offsets = [(x, y) for x in range(-10, 11) for y in range(-10, 11)]
-
+    offsets_xy = [(dy, dx) for dy in range(-10, 11) for dx in range(-10, 11)]
     offsets_z = list(range(-10, 11))
 
     hot_sphere_counts = {}
 
+    z_dim, y_dim, x_dim = image_data.shape
+
     for name, _ in phantom.rois.items():
+
         if "sphere" not in name:
             continue
 
@@ -183,48 +242,302 @@ def _calculate_hot_sphere_counts_offset_zxy(
         if sphere_roi is None:
             continue
 
-        center_yx = sphere_roi["center_vox"]
-        max_mean = -np.inf
-        best_offset_zyx = None
+        center_y, center_x = sphere_roi["center_vox"]
+        radius = sphere_roi["radius_vox"]
 
+        diameter = int(np.ceil(radius * 2))
+        mask_size = diameter if diameter % 2 == 1 else diameter + 1
+
+        base_mask = extract_circular_mask_2d(
+            (mask_size, mask_size),
+            (mask_size // 2, mask_size // 2),
+            radius,
+        )
+
+        mask_half = mask_size // 2
+
+        max_mean = -np.inf
+        best_std = 0.0
+        best_n = 1
+        best_mask = None
+        best_slice = None
+        best_offset = None
         for dz in offsets_z:
-            slice_idx = central_slice_idx + dz
-            if slice_idx < 0 or slice_idx >= image_data.shape[0]:
+
+            z_idx = central_slice_idx + dz
+            if z_idx < 0 or z_idx >= z_dim:
                 continue
 
-            current_slice = image_data[slice_idx, :, :]
-            slice_dims_yx = current_slice.shape
+            current_slice = image_data[z_idx]
 
-            for offset in offsets:
-                offset_center = (center_yx[0] + offset[0], center_yx[1] + offset[1])
-                roi_mask = extract_circular_mask_2d(
-                    (slice_dims_yx[0], slice_dims_yx[1]),
-                    offset_center,
-                    sphere_roi["radius_vox"],
-                )
-                mean_count = np.mean(current_slice[roi_mask])
-                if mean_count > max_mean:
-                    max_mean = mean_count
-                    best_offset_zyx = (dz, offset[0], offset[1])
+            for dy, dx in offsets_xy:
+
+                target_y = int(round(center_y + dy))
+                target_x = int(round(center_x + dx))
+
+                y_min = target_y - mask_half
+                y_max = target_y + mask_half + 1
+                x_min = target_x - mask_half
+                x_max = target_x + mask_half + 1
+
+                if y_min < 0 or x_min < 0 or y_max > y_dim or x_max > x_dim:
+                    continue
+
+                shifted_region = current_slice[y_min:y_max, x_min:x_max]
+
+                values = shifted_region[base_mask]
+
+                if values.size == 0:
+                    continue
+
+                mean_val = np.mean(values)
+
+                if mean_val > max_mean:
+                    max_mean = mean_val
+                    best_std = np.std(values, ddof=1)
+                    best_n = values.size
+                    best_mask = base_mask
+                    best_slice = shifted_region
+                    best_offset = (dz, dy, dx)
+
+        if max_mean == -np.inf:
+            _logger.warning(f"No valid ROI found for {name}")
+            hot_sphere_counts[name] = {
+                "mean": 0.0,
+                "std_H": 0.0,
+                "n_H": 1,
+            }
+            continue
+
         if _logger.isEnabledFor(logging.DEBUG):
             _logger.debug(
-                f"  Found the best average counts for {name} with offset {best_offset_zyx}: {max_mean:.2f}"
+                f"{name}: best offset {best_offset}, "
+                f"mean={max_mean:.3f}, std={best_std:.3f}, n={best_n}"
             )
-        hot_sphere_counts[name] = max_mean
 
-        # Save visualization if requested
-        if save_visualizations and viz_dir:
+        hot_sphere_counts[name] = {
+            "mean": float(max_mean),
+            "std_H": float(best_std),
+            "n_H": int(best_n),
+        }
+
+        if save_visualizations and viz_dir and best_slice is not None:
             save_sphere_visualization(
-                current_slice,
+                best_slice,
                 name,
-                center_yx,
-                sphere_roi["radius_vox"],
-                roi_mask,
+                (mask_half, mask_half),
+                radius,
+                best_mask if best_mask is not None else np.zeros_like(best_slice, dtype=bool),  # type: ignore[arg-type]
                 viz_dir,
                 central_slice_idx,
             )
 
     return hot_sphere_counts
+
+
+def _calculate_crc_std(
+    image_data: npt.NDArray[Any],
+    phantom: NemaPhantom,
+    central_slice_idx: int,
+    measure_in_px: int,
+    uniform_region_mask: npt.NDArray[Any],
+    cfg: yacs.config.CfgNode,
+) -> Dict[str, Dict[str, Any]]:  # type: ignore[return-value]
+    """
+    Calculate Recovery Coefficients following NEMA NU4-2008 standard.
+
+    Per NEMA NU4-2008:
+    - "Averaging the voxels along the axial axis and determining the maximum
+       average activity inside each VOI."
+    - "Five VOIs with a diameter TWICE the rod diameter and length of 10 mm."
+
+    Important: The phantom config specifies the rod diameter, but per NEMA standard
+    the VOI must be TWICE that diameter. This is critical for accurate RC calculation.
+
+    Algorithm:
+    1. Create VOI with diameter = 2 × rod diameter (radius = 2 × rod radius)
+    2. For each (y,x) position in the VOI, create an axial line profile (along z)
+    3. Find the (y,x) position with maximum average along z-axis
+    4. Extract that specific line profile
+    5. Compute mean and std dev from that line profile only
+
+    This differs from computing over entire 2D slices and reduces std dev by
+    focusing on axial uniformity at the peak location.
+    """
+
+    mode = cfg.STATISTICS.MODE
+    eps = getattr(cfg.STATISTICS, "EPSILON", 1e-12)
+
+    uniform_values = image_data[uniform_region_mask]
+    uniform_est = Estimator.from_samples(uniform_values, mode=mode)
+
+    _logger.debug(
+        " RC params: center=%d, measure_in_px=%d, z_dim=%d",
+        central_slice_idx,
+        measure_in_px,
+        image_data.shape[0],
+    )
+
+    num_slices = [
+        i
+        for i in range(
+            central_slice_idx - measure_in_px, central_slice_idx + measure_in_px + 1
+        )
+        if 0 <= i < image_data.shape[0]
+    ]
+    _logger.debug(f" RC slices in bounds: {num_slices}")
+
+    crc_results: Dict[str, Dict[str, Any]] = {}
+
+    for name, _ in phantom.rois.items():
+        sphere_roi = phantom.get_roi(name)
+
+        if sphere_roi is None:
+            continue
+
+        # NEMA NU4-2008: VOI diameter must be TWICE the rod diameter
+        # Config contains rod diameter, so VOI radius = 2 × rod radius
+        voi_radius_vox = sphere_roi["radius_vox"] * 2.0
+
+        y, x = sphere_roi["center_vox"]
+
+        # Create 2D mask for the ROD VOI
+        roi_mask = extract_circular_mask_2d(
+            (image_data.shape[1], image_data.shape[2]),
+            sphere_roi["center_vox"],
+            voi_radius_vox,
+        )
+
+        # Get (y,x) coordinates where mask is True
+        y_coords, x_coords = np.where(roi_mask)
+
+        if len(y_coords) == 0:
+            _logger.warning(f"  No voxels found in ROI mask for {name}")
+            crc_results[name] = {  # type: ignore[index]
+                "mean_signal": 0.0,
+                "std_signal": 0.0,
+                "uniform_mean": 0.0,  # type: ignore[name-defined]
+                "uniform_std": 0.0,  # type: ignore[name-defined]
+                "recovery_coeff": 0.0,
+                "percentage_STD_rc": 0.0,
+                "cError": 0.0,
+            }
+            continue
+
+        _logger.debug(
+            f" Calculating RC for {name}:"
+            f" rod_diameter={sphere_roi['diameter']}mm,"  # type: ignore[index]
+            f" voi_radius_vox={voi_radius_vox:.3f},"
+            f" mask_pixels={len(y_coords)}"
+        )
+
+    for name, _ in phantom.rois.items():
+
+        sphere_roi = phantom.get_roi(name)
+        if sphere_roi is None:
+            continue
+
+        voi_radius_vox = sphere_roi["radius_vox"] * 2.0
+
+        roi_mask = extract_circular_mask_2d(
+            (image_data.shape[1], image_data.shape[2]),
+            sphere_roi["center_vox"],
+            voi_radius_vox,
+        )
+
+        y_coords, x_coords = np.where(roi_mask)
+
+        if len(y_coords) == 0:
+            continue
+
+        max_avg = -np.inf
+        best_profile = None
+
+        for y, x in zip(y_coords, x_coords):
+
+            profile = [float(image_data[z, y, x]) for z in num_slices]
+
+            avg = np.mean(profile)
+
+            if avg > max_avg:
+                max_avg = float(avg)
+                best_profile = profile
+
+        if best_profile is None:
+            continue
+
+        rod_est = Estimator.from_samples(
+            np.array(best_profile),
+            mode=mode,
+        )
+
+        if abs(uniform_est.mean) < eps:
+            rc_est = Estimator(0.0, 0.0, 1)
+        else:
+            rc_est = rod_est.ratio(uniform_est)
+
+        crc_results[name] = {
+            "mean_signal": rod_est.mean,
+            "std_signal": rod_est.std,
+            "uniform_mean": uniform_est.mean,
+            "uniform_std": uniform_est.std,
+            "recovery_coeff": rc_est.mean,
+            "percentage_STD_rc": (
+                100 * rc_est.std / rc_est.mean if abs(rc_est.mean) > eps else 0.0
+            ),
+            "cError": rc_est.std,
+        }
+
+    return crc_results
+
+
+def _calculate_spillover_ratio(
+    image_data: npt.NDArray[Any],
+    phantom: NemaPhantom,
+    uniform_region_mask: npt.NDArray[Any],
+    air_region_mask: npt.NDArray[Any],
+    water_region_mask: npt.NDArray[Any],
+    cfg: yacs.config.CfgNode,
+) -> Dict[str, Dict[str, Any]]:  # type: ignore[return-value]
+    """Internal function to calculate the spillover ratio for lung inserts."""
+    mode = cfg.STATISTICS.MODE
+    eps = getattr(cfg.STATISTICS, "EPSILON", 1e-12)
+
+    uniform_values = image_data[uniform_region_mask]
+    uniform_est = Estimator.from_samples(uniform_values, mode=mode)
+
+    spillover_ratios = {}
+
+    for region_name, region_mask in [
+        ("air", air_region_mask),
+        ("water", water_region_mask),
+    ]:
+
+        region_values = image_data[region_mask]
+        region_est = Estimator.from_samples(region_values, mode=mode)
+
+        if abs(uniform_est.mean) < eps:
+            sor_est = Estimator(0.0, 0.0, 1)
+        else:
+            sor_est = region_est.ratio(uniform_est)
+
+        _logger.info(
+            f"ROI {region_name.capitalize()}:"
+            f" voxels={np.sum(region_mask)},"
+            f" mean={region_est.mean:.6f},"
+            f" std={region_est.std:.6f},"
+            f" perc_std={100 * region_est.std / region_est.mean if region_est.mean != 0 else 0:.2f}"
+        )
+
+        spillover_ratios[region_name] = {
+            "SOR": sor_est.mean,
+            "SOR_error": sor_est.std,
+            "%STD": (
+                100 * sor_est.std / sor_est.mean if abs(sor_est.mean) > eps else 0.0
+            ),
+        }
+
+    return spillover_ratios
 
 
 def _calculate_lung_insert_counts(
@@ -434,30 +747,83 @@ def calculate_nema_metrics(
     activity_ratio_term = activity_ratio - 1.0
     CB_37 = 0.0
 
-    for name, C_H in hot_sphere_counts.items():
+    eps = getattr(cfg.STATISTICS, "EPSILON", 1e-12)
+    mode = cfg.STATISTICS.MODE
+    sd_model = cfg.STATISTICS.SD_VARIANCE_MODEL
+
+    for name, hot_data in hot_sphere_counts.items():
+
         sphere_def = phantom.get_roi(name)
         if sphere_def is None:
             continue
+
         sphere_diam_mm = int(round(sphere_def["diameter"]))
-        C_B = background_stats[sphere_diam_mm]["C_B"]
-        SD_B = background_stats[sphere_diam_mm]["SD_B"]
 
-        percent_contrast = ((C_H / C_B) - 1.0) / activity_ratio_term * 100.0
-        percent_variability = (SD_B / C_B) * 100.0
+        sphere_diam_mm = int(round(sphere_def["diameter"]))
 
-        if sphere_diam_mm == 37:
-            CB_37 = C_B
-
-        logging.info(
-            f" Diameter Sphere {sphere_diam_mm}: Percentaje Contrast {percent_contrast:.1f}% Background Variability {percent_variability:.1f}%"
+        hot_est = Estimator.from_mean_std(
+            mean=hot_data["mean"],
+            std=hot_data["std_H"],
+            n=int(hot_data["n_H"]),
+            mode=mode,
         )
+
+        bkg_data = background_stats[sphere_diam_mm]
+
+        bkg_est = Estimator.from_mean_std(
+            mean=bkg_data["C_B"],
+            std=bkg_data["SD_B"],
+            n=int(bkg_data["n_B"]),
+            mode=mode,
+        )
+
+        if abs(bkg_est.mean) < eps:
+            _logger.warning(
+                f"Sphere {sphere_diam_mm}mm skipped: C_B too small ({bkg_est.mean:.3e})"
+            )
+            continue
+
+        ratio_est = hot_est.ratio(bkg_est)
+        qh_est = ratio_est.subtract_constant(1.0).scale(100.0 / activity_ratio_term)
+
+        # Build SD estimator
+        SD_B = bkg_data["SD_B"]  # type: ignore[index]
+        n_B = max(int(bkg_data["n_B"]), 1)  # type: ignore[arg-type]
+        C_B = bkg_est.mean
+
+        if sd_model == "poisson":
+            var_sd = C_B / (2.0 * n_B)
+        else:
+            var_sd = (SD_B**2) / (2.0 * n_B) if n_B > 1 else 0.0
+
+        sd_est = Estimator(SD_B, var_sd, n_B)  # type: ignore[arg-type]
+
+        n_est = sd_est.ratio(bkg_est).scale(100.0)
+
+        # Save 37 mm background for lung insert
+        if sphere_diam_mm == 37:
+            CB_37 = bkg_est.mean
+        _logger.info(
+            f"{sphere_diam_mm:2d} mm | "
+            f"RC={qh_est.mean:.2f} ± {qh_est.std:.2f}% | "
+            f"BV={n_est.mean:.2f} ± {n_est.std:.2f}%"
+        )
+
         results.append(
             {
                 "diameter_mm": sphere_diam_mm,
-                "percentaje_constrast_QH": percent_contrast,
-                "background_variability_N": percent_variability,
-                "avg_hot_counts_CH": C_H,
-                "avg_bkg_counts_CB": C_B,
+                "percentaje_constrast_QH": qh_est.mean,
+                "percentaje_constrast_QH_error": qh_est.std,
+                "percentaje_constrast_QH_%STD": (
+                    100 * qh_est.std / qh_est.mean if abs(qh_est.mean) > eps else 0.0
+                ),
+                "background_variability_N": n_est.mean,
+                "background_variability_error": n_est.std,
+                "background_variability_%STD": (
+                    100 * n_est.std / n_est.mean if abs(n_est.mean) > eps else 0.0
+                ),
+                "avg_hot_counts_CH": hot_est.mean,
+                "avg_bkg_counts_CB": bkg_est.mean,
                 "bkg_std_dev_SD": SD_B,
             }
         )
@@ -483,6 +849,167 @@ def calculate_nema_metrics(
             _logger.debug(f"  Slice {int(k)}: {float(v):.3f}")
 
     return results, results_lung
+
+
+def calculate_nema_metrics_nu4_2008(
+    image_data: npt.NDArray[Any],
+    phantom: NemaPhantom,
+    cfg: yacs.config.CfgNode,
+    save_visualizations: bool = False,
+    visualizations_dir: str = "visualizations",
+) -> Tuple[List[Dict[str, Any]], Dict[int, float], Dict[str, float]]:
+    """Calculate NEMA NU 4-2008 image quality metrics.
+
+    This function is a placeholder for the implementation of NEMA NU 4-2008 metrics calculation.
+    The actual logic for processing the image data according to the NU 4-2008 standard needs to be implemented.
+
+    Parameters
+    ----------
+    image_data : numpy.ndarray
+        3D PET image array with shape (z, y, x) in voxel units.
+    phantom : NemaPhantom
+        Initialized phantom model with ROI definitions and coordinate transforms.
+    cfg : yacs.config.CfgNode
+        Configuration object containing necessary parameters for NU 4-2008 analysis.
+    save_visualizations : bool, optional
+        If True, saves ROI mask visualizations to disk. Default is False.
+    visualizations_dir : str, optional
+        Directory path for saving visualization images. Default is "visualizations".
+
+    Returns
+    -------
+    Tuple[List[Dict[str, Any]], Dict[int, float], Dict[str, float]]
+    """
+    mode = cfg.STATISTICS.MODE
+    eps = getattr(cfg.STATISTICS, "EPSILON", 1e-12)
+
+    dim_z, dim_y, dim_x = image_data.shape
+    _logger.debug(f" Image data dimensions (z,y,x): {dim_z}, {dim_y}, {dim_x}")
+
+    # Find phantom center in xy plane only (for centering cylindrical ROIs)
+    center_method = getattr(cfg.ROIS, "PHANTOM_CENTER_METHOD", "weighted_slices")
+    center_threshold = getattr(cfg.ROIS, "PHANTOM_CENTER_THRESHOLD_FRACTION", 0.41)
+
+    ce_z, ce_y, ce_x = find_phantom_center_cv2_threshold(
+        image_data,
+        threshold_fraction=center_threshold,
+        method=center_method,
+    )
+
+    phantom_center_z = int(ce_z)
+    phantom_center_x = int(ce_x)
+    phantom_center_y = int(ce_y)
+
+    rods_center_z = cfg.ROIS.CENTRAL_SLICE
+
+    _logger.info(
+        f" Phantom center (z, x,y) found at: ({phantom_center_z}, {phantom_center_x}, {phantom_center_y})"
+    )
+    _logger.info(
+        f" Using CENTRAL_SLICE z={rods_center_z} as reference (hot rods center)"
+    )
+
+    # Calculate uniform region center and bounds
+    uniform_center_z = rods_center_z - cfg.ROIS.ORIENTATION_Z * (
+        cfg.ROIS.UNIFORM_OFFSET_MM / cfg.ROIS.SPACING
+    )
+    half_height_vox = (cfg.ROIS.UNIFORM_HEIGHT_MM / cfg.ROIS.SPACING) / 2.0
+    uniform_z_min = int(np.floor(uniform_center_z - half_height_vox))
+    uniform_z_max = int(np.ceil(uniform_center_z + half_height_vox))
+    _logger.debug(
+        f" Uniform region: center_z={uniform_center_z:.1f}, "
+        f"range z={uniform_z_min}-{uniform_z_max}, "
+        f"offset={cfg.ROIS.UNIFORM_OFFSET_MM}mm, "
+        f"height={cfg.ROIS.UNIFORM_HEIGHT_MM}mm"
+    )
+
+    uniform_region_mask = create_cylindrical_mask(
+        shape_zyx=(image_data.shape[0], image_data.shape[1], image_data.shape[2]),  # type: ignore[arg-type]
+        center_zyx=(
+            phantom_center_z
+            + cfg.ROIS.ORIENTATION_Z * (cfg.ROIS.UNIFORM_OFFSET_MM / cfg.ROIS.SPACING),
+            phantom_center_y,
+            phantom_center_x,
+        ),
+        radius_mm=cfg.ROIS.UNIFORM_RADIUS_MM,
+        height_mm=cfg.ROIS.UNIFORM_HEIGHT_MM,
+        spacing_xyz=np.array([cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING]),  # type: ignore[arg-type]
+    )
+    uniform_values = image_data[uniform_region_mask]
+    uniform_est = Estimator.from_samples(uniform_values, mode=mode)
+    uniformity_results = {
+        "mean": uniform_est.mean,
+        "maximum": float(np.max(uniform_values)) if uniform_values.size > 0 else 0.0,
+        "minimum": float(np.min(uniform_values)) if uniform_values.size > 0 else 0.0,
+        "%STD": (
+            100 * uniform_est.std / uniform_est.mean
+            if abs(uniform_est.mean) > eps
+            else 0.0
+        ),
+    }
+
+    air_region_mask = create_cylindrical_mask(
+        shape_zyx=(image_data.shape[0], image_data.shape[1], image_data.shape[2]),  # type: ignore[arg-type]
+        center_zyx=(
+            phantom_center_z
+            - cfg.ROIS.ORIENTATION_Z * (cfg.ROIS.AIRWATER_OFFSET_MM / cfg.ROIS.SPACING),
+            phantom_center_y
+            - cfg.ROIS.ORIENTATION_YX[0]
+            * (cfg.ROIS.AIRWATER_SEPARATION_MM / cfg.ROIS.SPACING),
+            phantom_center_x,
+        ),
+        radius_mm=cfg.ROIS.AIR_RADIUS_MM,
+        height_mm=cfg.ROIS.AIR_HEIGHT_MM,
+        spacing_xyz=np.array([cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING]),  # type: ignore[arg-type]
+    )
+
+    water_region_mask = create_cylindrical_mask(
+        shape_zyx=(image_data.shape[0], image_data.shape[1], image_data.shape[2]),  # type: ignore[arg-type]
+        center_zyx=(
+            phantom_center_z
+            - cfg.ROIS.ORIENTATION_Z * (cfg.ROIS.AIRWATER_OFFSET_MM / cfg.ROIS.SPACING),
+            phantom_center_y
+            + cfg.ROIS.ORIENTATION_YX[0]
+            * (cfg.ROIS.AIRWATER_SEPARATION_MM / cfg.ROIS.SPACING),
+            phantom_center_x,
+        ),
+        radius_mm=cfg.ROIS.WATER_RADIUS_MM,
+        height_mm=cfg.ROIS.WATER_HEIGHT_MM,
+        spacing_xyz=np.array([cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING]),  # type: ignore[arg-type]
+    )
+
+    spillover_ratio = _calculate_spillover_ratio(
+        image_data=image_data,
+        phantom=phantom,
+        uniform_region_mask=uniform_region_mask,
+        air_region_mask=air_region_mask,
+        water_region_mask=water_region_mask,
+        cfg=cfg,
+    )
+
+    _logger.info(" Spillover Ratios:")
+    for region, metrics in spillover_ratio.items():
+        _logger.info(
+            f"  {region.capitalize()}: SOR={metrics['SOR']:.4f} ± {metrics['SOR_error']:.4f}, %STD={metrics['%STD']:.2f}%"
+        )
+
+    crc_results = _calculate_crc_std(
+        image_data=image_data,
+        phantom=phantom,
+        central_slice_idx=rods_center_z,
+        measure_in_px=10,  # 10mm height / 0.5mm spacing = 20 voxels → ±10 slices = 21 total
+        uniform_region_mask=uniform_region_mask,
+        cfg=cfg,
+    )
+
+    _logger.info(" CRC Results:")
+    for region, metrics in crc_results.items():
+        _logger.info(
+            f"  {str(region).capitalize()}:"  # type: ignore[attr-defined]
+            f" RC={metrics['recovery_coeff']:.2f} ± {metrics['cError']:.2f},"  # type: ignore[index]
+            f" %STD={metrics['percentage_STD_rc']:.2f}%"  # type: ignore[index]
+        )
+    return crc_results, spillover_ratio, uniformity_results  # type: ignore[return-value]
 
 
 def save_sphere_visualization(
