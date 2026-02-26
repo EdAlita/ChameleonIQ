@@ -5,7 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [](https://github.com/EdAlita/nema_analysis_tool/compare/v2.0.0...HEAD) - 2026-01-19T10:56:24.218Z
+## [](https://github.com/EdAlita/nema_analysis_tool/compare/v2.1.0...HEAD) - 2026-02-12T09:51:45.221Z
+
+### Commits
+- chore(docs): Improve documentation for readthedocs ([d05e140](https://github.com/EdAlita/nema_analysis_tool/commit/d05e140359a275f4e19aa3000c85e20d33edd0ef))
+- fix(config): update default configuration for NEMA analysis tools ([95e8c68](https://github.com/EdAlita/nema_analysis_tool/commit/95e8c6848d0569406093661ae81bcc19cb215e9b))
+- chore(docs): Improve documentation and add examples to ([f1ac91f](https://github.com/EdAlita/nema_analysis_tool/commit/f1ac91fd9e4460f075f356c675b8512412be043b))
+- chore(docs): Enhance docstrings and comments for better readability and maintainability ([6328bd0](https://github.com/EdAlita/nema_analysis_tool/commit/6328bd08de0c790252403c85cf9ad571b0d536dd))
+- chore(docs): Updated function for calculating center of mass ([7682b6e](https://github.com/EdAlita/nema_analysis_tool/commit/7682b6ec703dd35a298e8986dba798e658d9cfd9))
+- chore(docs): Updated phantom.py with NEMA NU 2-2018 phantom geometry and ROI definitions ([75ec3f8](https://github.com/EdAlita/nema_analysis_tool/commit/75ec3f81969634dc94c71359658258ace963dede))
+- chore(docs): Improve some bugs in the documentation ([e1469b1](https://github.com/EdAlita/nema_analysis_tool/commit/e1469b1aea8951bad8d8dab1f5c107e12e4118e7))
+- chore(docs): Improve docstrings for input/output utilities ([8ebdf21](https://github.com/EdAlita/nema_analysis_tool/commit/8ebdf2117374acb7a8aeb4483db14377a15b7397))
+- fix: nema_quant/interactive_roi_editor.py: Add phantom center computation for auto-detection of initial slice ([04185ac](https://github.com/EdAlita/nema_analysis_tool/commit/04185ac310d85a41de24142fdc7bfb9ff5a45bd0))
+- chore(docs): Updated header function to underscore naming convention ([1b5f318](https://github.com/EdAlita/nema_analysis_tool/commit/1b5f3180731972316b348e29f4baa26a1ca9d6e4))
+- feat(project): Update version to 2.1.0 and add pdoc configuration ([8d3968e](https://github.com/EdAlita/nema_analysis_tool/commit/8d3968eefcada790c835d77f5b229eed67d7077b))
+- feat(image-processing): Update citation information to reflect version 2.1.0 of ChameleonIQ sofware ([f6e0e37](https://github.com/EdAlita/nema_analysis_tool/commit/f6e0e37c262da83759c1b73ffbd32cd5341fb8dc))
+- feat(nema_quant_iter): Remove unused module documentation ([0e0e987](https://github.com/EdAlita/nema_analysis_tool/commit/0e0e987d17f61c026d0daff5bb6588b1fc776b6c))
+- chore(docs): Update README with new logo ([3039308](https://github.com/EdAlita/nema_analysis_tool/commit/3039308e561de219d4ae7ae2547bb2f80b584d59))
+
+## [v2.1.0](https://github.com/EdAlita/nema_analysis_tool/compare/v2.0.0...v2.1.0) - 2026-02-12
+
+### Commits
+- fix(build): GUI: Resolve banner path ([de81efb](https://github.com/EdAlita/nema_analysis_tool/commit/de81efb1633e7431c3166e0685407659ca45b40f))
+- docs(CHANGELOG): Update CHANGELOG with latest changes ([644db6d](https://github.com/EdAlita/nema_analysis_tool/commit/644db6d7458b7e8c0a2151fbe7a2264bc95307d6))
+- docs(README): Update README with new citations and acknowledgements ([45d4231](https://github.com/EdAlita/nema_analysis_tool/commit/45d4231f43e88e19e8672b5f81252c8c16a0bfb7))
+- Add CITATION.cff for software citation ([503b212](https://github.com/EdAlita/nema_analysis_tool/commit/503b21292ea9b175fd7a382fcc244b2a03e6d255))
+- fix(pyproject): Add file to data files configuration ([978c5aa](https://github.com/EdAlita/nema_analysis_tool/commit/978c5aa9063314172ad71a90546b694ca4378fda))
 
 ## [v2.0.0](https://github.com/EdAlita/nema_analysis_tool/compare/v1.0.5...v2.0.0) - 2026-01-19
 
