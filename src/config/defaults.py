@@ -162,6 +162,11 @@ _C = CN()
 # Nema Tools Options           #
 # ---------------------------- #
 
+_C.RECONSTRUCTION = CN()
+_C.RECONSTRUCTION.ALGORITHM = "OSEM"
+_C.RECONSTRUCTION.FILTER = "Gaussian"
+_C.RECONSTRUCTION.ITERATIONS = 2
+
 _C.ACQUISITION = CN()
 _C.ACQUISITION.EMMISION_IMAGE_TIME_MINUTES = 10
 
@@ -170,56 +175,64 @@ _C.ACTIVITY.HOT = 0.79
 _C.ACTIVITY.BACKGROUND = 0.079
 _C.ACTIVITY.RATIO = 9.91
 _C.ACTIVITY.UNITS = "mCi"
+_C.ACTIVITY.PHANTOM_ACTIVITY = "10 MBq"
+_C.ACTIVITY.ACTIVITY_TIME = "16:20"
 _C.ACTIVITY.ACTIVITY_TOTAL = "29.24 MBq"
 
 _C.PHANTHOM = CN()
 _C.PHANTHOM.ROI_DEFINITIONS_MM = [
     {
         "center_yx": (211, 171),
-        "diameter_mm": 37,
+        "diameter_mm": 1,
         "color": "red",
         "alpha": 0.18,
-        "name": "hot_sphere_37mm",
+        "name": "hot_sphere_1mm",
     },
     {
         "center_yx": (187, 184),
-        "diameter_mm": 28,
+        "diameter_mm": 2,
         "color": "orange",
         "alpha": 0.18,
-        "name": "hot_sphere_28mm",
+        "name": "hot_sphere_2mm",
     },
     {
         "center_yx": (187, 212),
-        "diameter_mm": 22,
+        "diameter_mm": 3,
         "color": "gold",
         "alpha": 0.18,
-        "name": "hot_sphere_22mm",
+        "name": "hot_sphere_3mm",
     },
     {
         "center_yx": (211, 226),
-        "diameter_mm": 17,
+        "diameter_mm": 4,
         "color": "lime",
         "alpha": 0.18,
-        "name": "hot_sphere_17mm",
+        "name": "hot_sphere_4mm",
     },
     {
         "center_yx": (235, 212),
-        "diameter_mm": 13,
+        "diameter_mm": 5,
         "color": "cyan",
         "alpha": 0.18,
-        "name": "hot_sphere_13mm",
-    },
-    {
-        "center_yx": (235, 184),
-        "diameter_mm": 10,
-        "color": "blue",
-        "alpha": 0.18,
-        "name": "hot_sphere_10mm",
+        "name": "hot_sphere_5mm",
     },
 ]
 
 _C.ROIS = CN()
-_C.ROIS.CENTRAL_SLICE = 172
+_C.ROIS.CENTRAL_SLICE = 90
+
+_C.ROIS.UNIFORM_RADIUS_MM = 11.25
+_C.ROIS.UNIFORM_HEIGHT_MM = 10.0
+
+_C.ROIS.AIR_RADIUS_MM = 2.0
+_C.ROIS.AIR_HEIGHT_MM = 7.5
+
+_C.ROIS.WATER_RADIUS_MM = 2.0
+_C.ROIS.WATER_HEIGHT_MM = 7.5
+
+_C.ROIS.UNIFORM_OFFSET_MM = 5.0
+_C.ROIS.AIRWATER_OFFSET_MM = 10.0
+_C.ROIS.AIRWATER_SEPARATION_MM = 7.5
 
 _C.ROIS.BACKGROUND_OFFSET_YX = [
     (-16, -28),
@@ -236,6 +249,7 @@ _C.ROIS.BACKGROUND_OFFSET_YX = [
     (25, -3),
 ]
 _C.ROIS.ORIENTATION_YX = [1, 1]
+_C.ROIS.ORIENTATION_Z = 1
 
 _C.ROIS.SPACING = 2.0644
 
@@ -256,28 +270,34 @@ _C.STYLE.COLORS = [
 ]
 _C.STYLE.PLT_STYLE = "seaborn-v0_8-talk"
 _C.STYLE.RCPARAMS = [
+    ("figure.dpi", 600),
+    ("figure.facecolor", "white"),
+    ("savefig.facecolor", "white"),
+    ("savefig.edgecolor", "none"),
     ("font.size", 24),
     ("axes.titlesize", 24),
+    ("axes.titleweight", "bold"),
     ("axes.labelsize", 24),
+    ("axes.labelweight", "bold"),
+    ("axes.labelpad", 20),
     ("xtick.labelsize", 24),
     ("ytick.labelsize", 24),
     ("legend.fontsize", 24),
     ("legend.title_fontsize", 24),
-    ("lines.linewidth", 2.5),
-    ("lines.markersize", 8),
+    ("lines.linewidth", 4.0),
+    ("lines.linestyle", "-"),
+    ("lines.marker", "o"),
+    ("lines.markersize", 10),
+    ("lines.markerfacecolor", "white"),
+    ("lines.markeredgewidth", 2.0),
     ("axes.linewidth", 1.2),
     ("font.family", "DejaVu Sans"),
+    ("axes.grid", True),
+    ("grid.linestyle", "--"),
+    ("grid.linewidth", 2.0),
+    ("grid.alpha", 0.5),
+    ("grid.color", "gray"),
 ]
-
-_C.STYLE.LEGEND = CN()
-_C.STYLE.LEGEND.LABELPAD = 20
-_C.STYLE.LEGEND.FONTWEIGHT = "bold"  # or Normal, Light, Heavy, etc.
-
-_C.STYLE.GRID = CN()
-_C.STYLE.GRID.LINESTYLE = "--"
-_C.STYLE.GRID.LINEWIDTH = 2.0
-_C.STYLE.GRID.ALPHA = 0.3
-_C.STYLE.GRID.COLOR = "gray"
 
 _C.STYLE.PLOT = CN()
 _C.STYLE.PLOT.DEFAULT = CN()
@@ -296,6 +316,23 @@ _C.STYLE.PLOT.ENHANCED.ZORDER = 30
 _C.STYLE.PLOT.ENHANCED.LINESTYLE = "-"
 _C.STYLE.PLOT.ENHANCED.MARKERSIZE = 15
 _C.STYLE.PLOT.ENHANCED.MARKEREDGEWIDTH = 2.0
+
+_C.STATISTICS = CN()
+
+# Mode: "empirical", "poisson"
+_C.STATISTICS.MODE = "empirical"
+
+# Include covariance between ROIs (advanced)
+_C.STATISTICS.ESTIMATE_COVARIANCE = False
+
+# Large-sample SD variance model: "gaussian" or "poisson"
+_C.STATISTICS.SD_VARIANCE_MODEL = "gaussian"
+
+# Safety threshold to avoid division by zero
+_C.STATISTICS.EPSILON = 1e-12
+
+# Enable fast ROI mask shifting optimization
+_C.STATISTICS.FAST_ROI_SHIFT = True
 
 
 def get_cfg_defaults():
