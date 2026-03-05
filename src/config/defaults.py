@@ -63,8 +63,32 @@ ROIS : CfgNode
         12 background sampling positions as (y, x) offsets from phantom center.
     ORIENTATION_YX : list of int
         Image orientation indicators [y_orient, x_orient] (default: [1, 1]).
+    ORIENTATION_Z : int
+        Z-axis orientation indicator (default: 1).
     SPACING : float
         Pixel spacing in mm (default: 2.0644).
+    PHANTOM_CENTER_METHOD : str
+        Method for phantom center detection ("weighted_slices" or "max_slice", default: "weighted_slices").
+    PHANTOM_CENTER_THRESHOLD_FRACTION : float
+        Threshold fraction for phantom center detection (0.0-1.0, default: 0.41).
+    UNIFORM_RADIUS_MM : float
+        Uniform cylinder radius in mm (default: 11.25).
+    UNIFORM_HEIGHT_MM : float
+        Uniform cylinder height in mm (default: 10.0).
+    AIR_RADIUS_MM : float
+        Air cylinder radius in mm (default: 2.0).
+    AIR_HEIGHT_MM : float
+        Air cylinder height in mm (default: 7.5).
+    WATER_RADIUS_MM : float
+        Water cylinder radius in mm (default: 2.0).
+    WATER_HEIGHT_MM : float
+        Water cylinder height in mm (default: 7.5).
+    UNIFORM_OFFSET_MM : float
+        Offset from phantom center to uniform region in mm (default: 5.0).
+    AIRWATER_OFFSET_MM : float
+        Offset from phantom center to air/water regions in mm (default: 10.0).
+    AIRWATER_SEPARATION_MM : float
+        Separation between air and water cylinders in mm (default: 7.5).
 
 FILE : CfgNode
     File naming patterns and identifiers.
@@ -252,6 +276,11 @@ _C.ROIS.ORIENTATION_YX = [1, 1]
 _C.ROIS.ORIENTATION_Z = 1
 
 _C.ROIS.SPACING = 2.0644
+
+_C.ROIS.PHANTOM_CENTER_METHOD = "weighted_slices"
+_C.ROIS.PHANTOM_CENTER_THRESHOLD_FRACTION = 0.41
+
+_C.ROIS.INVERSE_AXES = False
 
 _C.FILE = CN()
 _C.FILE.USER_PATTERN = r"frame(\d+)"
