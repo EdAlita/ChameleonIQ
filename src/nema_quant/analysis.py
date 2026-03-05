@@ -413,7 +413,7 @@ def _calculate_crc_std(
 
         if len(y_coords) == 0:
             _logger.warning(f"  No voxels found in ROI mask for {name}")
-            crc_results[name] = {  # type: ignore[index]
+            crc_results[voi_radius_vox / 2.0] = {  # type: ignore[index]
                 "mean_signal": 0.0,
                 "std_signal": 0.0,
                 "uniform_mean": 0.0,  # type: ignore[name-defined]
@@ -476,16 +476,29 @@ def _calculate_crc_std(
         else:
             rc_est = rod_est.ratio(uniform_est)
 
-        crc_results[name] = {
+        # Calculate coefficient of variation for rod and uniform region (NEMA NU4 style)
+        cv_rod = (
+            np.std(best_profile) / np.mean(best_profile)
+            if abs(np.mean(best_profile)) > eps
+            else 0.0
+        )
+        cv_uniform = (
+            np.std(uniform_values) / np.mean(uniform_values)
+            if abs(np.mean(uniform_values)) > eps
+            else 0.0
+        )
+
+        # Combined %STD: propagate both rod and uniform variability
+        percentage_std_combined = 100.0 * np.sqrt(cv_rod**2 + cv_uniform**2)
+
+        crc_results[voi_radius_vox / 2.0] = {  # type: ignore[index]
             "mean_signal": rod_est.mean,
             "std_signal": rod_est.std,
             "uniform_mean": uniform_est.mean,
             "uniform_std": uniform_est.std,
-            "recovery_coeff": rc_est.mean,
-            "percentage_STD_rc": (
-                100 * rc_est.std / rc_est.mean if abs(rc_est.mean) > eps else 0.0
-            ),
-            "cError": rc_est.std,
+            "recovery_coeff": rc_est.mean * 100.0,
+            "percentage_STD_rc": percentage_std_combined,
+            "cError": rc_est.std * 100.0,
         }
 
     return crc_results
@@ -521,7 +534,22 @@ def _calculate_spillover_ratio(
         else:
             sor_est = region_est.ratio(uniform_est)
 
-        _logger.info(
+        # Calculate coefficient of variation using raw std (NEMA NU4 style, matching AMIDE)
+        cv_region = (
+            np.std(region_values) / np.mean(region_values)
+            if abs(np.mean(region_values)) > eps
+            else 0.0
+        )
+        cv_uniform = (
+            np.std(uniform_values) / np.mean(uniform_values)
+            if abs(np.mean(uniform_values)) > eps
+            else 0.0
+        )
+
+        # Combined %STD: propagate both region and uniform variability
+        percentage_std_combined = 100.0 * np.sqrt(cv_region**2 + cv_uniform**2)
+
+        _logger.debug(
             f"ROI {region_name.capitalize()}:"
             f" voxels={np.sum(region_mask)},"
             f" mean={region_est.mean:.6f},"
@@ -530,11 +558,9 @@ def _calculate_spillover_ratio(
         )
 
         spillover_ratios[region_name] = {
-            "SOR": sor_est.mean,
-            "SOR_error": sor_est.std,
-            "%STD": (
-                100 * sor_est.std / sor_est.mean if abs(sor_est.mean) > eps else 0.0
-            ),
+            "SOR": sor_est.mean * 100.0,
+            "SOR_error": sor_est.std * 100.0,
+            "%STD": percentage_std_combined,
         }
 
     return spillover_ratios
@@ -751,6 +777,9 @@ def calculate_nema_metrics(
     mode = cfg.STATISTICS.MODE
     sd_model = cfg.STATISTICS.SD_VARIANCE_MODEL
 
+    _logger.info(f"{'mm':^4} | {'RC [%]':^13} | {'BV [%]':^12}")
+    _logger.info(f"{'-'*4} | {'-'*13} | {'-'*12}")
+
     for name, hot_data in hot_sphere_counts.items():
 
         sphere_def = phantom.get_roi(name)
@@ -804,9 +833,9 @@ def calculate_nema_metrics(
         if sphere_diam_mm == 37:
             CB_37 = bkg_est.mean
         _logger.info(
-            f"{sphere_diam_mm:2d} mm | "
-            f"RC={qh_est.mean:.2f} ± {qh_est.std:.2f}% | "
-            f"BV={n_est.mean:.2f} ± {n_est.std:.2f}%"
+            f"{sphere_diam_mm:>4.1f} | "
+            f"{qh_est.mean:>5.2f} ± {qh_est.std:>4.2f}% | "
+            f"{n_est.mean:>5.2f} ± {n_est.std:>4.2f}%"
         )
 
         results.append(
@@ -902,10 +931,10 @@ def calculate_nema_metrics_nu4_2008(
 
     rods_center_z = cfg.ROIS.CENTRAL_SLICE
 
-    _logger.info(
+    _logger.debug(
         f" Phantom center (z, x,y) found at: ({phantom_center_z}, {phantom_center_x}, {phantom_center_y})"
     )
-    _logger.info(
+    _logger.debug(
         f" Using CENTRAL_SLICE z={rods_center_z} as reference (hot rods center)"
     )
 
@@ -942,11 +971,21 @@ def calculate_nema_metrics_nu4_2008(
         "maximum": float(np.max(uniform_values)) if uniform_values.size > 0 else 0.0,
         "minimum": float(np.min(uniform_values)) if uniform_values.size > 0 else 0.0,
         "%STD": (
-            100 * uniform_est.std / uniform_est.mean
-            if abs(uniform_est.mean) > eps
+            100 * np.std(uniform_values) / np.mean(uniform_values)
+            if abs(np.mean(uniform_values)) > eps
             else 0.0
         ),
     }
+
+    _logger.info("Uniformity Results:")
+    _logger.info(f"{'Mean':^10} | {'Maximum':^15} | {'Minimum':^15} | {'%STD':^7}")
+    _logger.info(f"{'-'*10} | {'-'*15} | {'-'*15} | {'-'*7}")
+    _logger.info(
+        f"{uniformity_results['mean']:>10.4f} | "
+        f"{uniformity_results['maximum']:>15.4f} | "
+        f"{uniformity_results['minimum']:>15.4f} | "
+        f"{uniformity_results['%STD']:>7.4f}"
+    )
 
     air_region_mask = create_cylindrical_mask(
         shape_zyx=(image_data.shape[0], image_data.shape[1], image_data.shape[2]),  # type: ignore[arg-type]
@@ -986,11 +1025,15 @@ def calculate_nema_metrics_nu4_2008(
         water_region_mask=water_region_mask,
         cfg=cfg,
     )
+    _logger.info("Spillover Ratios:")
+    _logger.info(f"{'Region':^10} | {'SOR ± Error':^15} | {'%STD':^5}")
+    _logger.info(f"{'-'*10} | {'-'*15} | {'-'*5}")
 
-    _logger.info(" Spillover Ratios:")
     for region, metrics in spillover_ratio.items():
         _logger.info(
-            f"  {region.capitalize()}: SOR={metrics['SOR']:.4f} ± {metrics['SOR_error']:.4f}, %STD={metrics['%STD']:.2f}%"
+            f"{region.capitalize():<10} | "
+            f"{metrics['SOR']:>5.2f} ± {metrics['SOR_error']:<5.2f}   | "
+            f"{metrics['%STD']:>5.2f}"
         )
 
     crc_results = _calculate_crc_std(
@@ -1002,12 +1045,15 @@ def calculate_nema_metrics_nu4_2008(
         cfg=cfg,
     )
 
-    _logger.info(" CRC Results:")
+    _logger.info("RC Results:")
+    _logger.info(f"{'Diameter':^10} | {'RC ± Error':^15} | {'%STD':^7}")
+    _logger.info(f"{'-'*10} | {'-'*15} | {'-'*7}")
+
     for region, metrics in crc_results.items():
         _logger.info(
-            f"  {str(region).capitalize()}:"  # type: ignore[attr-defined]
-            f" RC={metrics['recovery_coeff']:.2f} ± {metrics['cError']:.2f},"  # type: ignore[index]
-            f" %STD={metrics['percentage_STD_rc']:.2f}%"  # type: ignore[index]
+            f"{region:>10.1f} | "
+            f"{metrics['recovery_coeff']:>5.2f} ± {metrics['cError']:<5.2f}   | "
+            f"{metrics['percentage_STD_rc']:>5.2f}"
         )
     return crc_results, spillover_ratio, uniformity_results  # type: ignore[return-value]
 
