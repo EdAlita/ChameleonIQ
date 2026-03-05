@@ -10,15 +10,19 @@ Date: 2025-07-16
 import argparse
 import datetime
 import logging
+import os
+import re
 import sys
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Optional, Tuple
 from venv import logger
 
+import matplotlib
 import numpy as np
 import numpy.typing as npt
 import yacs.config
+from rich.highlighter import Highlighter
 from rich.logging import RichHandler
 
 from config.defaults import get_cfg_defaults
@@ -41,6 +45,34 @@ from .reporting import (
     save_results_to_txt,
     save_results_to_txt_nu4,
 )
+
+# Set environment variables for headless operation only when no display available
+is_headless = not os.environ.get("DISPLAY") and sys.platform != "win32"
+if is_headless:
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ["QT_LOGGING_RULES"] = "*.debug=false;qt.qpa.*=false"
+
+matplotlib.use("Agg")  # Set non-interactive backend before importing pyplot
+
+
+class NumberHighlighter(Highlighter):
+    """Highlight numeric values in log messages without highlighting paths."""
+
+    _number_pattern = re.compile(
+        r"(?<![A-Za-z0-9_/.-])([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?%?)(?![A-Za-z0-9_/.-])"
+    )
+
+    def highlight(self, text: Any) -> None:
+        for match in self._number_pattern.finditer(text.plain):
+            text.stylize("bold cyan", match.start(1), match.end(1))
+
+
+def _log_section(title: str) -> None:
+    logging.info(f"── {title} ──")
+
+
+def _log_kv(key: str, value: Any, key_width: int = 20) -> None:
+    logging.info(f"{key + ':':<{key_width}} {value}")
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -153,7 +185,25 @@ def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> Non
         datefmt="[%H:%M:%S]",
         handlers=[
             logging.FileHandler(log_file_path, mode="w", encoding="utf-8"),
-            RichHandler(rich_tracebacks=True),
+            RichHandler(
+                rich_tracebacks=True,
+                markup=True,
+                show_path=False,
+                highlighter=NumberHighlighter(),
+                keywords=[
+                    "Input image:",
+                    "Output file:",
+                    "Configuration:",
+                    "NEMA standard:",
+                    "Loading configuration:",
+                    "Saving results to:",
+                    "Results saved to:",
+                    "RC Results:",
+                    "Spillover Ratios:",
+                    "Tool:",
+                    "Uniformity Results:",
+                ],
+            ),
         ],
     )
 
@@ -170,35 +220,12 @@ def load_configuration(
     """Load configuration from file or use defaults."""
     cfg = get_cfg_defaults()
 
-    standard_config_map = {
-        "NU_2_2018": "nema_phantom_config.yaml",
-        "NU_4_2008": "nema_phantom_config_nu4_2008.yaml",
-    }
-    standard_config_name = standard_config_map.get(standard)
-    if standard_config_name:
-        standard_config_path = (
-            Path(__file__).resolve().parents[1] / "config" / standard_config_name
-        )
-        if standard_config_path.exists():
-            logging.info(
-                "Loading base config for standard %s: %s",
-                standard,
-                standard_config_path,
-            )
-            cfg.merge_from_file(str(standard_config_path))
-        else:
-            logging.warning(
-                "Base config for standard %s not found at %s",
-                standard,
-                standard_config_path,
-            )
-
     if config_path:
         config_file = Path(config_path)
         if not config_file.exists():
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-        logging.info("Loading configuration: %s", config_path)
+        logging.info("Loading configuration...")
         cfg.merge_from_file(config_path)
     else:
         logging.info("Using default configuration")
@@ -223,7 +250,7 @@ def get_image_properties(
             float(np.abs(affine[1, 1])),
             float(np.abs(affine[2, 2])),
         )
-        logging.info(f"Extracted voxel spacing from image: {voxel_spacing} mm")
+        logging.debug(f"Extracted voxel spacing from image: {voxel_spacing} mm")
     else:
         # Default spacing
         voxel_spacing = (1.0, 1.0, 1.0)
@@ -231,7 +258,7 @@ def get_image_properties(
             "No voxel spacing information available. Using default: (1.0, 1.0, 1.0) mm"
         )
 
-    logging.info(f"Image dimensions: {image_dims}")
+    logging.debug(f"Image dimensions: {image_dims}")
 
     return image_dims, voxel_spacing
 
@@ -239,14 +266,17 @@ def get_image_properties(
 def run_analysis(args: argparse.Namespace) -> int:
     """Run the NEMA analysis with the provided arguments."""
     try:
+        start_time = datetime.datetime.now()
+
         # Setup logging
         setup_logging(args.log_level)
 
-        logging.info("Starting ChameleonIQ ")
-        logging.info(f"Input image: {args.input_image}")
-        logging.info(f"Output file: {args.output}")
-        logging.info(f"Configuration file: {args.config}")
-        logging.info(f"NEMA standard: {args.standard}")
+        _log_section("Run")
+        _log_kv("Tool", "ChameleonIQ")
+        _log_kv("Input image", args.input_image)
+        _log_kv("Output file", args.output)
+        _log_kv("Configuration", args.config)
+        _log_kv("NEMA standard", args.standard)
 
         input_path = Path(args.input_image)
         if not input_path.exists():
@@ -274,10 +304,13 @@ def run_analysis(args: argparse.Namespace) -> int:
             print(f"ERROR: Failed to load configuration: {e}")
             return 1
 
+        _log_section("Load")
         logging.info("Loading NIfTI image...")
         try:
-            image_data, affine = load_nii_image(input_path, return_affine=True)
-            logging.info("Image loaded successfully")
+            image_data, affine = load_nii_image(
+                input_path, return_affine=True, inverse_axes=cfg.ROIS.INVERSE_AXES
+            )
+            logging.debug("Image loaded successfully")
         except Exception as e:
             logging.error(f"Failed to load image: {e}")
             if args.log_level == "DEBUG":
@@ -300,10 +333,11 @@ def run_analysis(args: argparse.Namespace) -> int:
             print(f"ERROR: Failed to extract image properties: {e}")
             return 1
 
+        _log_section("Initialize")
         logging.info("Initializing NEMA phantom...")
         try:
             phantom = NemaPhantom(cfg, image_dims, voxel_spacing)
-            logging.info(f"Phantom initialized with {len(phantom.rois)} ROIs")
+            logging.debug(f"Phantom initialized with {len(phantom.rois)} ROIs")
         except Exception as e:
             logging.error(f"Failed to initialize phantom: {e}")
             if args.log_level == "DEBUG":
@@ -314,6 +348,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             return 1
 
         # Perform NEMA analysis
+        _log_section("Analysis")
         logging.info("Performing NEMA analysis...")
         try:
             if args.standard == "NU_4_2008":
@@ -358,12 +393,13 @@ def run_analysis(args: argparse.Namespace) -> int:
         csv_dir.mkdir(parents=True, exist_ok=True)
 
         if args.standard == "NU_4_2008":
+            _log_section("Plots")
             logging.info("Saving analysis plots...")
             try:
                 generate_crc_plots_nu4(crc_results=crc_results, output_dir=png_dir, cfg=cfg)  # type: ignore[arg-type]
                 generate_iq_plot(image=image_data, output_dir=png_dir, cfg=cfg)
                 generate_spillover_barplot_nu4(spillover_ratio=spillover_results, output_dir=png_dir, cfg=cfg)  # type: ignore[arg-type]
-                logging.info("Plots generated successfully")
+                logging.debug("Plots saved successfully")
             except Exception as e:
                 logging.error(f"Failed to generate plots: {e}")
                 if logger.isEnabledFor(logging.DEBUG):
@@ -373,6 +409,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                 print(f"ERROR: Failed to generate plots: {e}")
                 return 1
         else:
+            _log_section("Plots")
             logging.info("Saving analysis plots...")
             try:
                 generate_plots(results=results, output_dir=png_dir, cfg=cfg)
@@ -387,7 +424,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                     image=image_data, output_dir=png_dir, cfg=cfg
                 )
                 generate_torso_plot(image=image_data, output_dir=png_dir, cfg=cfg)
-                logging.info("Plots generated successfully")
+                logging.debug("Plots saved successfully")
             except Exception as e:
                 logging.error(f"Failed to generate plots: {e}")
                 if logger.isEnabledFor(logging.DEBUG):
@@ -397,7 +434,8 @@ def run_analysis(args: argparse.Namespace) -> int:
                 print(f"ERROR: Failed to generate plots: {e}")
                 return 1
         if args.standard == "NU_4_2008":
-            logging.info(f"Saving CRC results to: {args.output}")
+            _log_section("Reports")
+            logging.info("Saving reports...")
             try:
                 output_path = Path(args.output)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -428,7 +466,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                     rois_loc_path=iq_rois_path,
                     spillover_ratio_path=spillover_path,
                 )
-                logging.info("Results saved successfully")
+                logging.debug("Results saved successfully")
 
             except Exception as e:
                 logging.error(f"Failed to save Results: {e}")
@@ -440,7 +478,8 @@ def run_analysis(args: argparse.Namespace) -> int:
                 return 1
         else:
 
-            logging.info(f"Saving results to: {args.output}")
+            _log_section("Reports")
+            logging.info("Saving reports...")
             try:
                 output_path = Path(args.output)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -466,7 +505,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                     rois_loc_path,
                     boxplot_path,
                 )
-                logging.info("Results saved successfully")
+                logging.debug("Results saved successfully")
             except Exception as e:
                 logging.error(f"Failed to save results: {e}")
                 if logger.isEnabledFor(logging.DEBUG):
@@ -544,11 +583,11 @@ def run_analysis(args: argparse.Namespace) -> int:
                     logging.error(traceback.format_exc())
                 print(f"ERROR: Failed to calculate advanced metrics: {e}")
                 return 1
-        logging.info(f"  Image dimensions: {image_dims}")
-        logging.info(f"  Voxel spacing: {voxel_spacing} mm")
-        if args.standard == "NU_2_2018":
-            logging.info(f"  Number of spheres analyzed: {len(results)}")
-        logging.info(f"  Results saved to: {args.output}")
+        elapsed_seconds = (datetime.datetime.now() - start_time).total_seconds()
+
+        _log_section("Summary")
+        _log_kv("Results saved to", Path(args.output).parent)
+        _log_kv("Elapsed", f"{elapsed_seconds:.2f} s")
 
         if args.save_visualizations:
             print(f"  Visualizations saved to: {args.visualizations_dir}/")
