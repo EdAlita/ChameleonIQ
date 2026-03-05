@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import logging
+import os
 import sys
 import xml.etree.ElementTree as ET
 from importlib.metadata import version
@@ -8,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from venv import logger
 
+import matplotlib
 import numpy as np
 import pandas as pd
 import yacs.config
@@ -25,6 +27,14 @@ from .reporting import (
     generate_merged_plots,
     generate_unified_statistical_heatmaps,
 )
+
+# Set environment variables for headless operation only when no display available
+is_headless = not os.environ.get("DISPLAY") and sys.platform != "win32"
+if is_headless:
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ["QT_LOGGING_RULES"] = "*.debug=false;qt.qpa.*=false"
+
+matplotlib.use("Agg")  # Set non-interactive backend before importing pyplot
 
 
 def load_configuration(config_path: Optional[str]) -> yacs.config.CfgNode:
