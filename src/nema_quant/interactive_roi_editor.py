@@ -669,6 +669,7 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         spacing_override: Optional[float] = None,
         center_method: Optional[str] = None,
         center_threshold: Optional[float] = None,
+        inverse_axis: bool = False,
     ) -> None:
         super().__init__()
         self.image = image
@@ -720,10 +721,6 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         self.activity_phantom_activity = "10 MBq"
         self.activity_time = "16:20:00"
 
-        # Initialize FILE parameters
-        self.file_user_pattern = "frame(\\d+)"
-        self.file_case = "NU4_2008"
-
         self.roi_defs = [
             dict(roi, center_yx=list(roi["center_yx"]))
             for roi in getattr(cfg.PHANTHOM, "ROI_DEFINITIONS_MM", [])
@@ -744,6 +741,9 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
                 clamped_slice,
             )
             self.central_slice = clamped_slice
+
+        # Initialize sagittal slice X coordinate (which YZ plane to display)
+        self.sagittal_slice_x = int(self.phantom_center_x)
 
         # Auto-detect ROI centers on initial slice
         detected_centers = self._auto_detect_centers()
@@ -874,13 +874,23 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
 
         # Slice control
         slice_group = QtWidgets.QGroupBox("Slice")
-        slice_layout = QtWidgets.QHBoxLayout()
+        slice_layout = QtWidgets.QGridLayout()
         self.slice_spinbox = QtWidgets.QSpinBox()
         self.slice_spinbox.setRange(0, self.image.shape[0] - 1)
         self.slice_spinbox.setValue(self.central_slice)
         self.slice_spinbox.valueChanged.connect(self._on_slice_changed)
-        slice_layout.addWidget(QtWidgets.QLabel("Z:"))
-        slice_layout.addWidget(self.slice_spinbox)
+        slice_layout.addWidget(QtWidgets.QLabel("Z (Axial):"), 0, 0)
+        slice_layout.addWidget(self.slice_spinbox, 0, 1)
+
+        self.sagittal_slice_x_spinbox = QtWidgets.QSpinBox()
+        self.sagittal_slice_x_spinbox.setRange(0, self.image.shape[2] - 1)
+        self.sagittal_slice_x_spinbox.setValue(self.sagittal_slice_x)
+        self.sagittal_slice_x_spinbox.valueChanged.connect(
+            self._on_sagittal_slice_changed
+        )
+        slice_layout.addWidget(QtWidgets.QLabel("X (Sagittal):"), 1, 0)
+        slice_layout.addWidget(self.sagittal_slice_x_spinbox, 1, 1)
+
         slice_group.setLayout(slice_layout)
         control_layout.addWidget(slice_group)
 
@@ -1057,26 +1067,6 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         spacing_group.setLayout(spacing_layout)
         control_layout.addWidget(spacing_group)
 
-        # FILE parameters (collapsible)
-        file_group = QtWidgets.QGroupBox("FILE")
-        file_group.setCheckable(True)
-        file_group.setChecked(False)
-        file_layout = QtWidgets.QGridLayout()
-
-        self.file_pattern_edit = QtWidgets.QLineEdit()
-        self.file_pattern_edit.setText(self.file_user_pattern)
-
-        self.file_case_edit = QtWidgets.QLineEdit()
-        self.file_case_edit.setText(self.file_case)
-
-        file_layout.addWidget(QtWidgets.QLabel("USER_PATTERN:"), 0, 0)
-        file_layout.addWidget(self.file_pattern_edit, 0, 1)
-        file_layout.addWidget(QtWidgets.QLabel("CASE:"), 1, 0)
-        file_layout.addWidget(self.file_case_edit, 1, 1)
-
-        file_group.setLayout(file_layout)
-        control_layout.addWidget(file_group)
-
         # Buttons
         button_layout = QtWidgets.QHBoxLayout()
         self.btn_recompute = QtWidgets.QPushButton("Recompute")
@@ -1117,8 +1107,8 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         # Add ROI overlays as circular regions
         self._draw_roi_circles()
 
-        # Sagittal view (Y,Z at fixed X)
-        sagittal_img = self.image[:, :, int(self.phantom_center_x)]
+        # Sagittal view (Y,Z at selected X slice)
+        sagittal_img = self.image[:, :, int(self.sagittal_slice_x)]
         self.view_sagittal.setImage(sagittal_img, autoRange=False)
         self.view_sagittal.setColorMap(cmap)
         self._draw_sagittal_overlays()
@@ -1170,7 +1160,7 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         self._sagittal_overlays = []
 
         uniform_mask, air_mask, water_mask = self._build_masks()
-        x_idx = int(self.phantom_center_x)
+        x_idx = int(self.sagittal_slice_x)
         uniform_slice = uniform_mask[:, :, x_idx].astype(np.float32)
         air_slice = air_mask[:, :, x_idx].astype(np.float32)
         water_slice = water_mask[:, :, x_idx].astype(np.float32)
@@ -1273,6 +1263,11 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         self.central_slice = value
         self._update_display()
 
+    def _on_sagittal_slice_changed(self, value: int) -> None:
+        """Handle sagittal X slice change."""
+        self.sagittal_slice_x = value
+        self._update_display()
+
     def _on_spacing_changed(self, value: float) -> None:
         """Handle spacing change."""
         self.spacing = value
@@ -1335,8 +1330,6 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         self.reconstruction_filter = self.recon_filter_edit.text()
         self.activity_phantom_activity = self.activity_phantom_edit.text()
         self.activity_time = self.activity_time_edit.text()
-        self.file_user_pattern = self.file_pattern_edit.text()
-        self.file_case = self.file_case_edit.text()
 
         # Generate YAML content
         yaml_content = self._generate_yaml_content()
@@ -1412,12 +1405,11 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         yaml_lines.append(f"  UNIFORM_OFFSET_MM: {self.uniform_offset_mm}")
         yaml_lines.append(f"  AIRWATER_OFFSET_MM: {self.airwater_offset_mm}")
         yaml_lines.append(f"  AIRWATER_SEPARATION_MM: {self.airwater_separation_mm}")
-
-        # FILE section
-        yaml_lines.append("")
-        yaml_lines.append("FILE:")
-        yaml_lines.append(f'  USER_PATTERN: "{self.file_user_pattern}"')
-        yaml_lines.append(f'  CASE: "{self.file_case}"')
+        yaml_lines.append(f"  PHANTOM_CENTER_METHOD: {self.center_method}")
+        yaml_lines.append(
+            f"  PHANTOM_CENTER_THRESHOLD_FRACTION: {self.center_threshold}"
+        )
+        yaml_lines
 
         return "\n".join(yaml_lines) + "\n"
 
@@ -1546,6 +1538,12 @@ def main() -> None:
         default=None,
         help="Phantom center detection threshold fraction (NU 4-2008)",
     )
+    parser.add_argument(
+        "--inverse-orientation",
+        action="store_true",
+        help="Invert orientation axes (NU 4-2008)",
+        default=False,
+    )
 
     args = parser.parse_args()
 
@@ -1557,7 +1555,9 @@ def main() -> None:
         logger.error(f"Image file not found: {image_path}")
         return
 
-    image_array_3d, affine = load_nii_image(filepath=image_path, return_affine=True)
+    image_array_3d, affine = load_nii_image(
+        filepath=image_path, return_affine=True, inverse_axes=args.inverse_orientation
+    )
 
     if args.standard == "NU_4_2008":
         # Create QApplication for PyQtGraph
@@ -1594,6 +1594,7 @@ def main() -> None:
             spacing_override=spacing_override,
             center_method=args.center_method,
             center_threshold=args.center_threshold,
+            inverse_axis=args.inverse_orientation,
         )
         editor.show()
         app.exec()
