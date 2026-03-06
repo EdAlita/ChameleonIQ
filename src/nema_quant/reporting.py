@@ -787,7 +787,7 @@ def generate_reportlab_report_nu4(
     elements.append(Paragraph("<b>Recovery Coefficient (RC) Results</b>", header_style))
     elements.append(Spacer(1, 0.1 * inch))
 
-    roi_defs = {roi["name"]: roi for roi in cfg.PHANTHOM.ROI_DEFINITIONS_MM}
+    roi_defs = {roi["diameter_mm"]: roi for roi in cfg.PHANTHOM.ROI_DEFINITIONS_MM}
     crc_table_data = [["Rod Diameter (mm)", "Recovery Coefficient", "%STD"]]
 
     rows: List[Tuple[float, float, float]] = []
@@ -905,19 +905,27 @@ def generate_plots(
 
     csv_path = output_dir.parent / "csv" / "analysis_results.csv"
     df.to_csv(csv_path, index=False)
-    logging.info(f"Results saved to CSV at: {csv_path}")
+    logging.debug(f"Results saved to CSV at: {csv_path}")
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
     plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     fig, axes = plt.subplots(1, 2, figsize=(24, 10), sharex=True)
 
-    for ax, yvar, ylabel in zip(
+    for ax, yvar, yerror, ylabel in zip(
         axes,
         ["percentaje_constrast_QH", "background_variability_N"],
-        ["CR (Hot sphere) [%]", "BV [%]"],
+        ["percentaje_constrast_QH_error", "background_variability_error"],
+        ["CR [%]", "BV [%]"],
     ):
-        ax.plot(df["diameter_mm"], df[yvar], color=cfg.STYLE.COLORS[0])
+        ax.errorbar(
+            df["diameter_mm"],
+            df[yvar],
+            yerr=df[yerror],
+            fmt="-o",
+            color=cfg.STYLE.COLORS[0],
+            capsize=3,
+        )
         ax.set_ylabel(ylabel)
         ax.set_xlabel("Sphere Diameter [mm]")
         ax.tick_params(axis="both", labelsize=20, width=1.2)
@@ -955,7 +963,7 @@ def generate_crc_plots_nu4(
     None
         This function does not return a value; the plot is saved to disk.
     """
-    roi_defs = {roi["name"]: roi for roi in cfg.PHANTHOM.ROI_DEFINITIONS_MM}
+    roi_defs = {roi["diameter_mm"]: roi for roi in cfg.PHANTHOM.ROI_DEFINITIONS_MM}
     rows: List[Dict[str, Any]] = []
     for name, metrics in crc_results.items():
         roi = roi_defs.get(name)
@@ -966,6 +974,7 @@ def generate_crc_plots_nu4(
                 "name": name,
                 "diameter_mm": float(roi["diameter_mm"]),
                 "RC": float(metrics.get("recovery_coeff", 0.0)),
+                "cError": float(metrics.get("cError", 0.0)),
                 "percent_std": float(metrics.get("percentage_STD_rc", 0.0)),
             }
         )
@@ -977,19 +986,30 @@ def generate_crc_plots_nu4(
 
     csv_path = output_dir.parent / "csv" / "rc_results.csv"
     df.to_csv(csv_path, index=False)
-    logging.info(f"RC results saved to CSV at: {csv_path}")
+    logging.debug(f"RC results saved to CSV at: {csv_path}")
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
     plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     fig, axes = plt.subplots(1, 2, figsize=(24, 10), sharex=True)
 
-    for ax, yvar, ylabel in zip(
+    for ax, yvar, ylabel, yerror in zip(
         axes,
         ["RC", "percent_std"],
-        ["RC (a. u.)", "Percent STD (%)"],
+        ["CR [a. u.]", "Percent STD [%]"],
+        ["cError", None],
     ):
-        ax.plot(df["diameter_mm"], df[yvar], color=cfg.STYLE.COLORS[0])
+        if yerror == "cError":
+            ax.errorbar(
+                df["diameter_mm"],
+                df[yvar],
+                yerr=df[yerror],
+                fmt="-o",
+                color=cfg.STYLE.COLORS[0],
+                capsize=3,
+            )
+        else:
+            ax.plot(df["diameter_mm"], df[yvar], color=cfg.STYLE.COLORS[0])
         ax.set_ylabel(ylabel)
         ax.set_xlabel("Sphere Diameter [mm]")
         ax.tick_params(axis="both", width=1.2)
@@ -1042,7 +1062,7 @@ def generate_spillover_barplot_nu4(
     )
     csv_path = output_dir.parent / "csv" / "spillover_ratio.csv"
     df.to_csv(csv_path, index=False)
-    logging.info(f"Spillover ratio saved to CSV at: {csv_path}")
+    logging.debug(f"Spillover ratio saved to CSV at: {csv_path}")
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
     plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
@@ -1109,7 +1129,7 @@ def generate_boxplot_with_mean_std(
     csv_path = output_dir.parent / "csv" / "lung_results.csv"
     df = pd.DataFrame({"data": data})
     df.to_csv(csv_path, index=False)
-    logging.info(f"Lung Results saved to CSV at: {csv_path}")
+    logging.debug(f"Lung results saved to CSV at: {csv_path}")
 
     label = f"{(output_dir.stem).capitalize()}"
 
