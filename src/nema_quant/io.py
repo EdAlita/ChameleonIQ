@@ -2,15 +2,14 @@
 Input/output utilities for loading images and saving analysis results.
 """
 
-import sys
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import matplotlib
 
-# Only use QtAgg backend if not running tests (pytest sets 'Agg' backend)
-if "pytest" not in sys.modules:
-    matplotlib.use("QtAgg")
+# Use non-interactive backend for file operations (works in headless environments)
+matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -20,9 +19,11 @@ from matplotlib.patches import Circle, Patch  # noqa: E402
 
 from nema_quant import utils  # noqa: E402
 
+logger = logging.getLogger(__name__)
+
 
 def load_nii_image(
-    filepath: Path, return_affine: bool = False
+    filepath: Path, return_affine: bool = False, inverse_axes: bool = False
 ) -> Tuple[npt.NDArray[Any], Optional[npt.NDArray[Any]]]:
     """Load a NIfTI image into a NumPy array.
 
@@ -54,20 +55,37 @@ def load_nii_image(
     if not filepath.exists():
         raise FileNotFoundError(f"The file was not found at: {filepath}")
 
+    logger.info(f"Loading NIfTI image: {filepath.name}")
+
     try:
         sitk_image = sitk.ReadImage(str(filepath))
+        ori = sitk.DICOMOrientImageFilter_GetOrientationFromDirectionCosines(
+            sitk_image.GetDirection()
+        )
+
+        logger.debug("Orientation: %s", ori)
+        logger.debug("Direction Cosines: %s", sitk_image.GetDirection())
         image_data = sitk.GetArrayFromImage(sitk_image)
 
         image_data = image_data.astype(np.float32)
+        if inverse_axes:
+            image_data = np.transpose(image_data, (0, 2, 1))  # Reorder to (z, y, x)
+
+        # Log image properties
+        logger.debug(f"Image dimensions (Z,Y,X): {image_data.shape}")
+        spacing = sitk_image.GetSpacing()
+        logger.debug(
+            f"Voxel spacing (X,Y,Z): ({spacing[0]:.4f}, {spacing[1]:.4f}, {spacing[2]:.4f}) mm"
+        )
 
         if return_affine:
-            spacing = sitk_image.GetSpacing()
             origin = sitk_image.GetOrigin()
             direction = sitk_image.GetDirection()
             affine = np.eye(4)
             direction_matrix = np.array(direction).reshape(3, 3)
             affine[:3, :3] = direction_matrix * np.array(spacing)
             affine[:3, 3] = origin
+            logger.debug("Affine matrix computed from NIfTI metadata")
 
             return image_data, affine
         else:
