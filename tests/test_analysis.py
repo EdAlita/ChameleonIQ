@@ -477,7 +477,7 @@ def test_calculate_nema_metrics_nu4_2008_basic(
     mock_find_center.return_value = (5.0, 5.0, 5.0)
     mock_spillover.return_value = {"air": {"SOR": 0.01, "SOR_error": 0.0, "%STD": 1.0}}
     mock_crc.return_value = {
-        "rod_1": {"recovery_coeff": 1.0, "cError": 0.0, "percentage_STD_rc": 0.0}
+        1.0: {"recovery_coeff": 1.0, "cError": 0.0, "percentage_STD_rc": 0.0}
     }
 
     crc_results, spillover_results, uniformity_results = (
