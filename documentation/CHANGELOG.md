@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.2.1](https://github.com/EdAlita/nema_analysis_tool/compare/v2.2.0...v2.2.1) - 2026-03-09
+
+### Commits
+- feat(cli): Added headless mode detection and related backend configuration for matplotlib. ([95453e1](https://github.com/EdAlita/nema_analysis_tool/commit/95453e13f7a36068987e006fe1762776f02acb36))
+- fix(gitignore): Divide Project specific gitignore and local one ([5a783d9](https://github.com/EdAlita/nema_analysis_tool/commit/5a783d99106f9d11672f790be16fbcfaf898bbe3))
+- fix(analysis): Update CRC calculations with NEMA NU4 style ([932f1b3](https://github.com/EdAlita/nema_analysis_tool/commit/932f1b3a4d5d28bff3e7eb86069fa9a2cb345bd4))
+- feat(interactive_roi): Add the new NEMA NU4 2008 ([f49b340](https://github.com/EdAlita/nema_analysis_tool/commit/f49b340ce7124c66cdfe092228faa1e1ee23ab33))
+- fix(reporting.py): Update ROI definitions and plot parameters. ([0d0e263](https://github.com/EdAlita/nema_analysis_tool/commit/0d0e263cdd92b212972f4f70fdccc5e70dfe4a1f))
+- feat(io): Add inverse axes option to load_nii_image ([57dee7c](https://github.com/EdAlita/nema_analysis_tool/commit/57dee7c20dfc096342038b2c84bb8df146de05ab))
+- feat(config/defaults.py): Add new configuration options for phantom center detection aand uniform regions ([b866930](https://github.com/EdAlita/nema_analysis_tool/commit/b86693090337193ec0ace4ca06415bc309f11a6f))
+- feat(cli): Add environment variable checks for headless operation ([87ffd5c](https://github.com/EdAlita/nema_analysis_tool/commit/87ffd5cf3318d8dcd58ac2a8ff7b1fcf91eb225f))
+- chore(setup): exclude pattenrs for flake8 checks ([5c3d950](https://github.com/EdAlita/nema_analysis_tool/commit/5c3d9506f266a7a4bd23a41f799dea46d2fa4451))
+- fix(cli): Set non-interactive backend for plotting ([cea472e](https://github.com/EdAlita/nema_analysis_tool/commit/cea472e61d7f565ac3defa9ea6c91d94e6f38643))
+- fix(benchmarking): added headless mode for offscreen rendering ([41746db](https://github.com/EdAlita/nema_analysis_tool/commit/41746db8ef058243d810d0adcc86ded891de7165))
+- fix(data reporting): Add error values to sample results ([aa43c79](https://github.com/EdAlita/nema_analysis_tool/commit/aa43c79c7b0551320c6bdf95e1b774011285d446))
+- test-fix(test_analysis.py): Fix CRC mock values ([9712e2d](https://github.com/EdAlita/nema_analysis_tool/commit/9712e2d3ecae8a98dfb0d98931b1496ff60e1b7f))
+- feature(estimator library): Implemented MultiEstimator class with covariance propagation support and ratio method for multivariate estimators. ([bf0445e](https://github.com/EdAlita/nema_analysis_tool/commit/bf0445e5293903cb0ca1275b751220da5d2f5190))
+
 ## [v2.2.0](https://github.com/EdAlita/nema_analysis_tool/compare/v2.1.0...v2.2.0) - 2026-02-26
 
 ### Commits
@@ -31,14 +49,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add contributing guidelines to CONTRIBUTING.md ([92cfd8b](https://github.com/EdAlita/nema_analysis_tool/commit/92cfd8b838497f20a2bcc7a059a59204353ce0e8))
 - feat(pyproject): Add configuration for pytest ([21b03a5](https://github.com/EdAlita/nema_analysis_tool/commit/21b03a51406619bc528377963a93e5712d77dba8))
 - chore(docs): Improve docstrings for input/output utilities ([8ebdf21](https://github.com/EdAlita/nema_analysis_tool/commit/8ebdf2117374acb7a8aeb4483db14377a15b7397))
+- fix(tests): solev issue for running test and add new changelog ([bc5c70b](https://github.com/EdAlita/nema_analysis_tool/commit/bc5c70bf413e70f6e8da6710c0f4505b3ba2d4b6))
 - docs(changelog): Update CHANGELOG with latest changes ([3300500](https://github.com/EdAlita/nema_analysis_tool/commit/3300500e11ea932c8c346bbf97052ad76d0bdbcd))
 - feat(env): added new dependencies to development enviroment ([8abc16f](https://github.com/EdAlita/nema_analysis_tool/commit/8abc16fb41dbe2d73c99f3d9fc6f25c571f02c43))
 - fix: nema_quant/interactive_roi_editor.py: Add phantom center computation for auto-detection of initial slice ([04185ac](https://github.com/EdAlita/nema_analysis_tool/commit/04185ac310d85a41de24142fdc7bfb9ff5a45bd0))
 - chore(docs): Updated header function to underscore naming convention ([1b5f318](https://github.com/EdAlita/nema_analysis_tool/commit/1b5f3180731972316b348e29f4baa26a1ca9d6e4))
 - feat(project): Update version to 2.1.0 and add pdoc configuration ([8d3968e](https://github.com/EdAlita/nema_analysis_tool/commit/8d3968eefcada790c835d77f5b229eed67d7077b))
+- chore(build): update de version to 2.2.0 ([630d113](https://github.com/EdAlita/nema_analysis_tool/commit/630d113b15e1a69412c0189a8ad82552f14009f8))
 - feat(image-processing): Update citation information to reflect version 2.1.0 of ChameleonIQ sofware ([f6e0e37](https://github.com/EdAlita/nema_analysis_tool/commit/f6e0e37c262da83759c1b73ffbd32cd5341fb8dc))
 - fix(phantom): update type hint for phantom_center_voxels ([405f2ff](https://github.com/EdAlita/nema_analysis_tool/commit/405f2ff2cb0ac491a1b7156aee69823373d19d63))
 - feat(nema_quant_iter): Remove unused module documentation ([0e0e987](https://github.com/EdAlita/nema_analysis_tool/commit/0e0e987d17f61c026d0daff5bb6588b1fc776b6c))
+- chore(deps): bump pillow in the pip group across 1 directory ([38a539f](https://github.com/EdAlita/nema_analysis_tool/commit/38a539fbd8f372bfcfe7b137fd12aa18be0420df))
 - chore(deps): bump pillow in the pip group across 1 directory ([13cee00](https://github.com/EdAlita/nema_analysis_tool/commit/13cee001c0b008cafca9cc0281aed9c9dc39ee1e))
 - fix(setup): fix flake8 configuration ([8de57d8](https://github.com/EdAlita/nema_analysis_tool/commit/8de57d8691d2cf7eb0c2bf815bed1e20eb93e0d7))
 - chore(gitignore): Adding ignores to local files for development ([a3eef05](https://github.com/EdAlita/nema_analysis_tool/commit/a3eef056e69cf363075d42a6d85ae34c04ac35f8))

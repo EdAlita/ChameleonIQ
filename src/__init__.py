@@ -23,11 +23,11 @@ GUI : module
 
 Version
 -------
-2.1.0
+2.2.1
 
 See Also
 --------
 https://github.com/EdAlita/ChameleonIQ
 """
 
-__version__ = "2.2.0"
+__version__ = "2.2.1"
