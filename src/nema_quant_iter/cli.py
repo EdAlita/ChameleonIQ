@@ -17,6 +17,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import matplotlib
 import numpy as np
 import numpy.typing as npt
 import yacs.config
@@ -45,6 +46,13 @@ from .reporting import (
     save_results_to_txt,
     save_results_to_txt_nu4_iter,
 )
+
+is_headless = not os.environ.get("DISPLAY") and sys.platform != "win32"
+if is_headless:
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ["QT_LOGGING_RULES"] = "*.debug=false;qt.qpa.*=false"
+
+matplotlib.use("Agg")  # Set non-interactive backend before importing pyplot
 
 
 def create_parser() -> argparse.ArgumentParser:
