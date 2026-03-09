@@ -16,7 +16,9 @@ def sample_results():
         {
             "diameter_mm": 10.0,
             "percentaje_constrast_QH": 85.0,
+            "percentaje_constrast_QH_error": 2.1,
             "background_variability_N": 5.2,
+            "background_variability_error": 0.3,
             "avg_hot_counts_CH": 15000.0,
             "avg_bkg_counts_CB": 2000.0,
             "bkg_std_dev_SD": 104.0,
@@ -24,7 +26,9 @@ def sample_results():
         {
             "diameter_mm": 13.0,
             "percentaje_constrast_QH": 78.5,
+            "percentaje_constrast_QH_error": 2.4,
             "background_variability_N": 5.8,
+            "background_variability_error": 0.4,
             "avg_hot_counts_CH": 12000.0,
             "avg_bkg_counts_CB": 1950.0,
             "bkg_std_dev_SD": 113.0,
