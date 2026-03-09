@@ -35,7 +35,7 @@ class Estimator:
         if mode == "poisson":
             variance = float(mean / n)
         else:
-            std = np.std(samples, ddof=1)
+            std = np.std(samples)
             variance = float((std**2) / n)
 
         return cls(float(mean), variance, n)
