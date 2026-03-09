@@ -1,3 +1,5 @@
+# Project-wide gitignore (commit this to repo)
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -25,14 +27,6 @@ wheels/
 *.egg
 MANIFEST
 
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -46,43 +40,8 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
 # Jupyter Notebook
 .ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# celery beat schedule file
-celerybeat-schedule
-
-# SageMath parsed files
-*.sage.py
 
 # Environments
 .env
@@ -93,16 +52,6 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
 # mypy
 .mypy_cache/
 .dmypy.json
@@ -111,60 +60,20 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Project specific
-
+# Project specific outputs
 output/
 results/
 visualization_output/
 *.nii
 *.nii.gz
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.backup
-
-# Log files
+# Logs
 *.log
 logs/
 
-# Configuration files with sensitive data
-config/local_*.yaml
-config/secret_*.yaml
-.env.local
-.env.production
+# OS generated files
+.DS_Store
+Thumbs.db
 
-# Coverage reports
-.coveragerc
-
-.gitmessage
-.auto-changelog
-.auto-changelog-setup.js
-CHANGELOG.md
-
-order.py
-run_nema_quant_sweep.sh
-xml_generator.py
-run_torso_202409.sh
-PETCT_DoseOptimization_DatasetGuide.md
-PETCT_DoseOptimization_DatasetGuide.pdf
-*/*/nema_phantom_config_202409.yaml
-*/*/nema_phantom_config_utrech.yaml
-SECTION_2_2_AND_2_3.md
+# Include local gitignore
+.gitignore.local
