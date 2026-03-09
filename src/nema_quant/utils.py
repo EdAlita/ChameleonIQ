@@ -4,6 +4,7 @@ Utility functions for image processing and data manipulation.
 
 import argparse
 import logging
+import os
 import sys
 from typing import Any, Optional, Tuple
 
@@ -14,6 +15,10 @@ from scipy.ndimage import binary_fill_holes, center_of_mass, gaussian_filter
 from scipy.ndimage import label as ndimage_label
 
 _logger = logging.getLogger(__name__)
+
+is_headless = not os.environ.get("DISPLAY") and sys.platform != "win32"
+if is_headless:
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 
 def find_phantom_center(
