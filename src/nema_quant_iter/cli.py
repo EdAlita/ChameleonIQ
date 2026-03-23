@@ -490,13 +490,6 @@ def run_analysis(args: argparse.Namespace) -> int:
             )
 
             logging.info(
-                f"Iteration with highest weighted CBR: {best_cbr_iter_num} (CBR={best_cbr_metrics['weighted_CBR']:.3f})"
-            )
-            logging.info(
-                f"Iteration with highest weighted FOM: {best_fom_iter_num} (FOM={best_fom_metrics['weighted_FOM']:.3f})"
-            )
-
-            logging.info(
                 f"Processing complete: {successful_iterations // 6} successful, {failed_count // 6} failed"
             )
 
