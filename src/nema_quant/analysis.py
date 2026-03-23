@@ -151,15 +151,15 @@ def _calculate_background_stats(
     pivot_point_yx = reference_sphere["center_vox"]
     slices_dims_yx = (image_data.shape[1], image_data.shape[2])
 
-    bkg_voxels_per_size: Dict[int, List[float]] = {}
+    bkg_counts_per_size: Dict[int, List[float]] = {}
 
     for name, _ in phantom.rois.items():
         if "sphere" in name:
             sphere_roi = phantom.get_roi(name)
             if sphere_roi:
                 diam_mm = int(round(sphere_roi["diameter"]))
-                if diam_mm not in bkg_voxels_per_size:
-                    bkg_voxels_per_size[diam_mm] = []
+                if diam_mm not in bkg_counts_per_size:
+                    bkg_counts_per_size[diam_mm] = []
 
     if save_visualizations and viz_dir:
         central_slice = image_data[slices_indices[len(slices_indices) // 2], :, :]
@@ -199,17 +199,18 @@ def _calculate_background_stats(
             for slice_idx in slices_indices:
                 if 0 <= slice_idx < image_data.shape[0]:
                     img_slice = image_data[slice_idx, :, :]
+                    avg_count = (
+                        np.mean(img_slice[roi_mask]) if np.sum(roi_mask) > 0 else 0.0
+                    )
                     sphere_diam_mm = int(round(sphere_roi["diameter"]))
-                    voxels = img_slice[roi_mask]
-                    bkg_voxels_per_size[sphere_diam_mm].extend(voxels.tolist())  # type: ignore[arg-type]
+                    bkg_counts_per_size[sphere_diam_mm].append(float(avg_count))
     bkg_stats = {}
-    for diam, voxels_list in bkg_voxels_per_size.items():
-        if len(voxels_list) > 0:
-            voxels_array = np.array(voxels_list)  # Convert list of scalars to array
+    for diam, counts_list in bkg_counts_per_size.items():
+        if len(counts_list) > 0:
             bkg_stats[diam] = {
-                "C_B": float(np.mean(voxels_array)),
-                "SD_B": float(np.std(voxels_array, ddof=1)),
-                "n_B": len(voxels_list),
+                "C_B": float(np.mean(counts_list)),
+                "SD_B": float(np.std(counts_list)),
+                "n_B": len(counts_list),
             }
         else:
             bkg_stats[diam] = {"C_B": 100.0, "SD_B": 0.0, "n_B": 0}
