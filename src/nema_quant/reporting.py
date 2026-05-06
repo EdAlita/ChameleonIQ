@@ -482,8 +482,9 @@ def generate_reportlab_report(
         elements.append(Paragraph(acq_text, body_style))
         elements.append(Spacer(1, 0.18 * inch))
 
-    values = list(lung_results.values())
-    average = float(np.mean(values))
+    if lung_results != {}:
+        values = list(lung_results.values())
+        average = float(np.mean(values))
     elements.append(Paragraph("<b>Summary Statistics</b>", header_style))
     avg_contrast = (
         sum(r["percentaje_constrast_QH"] for r in results) / len(results)
@@ -501,12 +502,13 @@ def generate_reportlab_report(
     elements.append(
         Paragraph(f"Average Background Variability: {avg_variability:.2f}%", body_style)
     )
-    elements.append(
-        Paragraph(f"Average error in Lung Insert: {average:.2f} %", body_style)
-    )
-    elements.append(
-        Paragraph(f"Number of spheres analyzed: {len(results)}", body_style)
-    )
+    if lung_results != {}:
+        elements.append(
+            Paragraph(f"Average error in Lung Insert: {average:.2f} %", body_style)
+        )
+        elements.append(
+            Paragraph(f"Number of spheres analyzed: {len(results)}", body_style)
+        )
 
     elements.append(PageBreak())
 
@@ -552,45 +554,48 @@ def generate_reportlab_report(
         elements.append(Spacer(1, 0.2 * inch))
 
     elements.append(PageBreak())
+    if lung_results != {}:
+        if boxplot_path and Path(boxplot_path).exists():
+            elements.append(Paragraph("<b>Lung Insert Plot</b>", header_style))
+            elements.append(Image(str(boxplot_path), width=4 * inch, height=4 * inch))
+            elements.append(Spacer(1, 0.2 * inch))
 
-    if boxplot_path and Path(boxplot_path).exists():
-        elements.append(Paragraph("<b>Lung Insert Plot</b>", header_style))
-        elements.append(Image(str(boxplot_path), width=4 * inch, height=4 * inch))
-        elements.append(Spacer(1, 0.2 * inch))
-
-    table_data_2 = [
-        ["Statistic", "Value"],
-        ["Total slices", f"{len(values)}"],
-        ["Min", f"{float(np.min(values)):.2f}"],
-        ["Max", f"{float(np.max(values)):.2f}"],
-        ["Mean", f"{float(np.mean(values)):.2f}"],
-        ["Median", f"{float(np.median(values)):.2f}"],
-        ["Standard deviation", f"{float(np.std(values)):.2f}"],
-        ["IQR", f"{float(np.percentile(values, 75) - np.percentile(values, 25)):.2f}"],
-    ]
-
-    col_widths = [2.5 * inch, 1.5 * inch]
-
-    table2 = Table(table_data_2, colWidths=col_widths)
-
-    table2.setStyle(
-        TableStyle(
+        table_data_2 = [
+            ["Statistic", "Value"],
+            ["Total slices", f"{len(values)}"],
+            ["Min", f"{float(np.min(values)):.2f}"],
+            ["Max", f"{float(np.max(values)):.2f}"],
+            ["Mean", f"{float(np.mean(values)):.2f}"],
+            ["Median", f"{float(np.median(values)):.2f}"],
+            ["Standard deviation", f"{float(np.std(values)):.2f}"],
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 10),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
-                ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-            ]
+                "IQR",
+                f"{float(np.percentile(values, 75) - np.percentile(values, 25)):.2f}",
+            ],
+        ]
+
+        col_widths = [2.5 * inch, 1.5 * inch]
+
+        table2 = Table(table_data_2, colWidths=col_widths)
+
+        table2.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.darkblue),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 10),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                    ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ]
+            )
         )
-    )
 
-    elements.append(table2)
+        elements.append(table2)
 
-    elements.append(PageBreak())
+        elements.append(PageBreak())
 
     if rois_loc_path and Path(rois_loc_path).exists():
         elements.append(Paragraph("<b>ROIs Location</b>", header_style))
@@ -996,7 +1001,7 @@ def generate_crc_plots_nu4(
     for ax, yvar, ylabel, yerror in zip(
         axes,
         ["RC", "percent_std"],
-        ["CR [a. u.]", "Percent STD [%]"],
+        ["CR [%]", "Percent STD [%]"],
         ["cError", None],
     ):
         if yerror == "cError":
@@ -1210,7 +1215,7 @@ def generate_boxplot_with_mean_std(
 
 
 def generate_rois_plots(
-    image: npt.NDArray[Any], output_dir: Path, cfg: yacs.config.CfgNode
+    image: npt.NDArray[Any], output_dir: Path, cfg: yacs.config.CfgNode, protocol: str
 ) -> None:
     """
     Generates a plot of the ROIs for the input image.
@@ -1257,7 +1262,10 @@ def generate_rois_plots(
         ax2.add_patch(circle)
         ax2.plot(x, y, "+", color=roi["color"], markersize=12)
 
-    background_radius = (37 / 2) / pixel_spacing
+    if protocol == "NU_2_2018":
+        background_radius = (37 / 2) / pixel_spacing
+    else:
+        background_radius = (20 / 2) / pixel_spacing
 
     # Find the 37mm sphere center, use it as reference for background ROIs
     centro_37 = None
