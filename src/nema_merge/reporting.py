@@ -35,12 +35,23 @@ def generate_merged_plots(
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
     plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(25, 10))
     enhanced_experiments = [
         exp for exp in experiments if plots_status.get(exp) == "enhanced"
     ]
+    enhanced_markers = ["o", "s", "^", "D", "P", "X"]
+    enhanced_linestyles = ["-", "--", "-.", ":", (0, (5, 1)), (0, (3, 1, 1, 1))]
     enhanced_color_map = {
         exp: cfg.STYLE.COLORS[i % len(cfg.STYLE.COLORS)]
+        for i, exp in enumerate(enhanced_experiments)
+    }
+    enhanced_marker_map = {
+        exp: enhanced_markers[i % len(enhanced_markers)]
+        for i, exp in enumerate(enhanced_experiments)
+    }
+    enhanced_linestyle_map = {
+        exp: enhanced_linestyles[i % len(enhanced_linestyles)]
         for i, exp in enumerate(enhanced_experiments)
     }
 
@@ -63,7 +74,8 @@ def generate_merged_plots(
             _linewidth = cfg.STYLE.PLOT.ENHANCED.LINEWIDTH
             _alpha = cfg.STYLE.PLOT.ENHANCED.ALPHA
             _zorder = cfg.STYLE.PLOT.ENHANCED.ZORDER
-            _linestyle = cfg.STYLE.PLOT.ENHANCED.LINESTYLE
+            _linestyle = enhanced_linestyle_map[experiment]
+            _marker = enhanced_marker_map[experiment]
             _markersize = cfg.STYLE.PLOT.ENHANCED.MARKERSIZE
             _markeredgewidth = cfg.STYLE.PLOT.ENHANCED.MARKEREDGEWIDTH
         else:
@@ -72,6 +84,7 @@ def generate_merged_plots(
             _alpha = cfg.STYLE.PLOT.DEFAULT.ALPHA
             _zorder = cfg.STYLE.PLOT.DEFAULT.ZORDER
             _linestyle = cfg.STYLE.PLOT.DEFAULT.LINESTYLE
+            _marker = "o"
             _markersize = cfg.STYLE.PLOT.DEFAULT.MARKERSIZE
             _markeredgewidth = cfg.STYLE.PLOT.DEFAULT.MARKEREDGEWIDTH
 
@@ -83,7 +96,7 @@ def generate_merged_plots(
             linestyle=_linestyle,
             alpha=_alpha,
             zorder=_zorder,
-            marker="o",
+            marker=_marker,
             markersize=_markersize,
             markerfacecolor=_color,
             markeredgecolor="white",
@@ -99,7 +112,7 @@ def generate_merged_plots(
             linestyle=_linestyle,
             alpha=_alpha,
             zorder=_zorder,
-            marker="o",
+            marker=_marker,
             markersize=_markersize,
             markerfacecolor=_color,
             markeredgecolor="white",
@@ -107,47 +120,19 @@ def generate_merged_plots(
             label=experiment if plot_status == "enhanced" else None,
         )
 
-    ax1.set_xlabel(
-        "Sphere Diameter (mm)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax1.set_ylabel(
-        "Contrast Recovery (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax1.grid(
-        True,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        alpha=cfg.STYLE.GRID.ALPHA,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
-    ax1.legend()
-    ax2.set_xlabel(
-        "Sphere Diameter (mm)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax2.set_ylabel(
-        "Background Variability (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
+    unique_diameters = sorted(df["diameter_mm"].unique())
+    ax1.set_xlabel("Sphere Diameter (mm)")
+    ax1.set_ylabel("Contrast Recovery (%)")
+    ax1.set_xticks(unique_diameters)
 
-    ax2.grid(
-        True,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        alpha=cfg.STYLE.GRID.ALPHA,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
-    ax2.legend()
+    ax1.legend()
+    ax2.set_xlabel("Sphere Diameter (mm)")
+    ax2.set_ylabel("Background Variability (%)")
+    ax2.set_xticks(unique_diameters)
 
     plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.96))
 
-    output_path = output_dir / "merge_analysis_plot.png"
+    output_path = output_dir / "merge_analysis_plot.jpg"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -247,26 +232,12 @@ def generate_merged_boxplot(
                 },
             )
 
-    ax.set_xlabel(
-        "Experiment",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax.set_ylabel(
-        "Accuracy of Corrections in Lung Insert (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax.grid(
-        True,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        alpha=cfg.STYLE.GRID.ALPHA,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
-    ax.set_xticks(range(1, len(experiment_names) + 1))
-    ax.set_xticklabels(experiment_names)
-    ax.set_facecolor("#fafafa")
+    # ax.set_xlabel("Experiment")
+    ax.set_ylabel("Accuracy of Corrections in Lung Insert (%)")
+    ax.set_xticks([])
+    # ax.set_xticks(range(1, len(experiment_names) + 1))
+    # ax.set_xticklabels(experiment_names)
+    # ax.set_facecolor("#fafafa")
 
     if len(experiment_names) > 3:
         ax.tick_params(axis="x", rotation=45)
@@ -293,7 +264,7 @@ def generate_merged_boxplot(
 
     plt.tight_layout()
 
-    output_path = output_dir / "merge_boxplot_analysis.png"
+    output_path = output_dir / "merge_boxplot_analysis.jpg"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -482,49 +453,21 @@ def generate_dose_merged_plot(
         framealpha=0.95,
     )
 
-    ax1.set_xlabel(
-        "Contrast Recovery (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax1.set_ylabel(
-        "DLP",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
+    ax1.set_xlabel("Contrast Recovery (%)")
+    ax1.set_ylabel("DLP")
 
-    ax1.grid(
-        alpha=cfg.STYLE.GRID.ALPHA,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
     ax1.yaxis.set_major_locator(MaxNLocator(6))
 
-    ax2.set_xlabel(
-        "Background Variability (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax2.set_ylabel(
-        "DLP",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
+    ax2.set_xlabel("Background Variability (%)")
+    ax2.set_ylabel("DLP")
 
-    ax2.grid(
-        alpha=cfg.STYLE.GRID.ALPHA,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
     ax2.yaxis.set_major_locator(MaxNLocator(6))
 
     plt.subplots_adjust(left=0.08, right=0.75, top=0.88, bottom=0.12, wspace=0.25)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "dose_merged_plot.png"
+    output_path = output_dir / "dose_merged_plot.jpg"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -673,53 +616,19 @@ def generate_dose_merged_plot_any_sphere(
 
     cbar_ax = fig.add_axes((0.92, 0.15, 0.02, 0.7))
     cbar = plt.colorbar(sm, cax=cbar_ax)
-    cbar.set_label(
-        "DLP", fontweight=cfg.STYLE.LEGEND.FONTWEIGHT, rotation=270, labelpad=30
-    )
+    cbar.set_label("DLP")
 
-    ax1.set_xlabel(
-        "DLP",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax1.set_ylabel(
-        "Contrast Recovery (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax1.grid(
-        alpha=cfg.STYLE.GRID.ALPHA,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
+    ax1.set_xlabel("DLP")
+    ax1.set_ylabel("Contrast Recovery (%)")
 
-    ax2.set_title(
-        "DLP vs Background Variability (BV)",
-        fontweight="bold",
-    )
-    ax2.set_xlabel(
-        "DLP",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax2.set_ylabel(
-        "Background Variability (%)",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax2.grid(
-        alpha=cfg.STYLE.GRID.ALPHA,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
+    ax2.set_xlabel("DLP")
+    ax2.set_ylabel("Background Variability (%)")
 
     plt.tight_layout(rect=(0.0, 0.0, 0.9, 0.93))
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / f"dose_{sphere_diameter:.1f}mm_sphere_plot.png"
+    output_path = output_dir / f"dose_{sphere_diameter:.1f}mm_sphere_plot.jpg"
     plt.savefig(
         str(output_path),
         dpi=600,
@@ -819,26 +728,12 @@ def generate_global_metrics_boxplot(
             },
         )
 
-    ax.set_xlabel(
-        "Metric",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax.set_ylabel(
-        "Value",
-        fontweight=cfg.STYLE.LEGEND.FONTWEIGHT,
-        labelpad=cfg.STYLE.LEGEND.LABELPAD,
-    )
-    ax.grid(
-        True,
-        linestyle=cfg.STYLE.GRID.LINESTYLE,
-        alpha=cfg.STYLE.GRID.ALPHA,
-        color=cfg.STYLE.GRID.COLOR,
-        linewidth=cfg.STYLE.GRID.LINEWIDTH,
-    )
+    ax.set_xlabel("Metric")
+    ax.set_ylabel("Value")
+
     ax.set_xticks(range(1, len(metrics_to_plot) + 1))
     ax.set_xticklabels(metrics_to_plot)
-    ax.set_facecolor("#fafafa")
+    # ax.set_facecolor("#fafafa")
 
     if len(metrics_to_plot) > 5:
         ax.tick_params(axis="x", rotation=45)
@@ -864,14 +759,13 @@ def generate_global_metrics_boxplot(
 
     plt.tight_layout()
 
-    output_path = output_dir / name
+    output_path = output_dir / f"{name}.jpg"
     plt.savefig(
         str(output_path),
         dpi=600,
         bbox_inches="tight",
         facecolor="white",
         edgecolor="none",
-        format="jpeg",
     )
 
     logger.info(f"Global metrics violinplot saved: {output_path}")
@@ -1004,7 +898,7 @@ def generate_unified_statistical_heatmaps(
 
     plt.tight_layout(rect=(0, 0, 0.95, 0.95))
 
-    output_path = output_dir / f"unified_statistical_heatmaps_{test_name}.png"
+    output_path = output_dir / f"unified_statistical_heatmaps_{test_name}.jpg"
     plt.savefig(output_path, dpi=600, bbox_inches="tight", facecolor="white")
     plt.close()
 
@@ -1121,7 +1015,7 @@ def generate_statistical_summary_matrix(
 
     plt.tight_layout()
     plt.savefig(
-        output_dir / "statistical_summary_matrix.png",
+        output_dir / "statistical_summary_matrix.jpg",
         dpi=600,
         bbox_inches="tight",
         facecolor="white",
@@ -1131,5 +1025,5 @@ def generate_statistical_summary_matrix(
     df_summary.to_csv(output_dir / "statistical_summary_table.csv", index=False)
 
     logging.info(
-        f"Statistical summary matrix saved: {output_dir / 'statistical_summary_matrix.png'}"
+        f"Statistical summary matrix saved: {output_dir / 'statistical_summary_matrix.jpg'}"
     )
