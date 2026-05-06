@@ -281,11 +281,12 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--log-level",
-        type=int,
-        default=10,
-        help="Logging level (10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR)",
+        "--log_level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level",
     )
+
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {version('ChameleonIQ')}"
     )
@@ -475,7 +476,8 @@ def perform_advanced_statistical_analysis(
 
 def run_merge_analysis(args: argparse.Namespace) -> int:
     try:
-        setup_logging(args.log_level)
+        numeric_level = getattr(logging, args.log_level.upper(), logging.INFO)
+        setup_logging(numeric_level)
         cfg = load_configuration(args.config)
 
         logging.info("Starting NEMA Merge Analysis")
