@@ -109,10 +109,6 @@ STYLE : CfgNode
     RCPARAMS : list of tuple
         Matplotlib rcParams as (key, value) pairs for font sizes,
         line widths, and font family.
-    LEGEND : CfgNode
-        Legend styling with LABELPAD (int) and FONTWEIGHT (str).
-    GRID : CfgNode
-        Grid styling with LINESTYLE, LINEWIDTH, ALPHA, and COLOR.
     PLOT : CfgNode
         Plot styling with DEFAULT and ENHANCED substyles.
 
@@ -300,9 +296,6 @@ _C.STYLE.COLORS = [
 _C.STYLE.PLT_STYLE = "seaborn-v0_8-talk"
 _C.STYLE.RCPARAMS = [
     ("figure.dpi", 600),
-    ("figure.facecolor", "white"),
-    ("savefig.facecolor", "white"),
-    ("savefig.edgecolor", "none"),
     ("font.size", 24),
     ("axes.titlesize", 24),
     ("axes.titleweight", "bold"),
@@ -322,10 +315,9 @@ _C.STYLE.RCPARAMS = [
     ("axes.linewidth", 1.2),
     ("font.family", "DejaVu Sans"),
     ("axes.grid", True),
-    ("grid.linestyle", "--"),
+    ("grid.linestyle", "-"),
     ("grid.linewidth", 2.0),
     ("grid.alpha", 0.5),
-    ("grid.color", "gray"),
 ]
 
 _C.STYLE.PLOT = CN()
