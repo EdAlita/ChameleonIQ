@@ -89,7 +89,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--standard",
-        choices=["NU_2_2018", "NU_4_2008"],
+        choices=["NU_2_2018", "NU_4_2008", "DEDICATED_IQ"],
         default="NU_2_2018",
         help="NEMA standard to use for phantom definitions (default: NU_2_2018)",
     )
@@ -107,10 +107,9 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--log_level",
-        type=int,
-        default=20,
-        choices=[10, 20, 30, 40, 50],
-        help="Set logging level: 10=DEBUG, 20=INFO, 30=WARNING, 40=ERROR, 50=CRITICAL (default: 20)",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level",
     )
 
     parser.add_argument(
@@ -315,13 +314,17 @@ def process_single_iteration(
                 cfg,
                 save_visualizations=args.save_visualizations,
                 visualizations_dir=args.visualizations_dir,
+                protocol=args.standard,
             )
 
             values = list(lung_results.values())
             average = float(np.mean(values)) if values else 0.0
-            logging.info(
-                f" Iteration {iteration_num}: Average Accuracy Correction: {average:.3f}%, Spheres: {len(results)}"
-            )
+            if args.standard == "DEDICATED_IQ":
+                logging.info(f" Iteration {iteration_num}: Spheres: {len(results)}")
+            else:
+                logging.info(
+                    f" Iteration {iteration_num}: Average Accuracy Correction: {average:.3f}%, Spheres: {len(results)}"
+                )
 
             return results, lung_results, None, None
 
@@ -338,7 +341,8 @@ def process_single_iteration(
 def run_analysis(args: argparse.Namespace) -> int:
     """Run the NEMA analysis with the provided arguments"""
     try:
-        setup_logging(args.log_level, args.output)
+        numeric_level = getattr(logging, args.log_level.upper(), logging.INFO)
+        setup_logging(numeric_level, args.output)
 
         logging.info("Starting ChameleonIQ for Multiple Iterations")
         logging.info(f" Input folder: {args.input_path}")
@@ -462,11 +466,13 @@ def run_analysis(args: argparse.Namespace) -> int:
                     failed_iterations.append((iteration_num, error or "Unknown error"))
 
         successful_iterations = (
-            len(all_results) if args.standard == "NU_2_2018" else len(all_crc_results)
+            len(all_results)
+            if args.standard == "NU_2_2018" or args.standard == "DEDICATED_IQ"
+            else len(all_crc_results)
         )
         failed_count = len(failed_iterations)
 
-        if args.standard == "NU_2_2018":
+        if args.standard == "NU_2_2018" or "DEDICATED_IQ":
             iteration_metrics = {}
             for result in all_results:
                 iter_num = result["iteration"]
@@ -509,6 +515,10 @@ def run_analysis(args: argparse.Namespace) -> int:
                 sphere_count = len(
                     [r for r in all_results if r["iteration"] == iteration_num]
                 )
+                if args.standard == "DEDICATED_IQ":
+                    logging.info(f"  Iteration {iteration_num}: {sphere_count} spheres")
+                    continue
+
                 lung_results = all_lung_results[iteration_num]
 
                 lung_values = list(lung_results.values())
@@ -540,18 +550,24 @@ def run_analysis(args: argparse.Namespace) -> int:
 
                 lung_values = list(lung_results.values())
                 avg_lung = float(np.mean(lung_values)) if lung_values else 0.0
-
-                logging.info(
-                    f"  Iteration {iteration_num}: {len(sphere_results)} spheres, "
-                    f"avg contrast: {avg_contrast:.1f}%, avg background varibility: {avg_background:.1f}% "
-                    f"avg lung correction: {avg_lung:.3f}%"
-                )
+                if args.standard == "DEDICATED_IQ":
+                    logging.info(
+                        f"  Iteration {iteration_num}: {len(sphere_results)} spheres"
+                        f"avg contrast: {avg_contrast:.1f}%, avg background varibility: {avg_background:.1f}% "
+                    )
+                else:
+                    logging.info(
+                        f"  Iteration {iteration_num}: {len(sphere_results)} spheres, "
+                        f"avg contrast: {avg_contrast:.1f}%, avg background varibility: {avg_background:.1f}% "
+                        f"avg lung correction: {avg_lung:.3f}%"
+                    )
 
             logging.info("Data ready for plotting and analysis")
         else:
             logging.info(
                 f"NU_4_2008 Analysis Iterations: {len(all_crc_results)} successful"
             )
+
             if failed_iterations:
                 logging.warning("Failed iterations:")
                 for iteration_num, error in failed_iterations:
@@ -598,7 +614,8 @@ def run_analysis(args: argparse.Namespace) -> int:
                 logging.info("Generating NU_2_2018 plots...")
                 generate_plots(all_results, png_dir, cfg)
                 generate_pc_vs_bg_plot(all_results, png_dir, cfg)
-                generate_boxplot_with_mean_std(all_lung_results, png_dir, cfg)
+                if args.standard == "NU_2_2018":
+                    generate_boxplot_with_mean_std(all_lung_results, png_dir, cfg)
                 generate_wcbr_convergence_plot(all_results, png_dir, cfg)
                 generate_cbr_convergence_plot(all_results, png_dir, cfg)
             logging.info("Plots generated successfully")
@@ -690,6 +707,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                     cfg,
                     input_path,
                     (cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
+                    args.standard,
                 )
                 logging.info("Text results saved successfully")
 
@@ -709,6 +727,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                         boxplot_path,
                         cbr_conv_path,
                         wcbr_conv_path,
+                        args.standard,
                     )
                     logging.info("PDF report saved successfully")
                 except Exception as e:
