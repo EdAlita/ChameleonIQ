@@ -48,3 +48,39 @@ ROIS:
 FILE:
   USER_PATTERN: "frame(\\d+)"
   CASE: "Test"
+
+STYLE:
+  RCPARAMS:
+    - ["figure.dpi", 600]
+    - ["font.size", 24]
+    - ["axes.titlesize", 24]
+    - ["axes.titleweight", "bold"]
+    - ["axes.labelsize", 24]
+    - ["axes.labelweight", "bold"]
+    - ["axes.labelpad", 20]
+    - ["xtick.labelsize", 24]
+    - ["ytick.labelsize", 24]
+    - ["legend.fontsize", 24]
+    - ["legend.title_fontsize", 24]
+    - ["lines.linewidth", 4.0]
+    - ["lines.linestyle", "-"]
+    - ["lines.marker", "o"]
+    - ["lines.markersize", 12]
+    - ["lines.markeredgewidth", 1.5]
+    - ["axes.linewidth", 1.2]
+    - ["font.family", "DejaVu Sans"]
+    - ["axes.grid", True]
+    - ["grid.linewidth", 0.8]
+    - ["grid.alpha", 0.3]
+    - ["grid.linestyle", "-"]
+
+  PLT_STYLE: "seaborn-v0_8-talk"
+  COLORS:
+    - "#377eb8"
+    - "#4daf4a"
+    - "#984ea3"
+    - "#ff7f00"
+    - "#ffd166"
+    - "#a65628"
+    - "#f781bf"
+    - "#e41a1c"
