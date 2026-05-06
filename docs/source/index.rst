@@ -58,7 +58,7 @@ It provides phantom detection, segmentation, quality metrics computation, and pr
 Key Features
 ~~~~~~~~~~~~
 
-- **NEMA NU 2-2018 Compliance**: Automated image quality assessment following international standards
+- **NEMA NU 2-2018 and NU 4-2008 Compliance**: Automated image quality assessment following international standards
 - **Phantom Detection**: Intelligent automatic segmentation of NEMA phantoms
 - **Quality Metrics**: Percent Contrast, Background Variability, Recovery Coefficient, and Spillover Ratio
 - **Interactive Tools**: ROI editor with visualization utilities

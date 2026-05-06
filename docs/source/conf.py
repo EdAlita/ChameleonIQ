@@ -1,5 +1,8 @@
+import os
 import sys
 from pathlib import Path
+
+os.environ.setdefault("PYQTGRAPH_QT_LIB", "PyQt5")
 
 # Add the project root and src/ to the path
 project_root = Path(__file__).parent.parent.parent
@@ -10,6 +13,14 @@ project = "ChameleonIQ"
 copyright = "2026, Edwing Y. Ulin-Briseno"
 author = "Edwing Y. Ulin-Briseno"
 release = "2.1.0"
+
+autodoc_mock_imports = getattr(globals(), "autodoc_mock_imports", []) + [
+    "pyqtgraph",
+    "pyqtgraph.Qt",
+    "PyQt5",
+    "PyQt5.QtCore",
+    "PyQt5.QtGui",
+]
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -47,7 +58,7 @@ autodoc_default_options = {
     "show-inheritance": True,
 }
 
-autodoc_mock_imports = [
+autodoc_mock_imports = getattr(globals(), "autodoc_mock_imports", []) + [
     "numpy",
     "scipy",
     "nibabel",
@@ -64,6 +75,29 @@ autodoc_mock_imports = [
     "statsmodels",
     "PyQt5",
 ]
+
+# Some packages (pyqtgraph / PyQt5) try to access Qt internals at import time
+# which can break Sphinx runs in headless/CI environments. Ensure those modules
+# are present in sys.modules as mocks so imports in autodoc do not load real
+# packages from the environment.
+try:
+    from unittest.mock import MagicMock
+except Exception:  # pragma: no cover - fallback for very old pythons
+    MagicMock = None
+
+if MagicMock is not None:
+    MOCK_MODULES = [
+        "pyqtgraph",
+        "pyqtgraph.Qt",
+        "pyqtgraph.Qt.QtCore",
+        "pyqtgraph.Qt.QtGui",
+        "PyQt5",
+        "PyQt5.QtCore",
+        "PyQt5.QtGui",
+    ]
+    for m in MOCK_MODULES:
+        if m not in sys.modules:
+            sys.modules[m] = MagicMock()
 
 napoleon_use_param = True
 napoleon_use_rtype = True

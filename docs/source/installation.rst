@@ -37,7 +37,7 @@ For development with additional tools::
 Verify Installation
 -------------------
 
-Check available commands::
+Check available commands, all of them begin with ``chameleoniq_``::
 
     chameleoniq_quant --help
 

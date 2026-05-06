@@ -29,7 +29,9 @@ Your First Analysis
 Command Line
 ~~~~~~~~~~~~
 
-1) Create a YAML config (see :doc:`guides/configuration`).
+1) Create a YAML config (see :doc:`guides/configuration`). Or run the ROI tool to generate the config interactively::
+
+    chameleoniq_roi input.nii.gz --standard NU_2_2018
 
 2) Run a single analysis::
 

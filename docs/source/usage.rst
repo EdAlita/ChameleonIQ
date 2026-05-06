@@ -166,8 +166,6 @@ Supported Image Formats
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 - NIfTI (.nii, .nii.gz)
-- DICOM (.dcm)
-- MetaImage (.mhd, .raw)
 
 Configuration Files
 ~~~~~~~~~~~~~~~~~~~
