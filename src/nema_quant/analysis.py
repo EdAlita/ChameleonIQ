@@ -229,6 +229,8 @@ def _calculate_hot_sphere_counts_offset_zxy(
 
     offsets_xy = [(dy, dx) for dy in range(-10, 11) for dx in range(-10, 11)]
     offsets_z = list(range(-10, 11))
+    # offsets_xy = [(dy, dx) for dy in range(-1, 2) for dx in range(-1, 2)]
+    # offsets_z = list(range(-1, 2))
 
     hot_sphere_counts = {}
 
@@ -648,6 +650,7 @@ def calculate_nema_metrics(
     cfg: yacs.config.CfgNode,
     save_visualizations: bool = False,
     visualizations_dir: str = "visualizations",
+    protocol: Optional[str] = "NU_2_2018",
 ) -> Tuple[List[Dict[str, Any]], Dict[int, float]]:
     """Calculate NEMA NU 2-2018 image quality metrics.
 
@@ -858,25 +861,28 @@ def calculate_nema_metrics(
             }
         )
 
-    phantom_center_zyx = find_phantom_center(
-        image_data, threshold=(np.max(image_data) * 0.41)
-    )
+    if protocol == "NU_2_2018":
+        phantom_center_zyx = find_phantom_center(
+            image_data, threshold=(np.max(image_data) * 0.41)
+        )
 
-    if _logger.isEnabledFor(logging.DEBUG):
-        _logger.debug(f" Phantom Center found at (z,y,x) : {phantom_center_zyx}")
+        if _logger.isEnabledFor(logging.DEBUG):
+            _logger.debug(f" Phantom Center found at (z,y,x) : {phantom_center_zyx}")
 
-    lung_insert_centers = extract_canny_mask(
-        image_data, cfg.ROIS.SPACING, int(phantom_center_zyx[0])
-    )
+        lung_insert_centers = extract_canny_mask(
+            image_data, cfg.ROIS.SPACING, int(phantom_center_zyx[0])
+        )
 
-    results_lung = _calculate_lung_insert_counts(
-        image_data, lung_insert_centers, CB_37, cfg.ROIS.SPACING
-    )
+        results_lung = _calculate_lung_insert_counts(
+            image_data, lung_insert_centers, CB_37, cfg.ROIS.SPACING
+        )
 
-    if _logger.isEnabledFor(logging.DEBUG):
-        _logger.debug(" Lung Insert Results")
-        for k, v in results_lung.items():
-            _logger.debug(f"  Slice {int(k)}: {float(v):.3f}")
+        if _logger.isEnabledFor(logging.DEBUG):
+            _logger.debug(" Lung Insert Results")
+            for k, v in results_lung.items():
+                _logger.debug(f"  Slice {int(k)}: {float(v):.3f}")
+    else:
+        results_lung = {}
 
     return results, results_lung
 
