@@ -15,8 +15,10 @@ from PyQt5.QtWidgets import (
     QGroupBox,
     QLabel,
     QLineEdit,
+    QListView,
     QPushButton,
     QScrollArea,
+    QStyledItemDelegate,
     QVBoxLayout,
     QWidget,
 )
@@ -37,14 +39,21 @@ COMMANDS: Dict[str, Dict[str, Any]] = {
             {"name": "input_image", "type": "file", "required": True},
             {"name": "--output", "type": "save", "required": True},
             {"name": "--config", "type": "file", "required": True},
+            {
+                "name": "--standard",
+                "type": "choice",
+                "choices": ["NU_4_2008", "NU_2_2018", "DEDICATED_IQ"],
+                "default": "NU_4_2008",
+                "required": True,
+            },
             {"name": "--save-visualizations", "type": "flag"},
             {"name": "--advanced-metrics", "type": "flag", "enables": "--gt-image"},
             {"name": "--gt-image", "type": "file", "requires": "--advanced-metrics"},
             {
                 "name": "--log_level",
                 "type": "choice",
-                "choices": ["10", "20", "30", "40"],
-                "default": "20",
+                "choices": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                "default": "INFO",
             },
         ],
     },
@@ -55,17 +64,18 @@ COMMANDS: Dict[str, Dict[str, Any]] = {
             {"name": "--output", "type": "save", "required": True},
             {"name": "--config", "type": "file", "required": True},
             {
-                "name": "--spacing",
-                "type": "text",
-                "help": "Voxel spacing in mm (x y z)",
+                "name": "--standard",
+                "type": "choice",
+                "choices": ["NU_4_2008", "NU_2_2018", "DEDICATED_IQ"],
+                "default": "NU_4_2008",
+                "required": True,
             },
             {"name": "--save-visualizations", "type": "flag"},
-            {"name": "--visualizations-dir", "type": "file"},
             {
                 "name": "--log_level",
                 "type": "choice",
-                "choices": ["10", "20", "30", "40", "50"],
-                "default": "20",
+                "choices": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                "default": "INFO",
             },
             {"name": "--verbose", "type": "flag", "default": True},
         ],
@@ -79,8 +89,8 @@ COMMANDS: Dict[str, Dict[str, Any]] = {
             {
                 "name": "--log-level",
                 "type": "choice",
-                "choices": ["10", "20", "30", "40"],
-                "default": "20",
+                "choices": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+                "default": "INFO",
             },
         ],
     },
@@ -107,6 +117,15 @@ def resolve_banner_path() -> Path:
             return path
 
     return candidates[0]
+
+
+class ComboPopupDelegate(QStyledItemDelegate):
+    """Increase popup row height so combo items do not visually overlap."""
+
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        size.setHeight(max(size.height(), 30))
+        return size
 
 
 class CommandLauncher(QWidget):
@@ -139,6 +158,7 @@ class CommandLauncher(QWidget):
                 padding: 6px 8px;
                 font-size: 11pt;
                 selection-background-color: #4CAF50;
+                selection-color: #ffffff;
             }
 
             QLineEdit:focus {
@@ -205,6 +225,48 @@ class CommandLauncher(QWidget):
                 font-size: 11pt;
             }
 
+            /* Ensure items in combo boxes keep readable selection colors */
+            QComboBox QAbstractItemView {
+                background-color: white;
+                selection-background-color: #4CAF50;
+                selection-color: #ffffff;
+                color: #333333;
+            }
+
+            /* More explicit rules to ensure hovered/selected combo items stay readable */
+            QComboBox QAbstractItemView::item:hover,
+            QComboBox QListView::item:hover,
+            QListView::item:hover,
+            QTreeView::item:hover,
+            QTableView::item:hover {
+                background-color: #4CAF50;
+                color: #ffffff;
+            }
+
+            QComboBox QAbstractItemView::item:selected,
+            QComboBox QListView::item:selected,
+            QListView::item:selected,
+            QTreeView::item:selected,
+            QTableView::item:selected {
+                background-color: #4CAF50;
+                color: #ffffff;
+            }
+
+            /* Selection styling for multi-line and list widgets */
+            QTextEdit, QPlainTextEdit {
+                background-color: white;
+                color: #333333;
+                selection-background-color: #4CAF50;
+                selection-color: #ffffff;
+            }
+
+            QListWidget::item:selected, QListView::item:selected,
+            QTreeView::item:selected, QTableView::item:selected,
+            QAbstractItemView::item:selected {
+                background-color: #4CAF50;
+                color: #ffffff;
+            }
+
             QComboBox:focus {
                 border: 2px solid #4CAF50;
             }
@@ -241,6 +303,37 @@ class CommandLauncher(QWidget):
             }
         """
         self.setStyleSheet(stylesheet)
+
+    def style_combo_popup(self, combo: QComboBox) -> None:
+        """Force readable hover/selection colors in the combo popup view."""
+
+        view = QListView()
+        view.setItemDelegate(ComboPopupDelegate(view))
+        view.setSpacing(3)
+        view.setStyleSheet(
+            """
+            QListView {
+                background-color: white;
+                color: #333333;
+                outline: 0;
+                padding: 4px;
+            }
+
+            QListView::item {
+                min-height: 30px;
+                padding: 6px 12px;
+                background-color: white;
+                color: #333333;
+            }
+
+            QListView::item:hover,
+            QListView::item:selected {
+                background-color: rgba(76,175,80,0.8);
+                color: #ffffff;
+            }
+            """
+        )
+        combo.setView(view)
 
     def build_selector(self):
         main_layout = QVBoxLayout()
@@ -279,6 +372,7 @@ class CommandLauncher(QWidget):
 
         self.command_box = QComboBox()
         self.command_box.addItems(COMMANDS.keys())
+        self.style_combo_popup(self.command_box)
         self.command_box.currentTextChanged.connect(self.build_form)
         self.command_box.setMinimumWidth(300)
 
@@ -362,11 +456,8 @@ class CommandLauncher(QWidget):
             if file_path:
                 line_edit.setText(file_path)
 
-        # Use timer to defer the dialog opening
-        timer = QTimer()
-        timer.setSingleShot(True)
-        timer.timeout.connect(open_dialog)
-        timer.start(50)  # 50ms delay
+        # Use singleShot to avoid losing a local QTimer reference.
+        QTimer.singleShot(50, open_dialog)
 
     def make_browse_handler(
         self, line_edit: QLineEdit, is_save: bool, title: str
@@ -440,6 +531,7 @@ class CommandLauncher(QWidget):
                     cb = QComboBox()
                     cb.addItems(arg["choices"])
                     cb.setCurrentText(arg.get("default", arg["choices"][0]))
+                    self.style_combo_popup(cb)
                     cb.setMinimumWidth(250)
                     target_layout.addWidget(cb, target_row, 1)
                     self.widgets[name] = cb
