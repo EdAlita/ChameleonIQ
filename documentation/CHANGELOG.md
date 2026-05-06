@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v2.3.0](https://github.com/EdAlita/nema_analysis_tool/compare/v2.2.2...v2.3.0) - 2026-05-06
+
+### Commits
+- fix(nema_quant/interactive_roi_editor): Improve docs generation and minor fix on yaml file error ([13ae128](https://github.com/EdAlita/nema_analysis_tool/commit/13ae128a3968469353d68d6f72042fe66408bc61))
+- feat(nema_quant_iter/reporting):  Improve plots visualization style ([bac94be](https://github.com/EdAlita/nema_analysis_tool/commit/bac94be630c1d7a73aed4762b0d717273586b235))
+- fix(nema_merge/reporting): With enhanced plot styling and color maps ([685ee48](https://github.com/EdAlita/nema_analysis_tool/commit/685ee48b36c31ee038a2d916644ba958894cabfd))
+- fix(gui): Add readable hover/selection colors to comboboxes and lists widgtes. Update commands inputs and avoid losing local QTimer reference ([27fa7e5](https://github.com/EdAlita/nema_analysis_tool/commit/27fa7e526ccb2c839cd67cf6dcd74d12833e4a02))
+- feat(nema_quant/reporting):  Add calculation of average error in Lung Insert and Number of spheres analyzed for Lung Results ([e057cab](https://github.com/EdAlita/nema_analysis_tool/commit/e057cabf2b5e863309422dfb6059a940cce69e60))
+- fix(nema_quant_iter/cli): Add standard option for dedicated iq protocol ([af0ad4f](https://github.com/EdAlita/nema_analysis_tool/commit/af0ad4f5d9824d0e2edda99babe34c3c4990ebf6))
+- fix(nema_quant/cli): Add standard option for dedicated iq protocol ([80abf7e](https://github.com/EdAlita/nema_analysis_tool/commit/80abf7efc0444f059e5515d927dbd19f98bd8ba2))
+- feat(nema_quant/analysis): Add NEMA NU 2-2018 protocol support and refine phantom center calculation ([166aed1](https://github.com/EdAlita/nema_analysis_tool/commit/166aed1e08df9e37cdc45b4948ef5375512494e5))
+- feat(config): Update NEMA Phantom configuration styles and parameters for improved visualization quality. ([7432475](https://github.com/EdAlita/nema_analysis_tool/commit/74324758f32c177a0cec530170f63c82fca19815))
+- fix(nema_merge/cli): Update logging level parsing and setup for new logging level choice. ([783a42e](https://github.com/EdAlita/nema_analysis_tool/commit/783a42e61a2ac5bc60f9c27ac2b619e9b4d7d906))
+- feat(config): Update style defaults for grid and legend styling ([f8b5afa](https://github.com/EdAlita/nema_analysis_tool/commit/f8b5afa6cae27998b25f11c536116b1dc8547af4))
+- fix(toml): Update Version ([7317aa0](https://github.com/EdAlita/nema_analysis_tool/commit/7317aa0858c73b7b9e8657377b1847c679c467d9))
+
+## [v2.2.2](https://github.com/EdAlita/nema_analysis_tool/compare/v2.2.1...v2.2.2) - 2026-03-23
+
+### Commits
+- fix(analysis): restore legacy background aggregation (/) based on per-ROI means instead of pooled voxel statistics to match historical results. ([65e3eef](https://github.com/EdAlita/nema_analysis_tool/commit/65e3eef120ffccb620665aa2bcde43763a3c4cc8))
+- fix(analysis): . ([eab7d1c](https://github.com/EdAlita/nema_analysis_tool/commit/eab7d1c216756fa0ec0b0c4dbcb2e360d8704690))
+- docs(project): change version to 2.2.2 ([cb3c8fb](https://github.com/EdAlita/nema_analysis_tool/commit/cb3c8fbe0d331005876f40965eedf9ba8091b1bf))
+- docs(project): change version to 2.2.2 ([690407d](https://github.com/EdAlita/nema_analysis_tool/commit/690407dec1598530c4fadb386098307389260f95))
+
 ## [v2.2.1](https://github.com/EdAlita/nema_analysis_tool/compare/v2.2.0...v2.2.1) - 2026-03-09
 
 ### Commits
@@ -15,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix(reporting.py): Update ROI definitions and plot parameters. ([0d0e263](https://github.com/EdAlita/nema_analysis_tool/commit/0d0e263cdd92b212972f4f70fdccc5e70dfe4a1f))
 - feat(io): Add inverse axes option to load_nii_image ([57dee7c](https://github.com/EdAlita/nema_analysis_tool/commit/57dee7c20dfc096342038b2c84bb8df146de05ab))
 - feat(config/defaults.py): Add new configuration options for phantom center detection aand uniform regions ([b866930](https://github.com/EdAlita/nema_analysis_tool/commit/b86693090337193ec0ace4ca06415bc309f11a6f))
+- chore(version): Update the version to v2.2.1 ([8472e30](https://github.com/EdAlita/nema_analysis_tool/commit/8472e30326509f0285e3f9d2c3ece603a257fef5))
 - feat(cli): Add environment variable checks for headless operation ([87ffd5c](https://github.com/EdAlita/nema_analysis_tool/commit/87ffd5cf3318d8dcd58ac2a8ff7b1fcf91eb225f))
 - chore(setup): exclude pattenrs for flake8 checks ([5c3d950](https://github.com/EdAlita/nema_analysis_tool/commit/5c3d9506f266a7a4bd23a41f799dea46d2fa4451))
 - fix(cli): Set non-interactive backend for plotting ([cea472e](https://github.com/EdAlita/nema_analysis_tool/commit/cea472e61d7f565ac3defa9ea6c91d94e6f38643))
