@@ -113,7 +113,7 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--standard",
-        choices=["NU_2_2018", "NU_4_2008"],
+        choices=["NU_2_2018", "NU_4_2008", "DEDICATED_IQ"],
         default="NU_2_2018",
         help="NEMA standard to use for phantom definitions (default: NU_2_2018)",
     )
@@ -152,7 +152,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--log_level",
         default="INFO",
-        help="Set the logging level (e.g., DEBUG, INFO, WARNING)",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level",
     )
 
     parser.add_argument(
@@ -268,8 +269,8 @@ def run_analysis(args: argparse.Namespace) -> int:
     try:
         start_time = datetime.datetime.now()
 
-        # Setup logging
-        setup_logging(args.log_level)
+        numeric_level = getattr(logging, args.log_level.upper(), logging.INFO)
+        setup_logging(log_level=numeric_level)
 
         _log_section("Run")
         _log_kv("Tool", "ChameleonIQ")
@@ -370,13 +371,15 @@ def run_analysis(args: argparse.Namespace) -> int:
                     cfg,
                     save_visualizations=args.save_visualizations,
                     visualizations_dir=args.visualizations_dir,
+                    protocol=args.standard,
                 )
-                values = list(lung_results.values())
-                average = float(np.mean(values))
-                logging.info(f"Average of Accuracy Corrections: {average:.3f} %")
-                logging.info(
-                    f"Analysis completed. Found {len(results)} sphere measurements"
-                )
+                if args.standard == "NU_2_2018":
+                    values = list(lung_results.values())
+                    average = float(np.mean(values))
+                    logging.info(f"Average of Accuracy Corrections: {average:.3f} %")
+                    logging.info(
+                        f"Analysis completed. Found {len(results)} sphere measurements"
+                    )
         except Exception as e:
             logging.error(f"Failed to perform analysis: {e}")
             if args.log_level == "DEBUG":
@@ -413,16 +416,23 @@ def run_analysis(args: argparse.Namespace) -> int:
             logging.info("Saving analysis plots...")
             try:
                 generate_plots(results=results, output_dir=png_dir, cfg=cfg)
-                generate_rois_plots(image=image_data, output_dir=png_dir, cfg=cfg)
-                generate_transverse_sphere_plots(
-                    image=image_data, output_dir=png_dir, cfg=cfg
+                generate_rois_plots(
+                    image=image_data,
+                    output_dir=png_dir,
+                    cfg=cfg,
+                    protocol=args.standard,
                 )
-                generate_boxplot_with_mean_std(
-                    data_dict=lung_results, output_dir=png_dir, cfg=cfg
-                )
-                generate_coronal_sphere_plots(
-                    image=image_data, output_dir=png_dir, cfg=cfg
-                )
+
+                if args.standard == "NU_2_2018":
+                    generate_boxplot_with_mean_std(
+                        data_dict=lung_results, output_dir=png_dir, cfg=cfg
+                    )
+                    generate_coronal_sphere_plots(
+                        image=image_data, output_dir=png_dir, cfg=cfg
+                    )
+                    generate_transverse_sphere_plots(
+                        image=image_data, output_dir=png_dir, cfg=cfg
+                    )
                 generate_torso_plot(image=image_data, output_dir=png_dir, cfg=cfg)
                 logging.debug("Plots saved successfully")
             except Exception as e:
