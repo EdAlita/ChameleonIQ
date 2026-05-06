@@ -5,7 +5,7 @@ Overview
 --------
 
 ``nema_quant`` provides comprehensive tools for automated analysis of PET/CT image quality
-according to NEMA NU 2-2018 standard. It includes phantom detection, segmentation, quality
+according to NEMA NU 2-2018 and NU 4-2008 standards. It includes phantom detection, segmentation, quality
 metrics computation, ROI analysis, and professional reporting capabilities.
 
 .. contents:: Table of Contents
@@ -20,7 +20,7 @@ Main Features
 - **ROI Analysis**: Interactive and automated region-of-interest extraction
 - **Report Generation**: Automated PDF/TXT reports with visualizations
 - **Batch Processing**: CLI for high-throughput analysis
-- **NEMA NU 2-2018 Compliance**: Follows international standards
+- **NEMA NU 2-2018 and NU 4-2008 Compliance**: Follows international standards
 
 .. Module Contents
 .. ---------------
@@ -111,6 +111,11 @@ Required Arguments
 
 **--config, -c**
    Path to custom YAML configuration file (required). See :doc:`../guides/configuration` for reference configuration parameters.
+
+**--standard**
+   NEMA standard to follow for analysis (required).
+
+   Options: ``NU_2_2018`` (default), ``NU_4_2008``
 
 Optional Arguments
 '''''''''''''''''''
@@ -359,6 +364,7 @@ Standards Compliance
 This implementation follows:
 
 - **NEMA NU 2-2018**: Standards for Performance Measurements of Positron Emission Tomographs [NEMA2018]_
+- **NEMA NU 4-2008**: Standards for Performance Measurements of Positron Emission Tomographs [NEMA2008]_
 - **EARL Guidelines**: European Association of Nuclear Medicine Research Limited [EARL]_
 - **IQ Phantom Specifications**: NEMA Image Quality phantom standards
 
@@ -368,6 +374,10 @@ References
 .. [NEMA2018] NEMA Standards Publication NU 2-2018: Performance Measurements of
               Positron Emission Tomographs. National Electrical Manufacturers
               Association, 2018.
+
+.. [NEMA2008] NEMA Standards Publication NU 4-2008: Performance Measurements of
+              Positron Emission Tomographs. National Electrical Manufacturers
+              Association, 2008.
 
 .. [EARL] EARL Guidelines for PET/CT Systems. European Association of Nuclear
           Medicine, https://earl.eanm.org/

@@ -97,6 +97,11 @@ Required
 **--config, -c**
    YAML configuration file (required)
 
+**--standard**
+   NEMA standard to follow for analysis (required).
+
+   Options: ``NU_2_2018`` (default), ``NU_4_2008``
+
 Optional
 ~~~~~~~~
 
