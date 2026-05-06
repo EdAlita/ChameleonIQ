@@ -45,6 +45,12 @@ logger = logging.getLogger(__name__)
 BEST_CBR_ITERATION = None
 
 
+def _style_plot_spines(ax) -> None:
+    """Apply a consistent axis frame style to all Matplotlib spines."""
+    for spine in ax.spines.values():
+        spine.set_visible(True)
+
+
 def generate_plots(
     results: List[Dict[str, Any]],
     output_dir: Path,
@@ -114,12 +120,12 @@ def generate_plots(
     }
 
     if len(key_iterations) == 2:
-        if first_iter == best_cbr_iter:
+        if first_iter == highest_cbr_iter:
             publication_colors = {
                 first_iter: cfg.STYLE.COLORS[0],
                 final_iter: cfg.STYLE.COLORS[2],
             }
-        elif final_iter == best_cbr_iter:
+        elif final_iter == highest_cbr_iter:
             publication_colors = {
                 first_iter: cfg.STYLE.COLORS[0],
                 final_iter: cfg.STYLE.COLORS[-1],
@@ -141,7 +147,7 @@ def generate_plots(
             zorder = 30
             linestyle = "-" if is_best else "--"
             markersize = 10
-            markeredgewidth = 2.0
+            markeredgewidth = 1.5
         else:
             color = "#0E0E0EFF"
             linewidth = 1.0
@@ -222,8 +228,8 @@ def generate_plots(
                     alpha=style["alpha"],
                     marker="o",
                     markersize=style["markersize"],
-                    markeredgecolor="white",
-                    markeredgewidth=style["markeredgewidth"],
+                    # markeredgecolor="white",
+                    # markeredgewidth=style["markeredgewidth"],
                     label=label,
                     zorder=style["zorder"],
                     solid_capstyle="round",
@@ -239,9 +245,7 @@ def generate_plots(
         unique_diameters = sorted(df_filtered["diameter_mm"].unique())
         ax.set_xticks(unique_diameters)
 
-        for spine in ax.spines:
-            ax.spines[spine].set_linewidth(1.2)
-            ax.spines[spine].set_color("#333333")
+        _style_plot_spines(ax)
 
     handles, labels = axes[0].get_legend_handles_labels()
 
@@ -253,22 +257,12 @@ def generate_plots(
             key_labels.append(label)
 
     if key_handles:
-        ncol = min(len(key_handles), 3)
-        fig.legend(
-            key_handles,
-            key_labels,
-            loc="upper center",
-            ncol=ncol,
-            frameon=True,
-            fancybox=True,
-            shadow=True,
-            columnspacing=2.0,
-        )
+        axes[0].legend(key_handles, key_labels, loc="best", ncol=1)
 
-    plt.tight_layout(rect=(0, 0.1, 1, 0.92))
+    plt.tight_layout()
 
-    output_path = output_dir / "analysis_plot_iterations.png"
-    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
+    output_path = output_dir / "analysis_plot_iterations.jpg"
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=600)
 
     plt.close()
 
@@ -339,10 +333,16 @@ def generate_pc_vs_bg_plot(
     key_iterations = list(dict.fromkeys(key_iterations))
 
     diameter_colors = cfg.STYLE.COLORS
+    line_styles = ["-", "--", "-.", ":", (0, (5, 1)), (0, (3, 1, 1, 1))]
+    marker_styles = ["o", "s", "^", "D", "P", "X"]
 
     diameter_color_map = {}
+    diameter_line_style_map = {}
+    diameter_marker_map = {}
     for i, diameter in enumerate(diameters):
         diameter_color_map[diameter] = diameter_colors[i % len(diameter_colors)]
+        diameter_line_style_map[diameter] = line_styles[i % len(line_styles)]
+        diameter_marker_map[diameter] = marker_styles[i % len(marker_styles)]
 
     plt.style.use(cfg.STYLE.PLT_STYLE)
     plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
@@ -356,6 +356,8 @@ def generate_pc_vs_bg_plot(
 
         if len(diameter_data) > 0:
             color = diameter_color_map[diameter]
+            line_style = diameter_line_style_map[diameter]
+            marker_style = diameter_marker_map[diameter]
 
             n_points = len(diameter_data)
             alphas = np.linspace(0.3, 1.0, n_points)
@@ -366,6 +368,12 @@ def generate_pc_vs_bg_plot(
                 color=color,
                 linewidth=2.0,
                 alpha=0.6,
+                linestyle=line_style,
+                marker=marker_style,
+                markersize=5,
+                markerfacecolor="white",
+                markeredgecolor=color,
+                markeredgewidth=1.0,
                 zorder=5,
             )
 
@@ -392,6 +400,7 @@ def generate_pc_vs_bg_plot(
                     color=color,
                     s=markersize**2,
                     alpha=alpha,
+                    marker=marker_style,
                     edgecolors=markeredgecolor,
                     linewidths=markeredgewidth,
                     zorder=zorder,
@@ -431,23 +440,25 @@ def generate_pc_vs_bg_plot(
     ax.tick_params(axis="y", rotation=0)
     ax.set_axisbelow(True)
 
-    for spine in ax.spines:
-        ax.spines[spine].set_linewidth(1.2)
-        ax.spines[spine].set_color("#333333")
+    _style_plot_spines(ax)
 
     legend_elements = []
     for diameter in diameters:
         color = diameter_color_map[diameter]
+        line_style = diameter_line_style_map[diameter]
+        marker_style = diameter_marker_map[diameter]
         legend_elements.append(
             Line2D(
                 [0],
                 [0],
                 color=color,
                 linewidth=3,
-                marker="o",
+                linestyle=line_style,
+                marker=marker_style,
                 markersize=8,
-                markeredgecolor="white",
-                markeredgewidth=2,
+                markerfacecolor="white",
+                markeredgecolor=color,
+                markeredgewidth=1.0,
                 label=f"{diameter:.0f} mm",
             )
         )
@@ -457,18 +468,13 @@ def generate_pc_vs_bg_plot(
         title="Sphere Diameter",
         loc="upper right",
         bbox_to_anchor=(1.55, 1.0),
-        frameon=True,
-        fancybox=True,
-        shadow=True,
-        framealpha=0.95,
-        edgecolor="black",
         columnspacing=1.0,
     )
 
     plt.tight_layout()
 
-    output_path = output_dir / "bg_vs_pc_plot.png"
-    plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
+    output_path = output_dir / "bg_vs_pc_plot.jpg"
+    plt.savefig(str(output_path), bbox_inches="tight", dpi=600)
 
     plt.close()
 
@@ -642,7 +648,7 @@ def generate_wcbr_convergence_plot(
     final_vs_peak = ((final_cbr - max_cbr_value) / max_cbr_value) * 100
 
     ax.set_xlabel("Iterations")
-    ax.set_ylabel("Weighted CBR")
+    ax.set_ylabel("Weighted CBR (a. u.)")
 
     ax.tick_params(axis="both", labelsize=20, width=1.2)
     ax.tick_params(axis="x", rotation=0)
@@ -650,13 +656,11 @@ def generate_wcbr_convergence_plot(
     ax.set_xticks(range(int(min(iterations)), int(max(iterations)) + 1, 1))
     ax.set_axisbelow(True)
 
-    for spine in ax.spines:
-        ax.spines[spine].set_linewidth(1.2)
-        ax.spines[spine].set_color("#333333")
+    _style_plot_spines(ax)
 
     plt.tight_layout()
 
-    output_path = output_dir / "weighted_cbr_convergence_analysis.png"
+    output_path = output_dir / "weighted_cbr_convergence_analysis.jpg"
 
     plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
 
@@ -1002,6 +1006,7 @@ def generate_cbr_convergence_plot(
             marker="o",
             markersize=8,
             markeredgecolor="white",
+            markerfacecolor=cfg.STYLE.COLORS[5],
             markeredgewidth=2,
             label="37 mm CBR",
         ),
@@ -1013,6 +1018,7 @@ def generate_cbr_convergence_plot(
             marker="o",
             markersize=8,
             markeredgecolor="white",
+            markerfacecolor=cfg.STYLE.COLORS[4],
             markeredgewidth=2,
             label="28 mm CBR",
         ),
@@ -1024,6 +1030,7 @@ def generate_cbr_convergence_plot(
             marker="o",
             markersize=8,
             markeredgecolor="white",
+            markerfacecolor=cfg.STYLE.COLORS[3],
             markeredgewidth=2,
             label="22 mm CBR",
         ),
@@ -1035,6 +1042,7 @@ def generate_cbr_convergence_plot(
             marker="o",
             markersize=8,
             markeredgecolor="white",
+            markerfacecolor=cfg.STYLE.COLORS[2],
             markeredgewidth=2,
             label="17 mm CBR",
         ),
@@ -1046,6 +1054,7 @@ def generate_cbr_convergence_plot(
             marker="o",
             markersize=8,
             markeredgecolor="white",
+            markerfacecolor=cfg.STYLE.COLORS[1],
             markeredgewidth=2,
             label="13 mm CBR",
         ),
@@ -1057,6 +1066,7 @@ def generate_cbr_convergence_plot(
             marker="o",
             markersize=8,
             markeredgecolor="white",
+            markerfacecolor=cfg.STYLE.COLORS[0],
             markeredgewidth=2,
             label="10 mm CBR",
         ),
@@ -1069,6 +1079,7 @@ def generate_cbr_convergence_plot(
             marker="o",
             markersize=8,
             markeredgecolor="white",
+            markerfacecolor=cfg.STYLE.COLORS[-2],
             markeredgewidth=2,
             label="Weighted CBR",
         ),
@@ -1080,6 +1091,7 @@ def generate_cbr_convergence_plot(
             linestyle="None",
             markersize=10,
             markeredgecolor="white",
+            markerfacecolor=cfg.STYLE.COLORS[-1],
             markeredgewidth=2,
             label="Peak CBR Points",
         ),
@@ -1090,21 +1102,14 @@ def generate_cbr_convergence_plot(
         loc="upper left",
         bbox_to_anchor=(1.02, 1.0),
         fontsize=12,
-        frameon=True,
-        fancybox=True,
-        shadow=True,
-        framealpha=0.95,
-        edgecolor="black",
     )
 
-    ax.set_facecolor("#fafafa")
-    for spine in ax.spines:
-        ax.spines[spine].set_linewidth(1.2)
-        ax.spines[spine].set_color("#333333")
+    # ax.set_facecolor("#fafafa")
+    _style_plot_spines(ax)
 
     plt.tight_layout(rect=(0.0, 0.0, 0.85, 1.0))
 
-    output_path = output_dir / "cbr_convergence_analysis.png"
+    output_path = output_dir / "cbr_convergence_analysis.jpg"
     plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
 
     plt.close()
@@ -1270,9 +1275,7 @@ def generate_boxplot_with_mean_std(
             zorder=10,
         )
 
-    for spine in ax.spines:
-        ax.spines[spine].set_linewidth(1.2)
-        ax.spines[spine].set_color("#333333")
+    _style_plot_spines(ax)
 
     for i, (mean, std_dev, _iteration) in enumerate(
         zip(means, std_devs, key_iterations), 1
@@ -1305,7 +1308,7 @@ def generate_boxplot_with_mean_std(
 
     plt.tight_layout()
 
-    output_path = output_dir / "lung_boxplot_iterations.png"
+    output_path = output_dir / "lung_boxplot_iterations.jpg"
     plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
 
     plt.close()
@@ -1406,6 +1409,7 @@ def generate_reportlab_report(
     boxplot_path: Optional[Path] = None,
     cbr_conv_path: Optional[Path] = None,
     wcbr_conv_path: Optional[Path] = None,
+    protocol: str = "NU_2_2018",
 ) -> None:
     """
     Generates a PDF report for NEMA quality analysis results across iterations using ReportLab.
@@ -1436,6 +1440,8 @@ def generate_reportlab_report(
         Path to the ROIs plot image file.
     boxplot_path : Path, optional
         Path to the lung boxplot image file.
+    protocol : str
+        Protocol name to exclude lung results when DEDICATED_IQ.
 
     Returns
     -------
@@ -1556,20 +1562,20 @@ def generate_reportlab_report(
                 body_style,
             )
         )
-
-    if filtered_lung_results:
-        all_lung_values = [
-            val
-            for lung_dict in filtered_lung_results.values()
-            for val in lung_dict.values()
-        ]
-        avg_lung_error = float(np.mean(all_lung_values))
-        elements.append(
-            Paragraph(
-                f"Average Lung Insert Error (all iterations): {avg_lung_error:.2f}%",
-                body_style,
+    if protocol != "DEDICATED_IQ":
+        if filtered_lung_results:
+            all_lung_values = [
+                val
+                for lung_dict in filtered_lung_results.values()
+                for val in lung_dict.values()
+            ]
+            avg_lung_error = float(np.mean(all_lung_values))
+            elements.append(
+                Paragraph(
+                    f"Average Lung Insert Error (all iterations): {avg_lung_error:.2f}%",
+                    body_style,
+                )
             )
-        )
 
     elements.append(
         Paragraph(f"Total measurements: {len(filtered_results)}", body_style)
@@ -1663,68 +1669,71 @@ def generate_reportlab_report(
 
     elements.append(PageBreak())
 
-    if filtered_lung_results:
-        elements.append(
-            Paragraph("<b>Lung Insert Analysis by Iteration</b>", header_style)
-        )
+    if protocol != "DEDICATED_IQ":
+        if filtered_lung_results:
+            elements.append(
+                Paragraph("<b>Lung Insert Analysis by Iteration</b>", header_style)
+            )
 
-        if boxplot_path and Path(boxplot_path).exists():
-            elements.append(Image(str(boxplot_path), width=6 * inch, height=4 * inch))
-            elements.append(Spacer(1, 0.2 * inch))
+            if boxplot_path and Path(boxplot_path).exists():
+                elements.append(
+                    Image(str(boxplot_path), width=6 * inch, height=4 * inch)
+                )
+                elements.append(Spacer(1, 0.2 * inch))
 
-        lung_table_data = [
-            [
-                "Iteration",
-                "Mean Error (%)",
-                "Std Dev (%)",
-                "Min (%)",
-                "Max (%)",
-                "N Slices",
+            lung_table_data = [
+                [
+                    "Iteration",
+                    "Mean Error (%)",
+                    "Std Dev (%)",
+                    "Min (%)",
+                    "Max (%)",
+                    "N Slices",
+                ]
             ]
-        ]
 
-        for iteration in iterations:
-            if iteration in filtered_lung_results:
-                values = list(filtered_lung_results[iteration].values())
-                lung_table_data.append(
+            for iteration in iterations:
+                if iteration in filtered_lung_results:
+                    values = list(filtered_lung_results[iteration].values())
+                    lung_table_data.append(
+                        [
+                            f"{iteration}"
+                            + (" (Final)" if iteration == max_iteration else ""),
+                            f"{float(np.mean(values)):.2f}",
+                            f"{float(np.std(values)):.2f}",
+                            f"{float(np.min(values)):.2f}",
+                            f"{float(np.max(values)):.2f}",
+                            str(len(values)),
+                        ]
+                    )
+
+            col_widths = [
+                1.0 * inch,
+                1.2 * inch,
+                1.2 * inch,
+                1.0 * inch,
+                1.0 * inch,
+                1.0 * inch,
+            ]
+            lung_table = Table(lung_table_data, colWidths=col_widths)
+            lung_table.setStyle(
+                TableStyle(
                     [
-                        f"{iteration}"
-                        + (" (Final)" if iteration == max_iteration else ""),
-                        f"{float(np.mean(values)):.2f}",
-                        f"{float(np.std(values)):.2f}",
-                        f"{float(np.min(values)):.2f}",
-                        f"{float(np.max(values)):.2f}",
-                        str(len(values)),
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.darkred),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, 0), 8),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                        ("BACKGROUND", (0, 1), (-1, -1), colors.mistyrose),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                        ("FONTSIZE", (0, 1), (-1, -1), 8),
                     ]
                 )
-
-        col_widths = [
-            1.0 * inch,
-            1.2 * inch,
-            1.2 * inch,
-            1.0 * inch,
-            1.0 * inch,
-            1.0 * inch,
-        ]
-        lung_table = Table(lung_table_data, colWidths=col_widths)
-        lung_table.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.darkred),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 8),
-                    ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
-                    ("BACKGROUND", (0, 1), (-1, -1), colors.mistyrose),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                    ("FONTSIZE", (0, 1), (-1, -1), 8),
-                ]
             )
-        )
-        elements.append(lung_table)
+            elements.append(lung_table)
 
-    elements.append(PageBreak())
+        elements.append(PageBreak())
 
     if cbr_conv_path and Path(cbr_conv_path).exists():
         elements.append(Image(str(cbr_conv_path), width=6 * inch, height=4 * inch))
@@ -1785,6 +1794,7 @@ def save_results_to_txt(
     cfg: yacs.config.CfgNode,
     input_image_path: Path,
     voxel_spacing: Tuple[float, float, float],
+    protocol: str,
 ) -> None:
     """
     Saves NEMA analysis results across iterations to a formatted text file.
@@ -1807,6 +1817,8 @@ def save_results_to_txt(
         Path to the input directory or image file.
     voxel_spacing : Tuple[float, float, float]
         Voxel spacing used during analysis.
+    protocol: str
+        Name of protocol to avoid saving lung results if DEDICATED_IQ
 
     Returns
     -------
@@ -1879,18 +1891,18 @@ def save_results_to_txt(
             f.write(
                 f"Spheres per iteration: {len(filtered_results) // len(iterations) if iterations else 0}\n"
             )
-
-        if filtered_lung_results:
-            all_lung_values = [
-                val
-                for lung_dict in filtered_lung_results.values()
-                for val in lung_dict.values()
-            ]
-            avg_lung_error = float(np.mean(all_lung_values))
-            f.write(
-                f"Average Lung Insert Error (all iterations): {avg_lung_error:.2f}%\n"
-            )
-        f.write("\n")
+        if protocol != "DEDICATED_IQ":
+            if filtered_lung_results:
+                all_lung_values = [
+                    val
+                    for lung_dict in filtered_lung_results.values()
+                    for val in lung_dict.values()
+                ]
+                avg_lung_error = float(np.mean(all_lung_values))
+                f.write(
+                    f"Average Lung Insert Error (all iterations): {avg_lung_error:.2f}%\n"
+                )
+            f.write("\n")
 
         f.write("ANALYSIS RESULTS BY ITERATION:\n")
         f.write("=" * 90 + "\n")
@@ -1936,31 +1948,31 @@ def save_results_to_txt(
                         "\n"
                     )
                 f.write("\n")
+        if protocol != "DEDICATED_IQ":
+            if filtered_lung_results:
+                f.write("LUNG INSERT ANALYSIS BY ITERATION:\n")
+                f.write("=" * 90 + "\n")
 
-        if filtered_lung_results:
-            f.write("LUNG INSERT ANALYSIS BY ITERATION:\n")
-            f.write("=" * 90 + "\n")
+                f.write(
+                    f"{'Iteration':<12} {'Mean (%)':<10} {'Std (%)':<10} {'Min (%)':<10} {'Max (%)':<10} {'N Slices':<10}\n"
+                )
+                f.write("-" * 72 + "\n")
 
-            f.write(
-                f"{'Iteration':<12} {'Mean (%)':<10} {'Std (%)':<10} {'Min (%)':<10} {'Max (%)':<10} {'N Slices':<10}\n"
-            )
-            f.write("-" * 72 + "\n")
-
-            for iteration in iterations:
-                if iteration in filtered_lung_results:
-                    values = list(filtered_lung_results[iteration].values())
-                    iter_label = f"{iteration}" + (
-                        " (Final)" if iteration == max_iteration else ""
-                    )
-                    f.write(
-                        f"{iter_label:<12} "
-                        f"{float(np.mean(values)):<10.2f} "
-                        f"{float(np.std(values)):<10.2f} "
-                        f"{float(np.min(values)):<10.2f} "
-                        f"{float(np.max(values)):<10.2f} "
-                        f"{len(values):<10}\n"
-                    )
-            f.write("\n")
+                for iteration in iterations:
+                    if iteration in filtered_lung_results:
+                        values = list(filtered_lung_results[iteration].values())
+                        iter_label = f"{iteration}" + (
+                            " (Final)" if iteration == max_iteration else ""
+                        )
+                        f.write(
+                            f"{iter_label:<12} "
+                            f"{float(np.mean(values)):<10.2f} "
+                            f"{float(np.std(values)):<10.2f} "
+                            f"{float(np.min(values)):<10.2f} "
+                            f"{float(np.max(values)):<10.2f} "
+                            f"{len(values):<10}\n"
+                        )
+                f.write("\n")
 
         f.write("ITERATION COMPARISON SUMMARY:\n")
         f.write("-" * 50 + "\n")
@@ -2154,7 +2166,7 @@ def generate_crc_convergence_plot_nu4_iter(
     ax.legend(fontsize=12, loc="best")
 
     plt.tight_layout()
-    output_path = output_dir / "crc_convergence_nu4_iter.png"
+    output_path = output_dir / "crc_convergence_nu4_iter.jpg"
     plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
     plt.close()
 
@@ -2240,7 +2252,7 @@ def generate_spillover_convergence_plot_nu4_iter(
     ax.legend(fontsize=12, loc="best")
 
     plt.tight_layout()
-    output_path = output_dir / "spillover_convergence_nu4_iter.png"
+    output_path = output_dir / "spillover_convergence_nu4_iter.jpg"
     plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
     plt.close()
 
@@ -2322,7 +2334,7 @@ def generate_uniformity_convergence_plot_nu4_iter(
     ax.legend(fontsize=12, loc="best")
 
     plt.tight_layout()
-    output_path = output_dir / "uniformity_convergence_nu4_iter.png"
+    output_path = output_dir / "uniformity_convergence_nu4_iter.jpg"
     plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
     plt.close()
 
