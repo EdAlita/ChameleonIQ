@@ -25,7 +25,6 @@ It provides phantom detection, segmentation, quality metrics computation, and pr
 
    getting_started
    installation
-   usage
 
 .. toctree::
    :maxdepth: 2
