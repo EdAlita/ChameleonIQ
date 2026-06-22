@@ -55,8 +55,6 @@ def load_nii_image(
     if not filepath.exists():
         raise FileNotFoundError(f"The file was not found at: {filepath}")
 
-    logger.info(f"Loading NIfTI image: {filepath.name}")
-
     try:
         sitk_image = sitk.ReadImage(str(filepath))
         ori = sitk.DICOMOrientImageFilter_GetOrientationFromDirectionCosines(
