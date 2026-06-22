@@ -39,6 +39,7 @@ from .reporting import (
     generate_reportlab_report,
     generate_reportlab_report_nu4,
     generate_rois_plots,
+    generate_rois_plots_coronal,
     generate_spillover_barplot_nu4,
     generate_torso_plot,
     generate_transverse_sphere_plots,
@@ -85,8 +86,6 @@ def create_parser() -> argparse.ArgumentParser:
     # Basic analysis
     chameleoniq_quant input.nii --config custom_config.yaml --output results.txt
 
-    # Verbose output
-    chameleoniq_quant input.nii --config custom_config.yaml --output results.txt --verbose
     """,
     )
 
@@ -189,7 +188,6 @@ def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> Non
             RichHandler(
                 rich_tracebacks=True,
                 markup=True,
-                show_path=False,
                 highlighter=NumberHighlighter(),
                 keywords=[
                     "Input image:",
@@ -203,6 +201,11 @@ def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> Non
                     "Spillover Ratios:",
                     "Tool:",
                     "Uniformity Results:",
+                    "RC Results:" "Loading NIfTI image:",
+                    "Phantom initialized with:",
+                    "Using Ratio from config:",
+                    "Average of Accuracy Corrections:",
+                    "Elapsed:",
                 ],
             ),
         ],
@@ -225,11 +228,7 @@ def load_configuration(
         config_file = Path(config_path)
         if not config_file.exists():
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
-
-        logging.info("Loading configuration...")
         cfg.merge_from_file(config_path)
-    else:
-        logging.info("Using default configuration")
 
     return cfg
 
@@ -306,7 +305,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             return 1
 
         _log_section("Load")
-        logging.info("Loading NIfTI image...")
+        _log_kv("Loading NIfTI image", input_path.name)
         try:
             image_data, affine = load_nii_image(
                 input_path, return_affine=True, inverse_axes=cfg.ROIS.INVERSE_AXES
@@ -335,10 +334,9 @@ def run_analysis(args: argparse.Namespace) -> int:
             return 1
 
         _log_section("Initialize")
-        logging.info("Initializing NEMA phantom...")
         try:
             phantom = NemaPhantom(cfg, image_dims, voxel_spacing)
-            logging.debug(f"Phantom initialized with {len(phantom.rois)} ROIs")
+            _log_kv("Phantom initialized with", f"{len(phantom.rois)} ROIs")
         except Exception as e:
             logging.error(f"Failed to initialize phantom: {e}")
             if args.log_level == "DEBUG":
@@ -350,10 +348,10 @@ def run_analysis(args: argparse.Namespace) -> int:
 
         # Perform NEMA analysis
         _log_section("Analysis")
-        logging.info("Performing NEMA analysis...")
+        if args.standard != "NU_4_2008":
+            _log_kv("Using Ratio from config", cfg.ACTIVITY.RATIO)
         try:
             if args.standard == "NU_4_2008":
-                logging.info("Running NU_4_2008 analysis path")
                 crc_results, spillover_results, uniformity_results = (
                     calculate_nema_metrics_nu4_2008(
                         image_data,
@@ -364,7 +362,6 @@ def run_analysis(args: argparse.Namespace) -> int:
                     )
                 )
             else:
-                logging.info("Running NU_2_2018 analysis path")
                 results, lung_results = calculate_nema_metrics(
                     image_data,
                     phantom,
@@ -376,10 +373,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                 if args.standard == "NU_2_2018":
                     values = list(lung_results.values())
                     average = float(np.mean(values))
-                    logging.info(f"Average of Accuracy Corrections: {average:.3f} %")
-                    logging.info(
-                        f"Analysis completed. Found {len(results)} sphere measurements"
-                    )
+                    _log_kv("Average of Accuracy Corrections", f"{average:.3f} %")
         except Exception as e:
             logging.error(f"Failed to perform analysis: {e}")
             if args.log_level == "DEBUG":
@@ -396,8 +390,6 @@ def run_analysis(args: argparse.Namespace) -> int:
         csv_dir.mkdir(parents=True, exist_ok=True)
 
         if args.standard == "NU_4_2008":
-            _log_section("Plots")
-            logging.info("Saving analysis plots...")
             try:
                 generate_crc_plots_nu4(crc_results=crc_results, output_dir=png_dir, cfg=cfg)  # type: ignore[arg-type]
                 generate_iq_plot(image=image_data, output_dir=png_dir, cfg=cfg)
@@ -412,11 +404,19 @@ def run_analysis(args: argparse.Namespace) -> int:
                 print(f"ERROR: Failed to generate plots: {e}")
                 return 1
         else:
-            _log_section("Plots")
-            logging.info("Saving analysis plots...")
             try:
-                generate_plots(results=results, output_dir=png_dir, cfg=cfg)
+                generate_plots(
+                    results=results, output_dir=png_dir, cfg=cfg, protocol=args.standard
+                )
+
                 generate_rois_plots(
+                    image=image_data,
+                    output_dir=png_dir,
+                    cfg=cfg,
+                    protocol=args.standard,
+                )
+
+                generate_rois_plots_coronal(
                     image=image_data,
                     output_dir=png_dir,
                     cfg=cfg,
@@ -444,12 +444,10 @@ def run_analysis(args: argparse.Namespace) -> int:
                 print(f"ERROR: Failed to generate plots: {e}")
                 return 1
         if args.standard == "NU_4_2008":
-            _log_section("Reports")
-            logging.info("Saving reports...")
             try:
                 output_path = Path(args.output)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
-                plot_path = output_path.parent / "png" / "rc_plot.png"
+                plot_path = output_path.parent / "png" / "pc_plot.png"
                 iq_rois_path = output_path.parent / "png" / "iq_rois.png"
                 spillover_path = output_path.parent / "png" / "spillover_ratio.png"
 
@@ -487,9 +485,6 @@ def run_analysis(args: argparse.Namespace) -> int:
                 print(f"ERROR: Failed to save Results: {e}")
                 return 1
         else:
-
-            _log_section("Reports")
-            logging.info("Saving reports...")
             try:
                 output_path = Path(args.output)
                 output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -498,7 +493,12 @@ def run_analysis(args: argparse.Namespace) -> int:
                 boxplot_path = output_path.parent / "png" / "boxplot_with_mean_std.png"
 
                 save_results_to_txt(
-                    results, output_path, cfg, input_path, voxel_spacing
+                    results,
+                    output_path,
+                    cfg,
+                    input_path,
+                    voxel_spacing,
+                    protocol=args.standard,
                 )
 
                 lung_results_any = {str(k): v for k, v in lung_results.items()}
@@ -514,6 +514,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                     plot_path,
                     rois_loc_path,
                     boxplot_path,
+                    protocol=args.standard,
                 )
                 logging.debug("Results saved successfully")
             except Exception as e:
