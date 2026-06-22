@@ -46,12 +46,12 @@ BACKGROUND_OFFSET_YX: List[Tuple[int, int]] = [
 ]
 
 BACKGROUND_OFFSET_YX_DEDICATEDIQ = [
-    (27, -35),  # cerca de entre 4.5mm y 9mm
-    (93, -41),  # cerca de entre 9mm y 15mm
-    (146, 30),  # cerca de entre 15mm y 12mm
-    (102, 106),  # cerca de entre 12mm y 6mm
-    (23, 100),  # cerca de entre 6mm y 4.5mm
-    (-12, 45),  # cerca de entre 4.5mm y 15mm
+    (-41, 44),  # + , -
+    (100, -60),
+    (167, 30),
+    (16, -64),
+    (108, 123),
+    (16, 120),
 ]
 
 DEFAULT_PIXEL_SPACING = 2.0644
@@ -99,10 +99,8 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         self.orientation_yx = [1, 1]
         self.threshold_percentile = threshold_percentile
         self.pixel_spacing = pixel_spacing
-        self.background_offset_yx = (
-            list(background_offset_yx)
-            if background_offset_yx is not None
-            else list(BACKGROUND_OFFSET_YX)
+        self.background_offset_yx = self._convert_offsets_to_current_spacing(
+            BACKGROUND_OFFSET_YX
         )
         self.statusBar().showMessage("Ready")
 
@@ -148,6 +146,23 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         self._roi_circles: List[pg.CircleROI] = []
 
         self._update_display()
+
+    def _convert_offsets_to_current_spacing(self, offsets):
+        """Convert offsets from DEFAULT_PIXEL_SPACING to current spacing."""
+        DEFAULT_PIXEL_SPACING = 2.0644
+
+        if abs(self.pixel_spacing - DEFAULT_PIXEL_SPACING) < 0.001:
+            # No conversion needed
+            return list(offsets)
+
+        ratio = self.pixel_spacing / DEFAULT_PIXEL_SPACING
+        converted = []
+        for dy, dx in offsets:
+            converted.append((int(round(dy * ratio)), int(round(dx * ratio))))
+        logger.debug(
+            f"Converted offsets from spacing {DEFAULT_PIXEL_SPACING} to {self.pixel_spacing}: ratio={ratio}"
+        )
+        return converted
 
     def _auto_detect_centers(self) -> List[List[int]]:
         """
@@ -271,8 +286,12 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         self.activity_ratio_spin.setValue(self.activity_ratio)
         self.activity_ratio_spin.setSingleStep(0.1)
 
-        self.activity_units_edit = QtWidgets.QLineEdit()
-        self.activity_units_edit.setText(self.activity_units)
+        self.activity_units_edit = QtWidgets.QComboBox()
+        self.activity_units_edit.addItems(["kBq/mL", "MBq/mL", "mCi/mL"])
+        self.activity_units_edit.setCurrentText(self.activity_units)
+        self.activity_units_edit.currentTextChanged.connect(
+            self._on_activity_units_changed
+        )
 
         self.activity_total_edit = QtWidgets.QLineEdit()
         self.activity_total_edit.setText(self.activity_total)
@@ -294,30 +313,63 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         # Slice control
         slice_group = QtWidgets.QGroupBox("Slice")
         slice_layout = QtWidgets.QHBoxLayout()
+
+        self.slice_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+        self.slice_slider.setRange(0, self.image.shape[0] - 1)
+        self.slice_slider.setValue(self.central_slice)
+        self.slice_slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
+        self.slice_slider.setTickInterval(max(1, (self.image.shape[0] - 1) // 10))
+        self.slice_slider.valueChanged.connect(self._on_slice_changed)
+
         self.slice_spinbox = QtWidgets.QSpinBox()
         self.slice_spinbox.setRange(0, self.image.shape[0] - 1)
         self.slice_spinbox.setValue(self.central_slice)
-        self.slice_spinbox.valueChanged.connect(self._on_slice_changed)
+        self.slice_spinbox.valueChanged.connect(self._on_slice_spinbox_changed)
+
         slice_layout.addWidget(QtWidgets.QLabel("Z:"))
+        slice_layout.addWidget(self.slice_slider, 1)
         slice_layout.addWidget(self.slice_spinbox)
+        slice_layout.addWidget(QtWidgets.QLabel(f"/{self.image.shape[0] - 1}"))
+
         slice_group.setLayout(slice_layout)
         control_layout.addWidget(slice_group)
 
         # Orientation controls
         orient_group = QtWidgets.QGroupBox("Orientation")
-        orient_layout = QtWidgets.QGridLayout()
-        self.orient_y_spinbox = QtWidgets.QSpinBox()
-        self.orient_y_spinbox.setRange(-1, 1)
-        self.orient_y_spinbox.setValue(self.orientation_yx[0])
-        self.orient_y_spinbox.valueChanged.connect(self._on_orientation_changed)
-        self.orient_x_spinbox = QtWidgets.QSpinBox()
-        self.orient_x_spinbox.setRange(-1, 1)
-        self.orient_x_spinbox.setValue(self.orientation_yx[1])
-        self.orient_x_spinbox.valueChanged.connect(self._on_orientation_changed)
-        orient_layout.addWidget(QtWidgets.QLabel("Y:"), 0, 0)
-        orient_layout.addWidget(self.orient_y_spinbox, 0, 1)
-        orient_layout.addWidget(QtWidgets.QLabel("X:"), 1, 0)
-        orient_layout.addWidget(self.orient_x_spinbox, 1, 1)
+        orient_layout = QtWidgets.QHBoxLayout()
+
+        # Y orientation
+        y_widget = QtWidgets.QWidget()
+        y_layout = QtWidgets.QHBoxLayout()
+        self.orient_y_combo = QtWidgets.QComboBox()
+        self.orient_y_combo.addItems(["-1", "1"])
+        self.orient_y_combo.setCurrentText(str(self.orientation_yx[0]))
+        self.orient_y_combo.currentTextChanged.connect(self._on_orientation_changed)
+        y_layout.addWidget(QtWidgets.QLabel("Y:"))
+        y_layout.addWidget(self.orient_y_combo)
+        y_widget.setLayout(y_layout)
+
+        # X orientation
+        x_widget = QtWidgets.QWidget()
+        x_layout = QtWidgets.QHBoxLayout()
+        self.orient_x_combo = QtWidgets.QComboBox()
+        self.orient_x_combo.addItems(["-1", "1"])
+        self.orient_x_combo.setCurrentText(str(self.orientation_yx[1]))
+        self.orient_x_combo.currentTextChanged.connect(self._on_orientation_changed)
+        x_layout.addWidget(QtWidgets.QLabel("X:"))
+        x_layout.addWidget(self.orient_x_combo)
+        x_widget.setLayout(x_layout)
+
+        orient_layout.addWidget(y_widget)
+        orient_layout.addWidget(x_widget)
+
+        rotate_bg_btn = QtWidgets.QPushButton("Rotate Background ROIs")
+        rotate_bg_btn.setToolTip(
+            "Rotate background ROIs 90° clockwise around center 37mm sphere"
+        )
+        rotate_bg_btn.clicked.connect(self._on_rotate_background_rois)
+        orient_layout.addWidget(rotate_bg_btn)
+
         orient_group.setLayout(orient_layout)
         control_layout.addWidget(orient_group)
 
@@ -446,6 +498,14 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
             val = img[y, x]
             self.statusBar().showMessage(f"x={x}, y={y}, val={val:.4f}")
 
+    def _on_rotate_background_rois(self) -> None:
+        """Rotate background ROIs by swapping X and Y offsets."""
+        self.background_offset_yx = [(dx, dy) for dy, dx in self.background_offset_yx]
+        logger.info(
+            f"Rotated background ROIs. New offsets: {self.background_offset_yx}"
+        )
+        self._update_display()
+
     def _draw_roi_circles(self) -> None:
         """Draw interactive ROI circles on axial view."""
         # Clear previous ROIs
@@ -457,6 +517,7 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
             except (ValueError, RuntimeError):
                 pass  # Already removed
         self._roi_circles = []
+        self._background_roi_circles = []
 
         # Draw circles for each ROI sphere (centers are in Y,X format)
         for i, (x, y) in enumerate(self.roi_centers):
@@ -469,10 +530,18 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
                 (x - radius_pix, y - radius_pix),
                 (radius_pix * 2, radius_pix * 2),
                 pen=pg.mkPen(color, width=2),
-                movable=False,
+                movable=True,
                 rotatable=False,
                 resizable=False,
             )
+
+            circle_roi.removeHandle(0)
+
+            circle_roi.roi_type = "main"
+            circle_roi.roi_idx = i
+
+            circle_roi.sigRegionChanged.connect(self._on_any_roi_moved)
+
             self.view_axial.addItem(circle_roi)
             self._roi_circles.append(circle_roi)
             label = pg.TextItem(text=f"{diameter}mm", color=color, anchor=(0.5, -0.5))
@@ -486,8 +555,9 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         if len(self.roi_centers) > 0:
             centro_37_y, centro_37_x = self.roi_centers[0]
             background_radius = (37 / 2) / self.pixel_spacing
+            self._background_roi_circles = []
 
-            for dy, dx in self.background_offset_yx:
+            for bg_idx, (dy, dx) in enumerate(self.background_offset_yx):
                 # Apply orientation to offsets
                 dy_oriented = dy * self.orientation_yx[0]
                 dx_oriented = dx * self.orientation_yx[1]
@@ -507,13 +577,29 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
                     rotatable=False,
                     resizable=False,
                 )
+
+                background_roi.removeHandle(0)
+
+                background_roi.roi_type = "background"
+                background_roi.roi_idx = bg_idx
+
                 self.view_axial.addItem(background_roi)
                 self._roi_circles.append(background_roi)
+                self._background_roi_circles.append(
+                    (background_roi, bg_idx, background_radius)
+                )
 
     def _on_slice_changed(self, value: int) -> None:
         """Handle slice change."""
         self.central_slice = value
         self._update_display()
+
+    def _on_slice_spinbox_changed(self, value: int) -> None:
+        """Handle slice spinbox change and sync with slider."""
+        self.slice_slider.blockSignals(True)
+        self.slice_slider.setValue(value)
+        self.slice_slider.blockSignals(False)
+        self._on_slice_changed(value)
 
     def _on_threshold_changed(self, value: float) -> None:
         """Handle threshold percentile change."""
@@ -541,10 +627,82 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
     def _on_orientation_changed(self, value: int) -> None:
         """Handle orientation change."""
         self.orientation_yx = [
-            self.orient_y_spinbox.value(),
-            self.orient_x_spinbox.value(),
+            int(self.orient_y_combo.currentText()),
+            int(self.orient_x_combo.currentText()),
         ]
         self._update_display()
+
+    def _on_any_roi_moved(self, roi_obj=None) -> None:
+        """Handle any ROI moved and update center spinboxes."""
+        sender = self.sender()
+        if not isinstance(sender, pg.CircleROI):
+            return
+        roi_type = getattr(sender, "roi_type", None)
+        roi_idx = getattr(sender, "roi_idx", None)
+
+        logger.debug(f"[_on_any_roi_moved] Detected: type={roi_type}, idx={roi_idx}")
+
+        if roi_type is None or roi_idx is None:
+            logger.warning(
+                f"[_on_any_roi_moved] Missing metadata! type={roi_type}, idx={roi_idx}"
+            )
+            return
+
+        if roi_type == "main":
+            logger.debug(
+                f"[_on_any_roi_moved] Calling _handle_main_roi_moved for idx={roi_idx}"
+            )
+            self._handle_main_roi_moved(roi_idx, sender)
+
+    def _handle_main_roi_moved(self, idx: int, circle_roi: pg.CircleROI) -> None:
+        diameter = self.sphere_diameters[idx]
+        radius_pix = (diameter / 2) / self.pixel_spacing
+
+        roi_pos = circle_roi.pos()
+
+        y_new = roi_pos.x() + radius_pix
+        x_new = roi_pos.y() + radius_pix
+
+        self.roi_centers[idx] = [int(round(y_new)), int(round(x_new))]
+
+        label_index = (idx * 2) + 1
+        if label_index < len(self._roi_circles):
+            label = self._roi_circles[label_index]
+            if isinstance(label, pg.TextItem):
+                label.setPos(y_new, x_new - radius_pix)
+
+        if idx < len(self.roi_spinboxes):
+            self.roi_spinboxes[idx][0].blockSignals(True)
+            self.roi_spinboxes[idx][1].blockSignals(True)
+            self.roi_spinboxes[idx][0].setValue(int(round(y_new)))
+            self.roi_spinboxes[idx][1].setValue(int(round(x_new)))
+            self.roi_spinboxes[idx][0].blockSignals(False)
+            self.roi_spinboxes[idx][1].blockSignals(False)
+
+        if idx == 0:
+            self._update_background_roi_positions(int(round(y_new)), int(round(x_new)))
+
+    def _update_background_roi_positions(
+        self, centro_37_y: int, centro_37_x: int
+    ) -> None:
+        """Update background ROI visual positions without redrawing."""
+        background_radius = (37 / 2) / self.pixel_spacing
+
+        for bg_roi, stored_bg_idx, _ in self._background_roi_circles:
+            # BLOCK SIGNALS to prevent cascading updates
+            bg_roi.sigRegionChanged.disconnect()
+
+            dx, dy = self.background_offset_yx[stored_bg_idx]
+            dy_oriented = dx * self.orientation_yx[0]
+            dx_oriented = dy * self.orientation_yx[1]
+
+            bg_y = centro_37_y + dy_oriented
+            bg_x = centro_37_x + dx_oriented
+
+            # Move the circle directly
+            bg_roi.setPos(bg_y - background_radius, bg_x - background_radius)
+
+            bg_roi.sigRegionChanged.connect(self._on_any_roi_moved)
 
     def _on_roi_center_changed(self, idx: int, value: int, is_y: bool) -> None:
         """Handle ROI center change."""
@@ -570,7 +728,7 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         self.activity_hot = self.activity_hot_spin.value()
         self.activity_background = self.activity_bg_spin.value()
         self.activity_ratio = self.activity_ratio_spin.value()
-        self.activity_units = self.activity_units_edit.text()
+        self.activity_units = self.activity_units_edit.currentText()
         self.activity_total = self.activity_total_edit.text()
 
         # Generate YAML content
@@ -602,6 +760,98 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
                 self, "Error", f"Failed to save configuration:\n{str(e)}"
             )
 
+    def _on_activity_units_changed(self, units: str) -> None:
+        """Handle activity units change and convert values."""
+        logger.debug(f"Activity units changed from {self.activity_units} to {units}")
+
+        # READ FROM STORED VALUES, NOT FROM SPINBOX (which may be clamped)
+        current_hot = self.activity_hot
+        current_bg = self.activity_background
+
+        logger.debug(
+            f"Current stored values: hot={current_hot}, bg={current_bg}, old_units={self.activity_units}"
+        )
+
+        # Convert FROM old units TO new units
+        if self.activity_units == "mCi/mL":
+            if units == "MBq/mL":
+                hot_value = current_hot * 37.0
+                bg_value = current_bg * 37.0
+            elif units == "kBq/mL":
+                hot_value = current_hot * 37000.0
+                bg_value = current_bg * 37000.0
+            else:
+                hot_value = current_hot
+                bg_value = current_bg
+
+        elif self.activity_units == "MBq/mL":
+            if units == "mCi/mL":
+                hot_value = current_hot / 37.0
+                bg_value = current_bg / 37.0
+            elif units == "kBq/mL":
+                hot_value = current_hot * 1000.0
+                bg_value = current_bg * 1000.0
+            else:
+                hot_value = current_hot
+                bg_value = current_bg
+
+        elif self.activity_units == "kBq/mL":
+            if units == "mCi/mL":
+                hot_value = current_hot / 37000.0
+                bg_value = current_bg / 37000.0
+            elif units == "MBq/mL":
+                hot_value = current_hot / 1000.0
+                bg_value = current_bg / 1000.0
+            else:
+                hot_value = current_hot
+                bg_value = current_bg
+        else:
+            hot_value = current_hot
+            bg_value = current_bg
+
+        logger.debug(
+            f"Converted values: hot={hot_value}, bg={bg_value}, new_units={units}"
+        )
+
+        # Update spinbox ranges FIRST, THEN set values
+        self.activity_hot_spin.blockSignals(True)
+        self.activity_bg_spin.blockSignals(True)
+
+        if units == "mCi/mL":
+            self.activity_hot_spin.setRange(0, 1.0)
+            self.activity_hot_spin.setSingleStep(0.00001)
+            self.activity_bg_spin.setRange(0, 0.001)
+            self.activity_bg_spin.setSingleStep(0.000001)
+
+        elif units == "MBq/mL":
+            self.activity_hot_spin.setRange(0, 50.0)
+            self.activity_hot_spin.setSingleStep(0.0001)
+            self.activity_bg_spin.setRange(0, 1.0)
+            self.activity_bg_spin.setSingleStep(0.00001)
+
+        elif units == "kBq/mL":
+            self.activity_hot_spin.setRange(0, 50000.0)
+            self.activity_hot_spin.setSingleStep(0.1)
+            self.activity_bg_spin.setRange(0, 1000.0)
+            self.activity_bg_spin.setSingleStep(0.001)
+
+        # NOW set values (after ranges are updated)
+        logger.debug(f"Setting spinbox values: hot={hot_value}, bg={bg_value}")
+        self.activity_hot_spin.setValue(hot_value)
+        self.activity_bg_spin.setValue(bg_value)
+
+        self.activity_hot_spin.blockSignals(False)
+        self.activity_bg_spin.blockSignals(False)
+
+        # Update stored values
+        self.activity_hot = hot_value
+        self.activity_background = bg_value
+        self.activity_units = units
+
+        logger.debug(
+            f"Final: hot={self.activity_hot}, bg={self.activity_background}, units={self.activity_units}"
+        )
+
     def _generate_yaml_content(self) -> str:
         """Generate YAML configuration content."""
         yaml_lines = []
@@ -609,7 +859,7 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         # ACQUISITION section
         yaml_lines.append("ACQUISITION:")
         yaml_lines.append(
-            f"  EMMISION_IMAGE_TIME_MINUTES: {self.emission_image_time_minutes}"
+            f"  EMMISION_IMAGE_TIME_MINUTES: {int(self.emission_image_time_minutes)}"
         )
 
         # ACTIVITY section
@@ -641,6 +891,9 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         yaml_lines.append("ROIS:")
         yaml_lines.append(f"  CENTRAL_SLICE: {self.central_slice}")
         yaml_lines.append(f"  ORIENTATION_YX: {self.orientation_yx}")
+        yaml_lines.append("  BACKGROUND_OFFSET_YX:")
+        for offset in self.background_offset_yx:
+            yaml_lines.append(f"    - {list(offset)}")
 
         return "\n".join(yaml_lines) + "\n"
 
@@ -875,31 +1128,60 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         act_group.setLayout(act_layout)
         control_layout.addWidget(act_group)
 
-        # Slice control
         slice_group = QtWidgets.QGroupBox("Slice")
-        slice_layout = QtWidgets.QGridLayout()
+        slice_layout = QtWidgets.QGridLayout()  # Back to QGridLayout for grid positions
+
+        self.slice_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.slice_slider.setRange(0, self.image.shape[0] - 1)
+        self.slice_slider.setValue(self.central_slice)
+        self.slice_slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
+        self.slice_slider.setTickInterval(max(1, (self.image.shape[0] - 1) // 10))
+        self.slice_slider.valueChanged.connect(self._on_slice_changed)
+
         self.slice_spinbox = QtWidgets.QSpinBox()
         self.slice_spinbox.setRange(0, self.image.shape[0] - 1)
         self.slice_spinbox.setValue(self.central_slice)
-        self.slice_spinbox.valueChanged.connect(self._on_slice_changed)
+        self.slice_spinbox.valueChanged.connect(self._on_slice_spinbox_changed)
+
+        # Row 0: Z (Axial)
         slice_layout.addWidget(QtWidgets.QLabel("Z (Axial):"), 0, 0)
-        slice_layout.addWidget(self.slice_spinbox, 0, 1)
+        slice_layout.addWidget(self.slice_slider, 0, 1)
+        slice_layout.addWidget(self.slice_spinbox, 0, 2)
+        slice_layout.addWidget(QtWidgets.QLabel(f"/{self.image.shape[0] - 1}"), 0, 3)
+
+        # Row 1: X (Sagittal)
+        self.sagittal_slice_x_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
+        self.sagittal_slice_x_slider.setRange(0, self.image.shape[2] - 1)
+        self.sagittal_slice_x_slider.setValue(self.sagittal_slice_x)
+        self.sagittal_slice_x_slider.setTickPosition(
+            QtWidgets.QSlider.TickPosition.TicksBelow
+        )
+        self.sagittal_slice_x_slider.setTickInterval(
+            max(1, (self.image.shape[2] - 1) // 10)
+        )
+        self.sagittal_slice_x_slider.valueChanged.connect(
+            self._on_sagittal_slice_changed
+        )
 
         self.sagittal_slice_x_spinbox = QtWidgets.QSpinBox()
         self.sagittal_slice_x_spinbox.setRange(0, self.image.shape[2] - 1)
         self.sagittal_slice_x_spinbox.setValue(self.sagittal_slice_x)
         self.sagittal_slice_x_spinbox.valueChanged.connect(
-            self._on_sagittal_slice_changed
+            self._on_sagittal_slice_spinbox_changed
         )
+
         slice_layout.addWidget(QtWidgets.QLabel("X (Sagittal):"), 1, 0)
-        slice_layout.addWidget(self.sagittal_slice_x_spinbox, 1, 1)
+        slice_layout.addWidget(self.sagittal_slice_x_slider, 1, 1)
+        slice_layout.addWidget(self.sagittal_slice_x_spinbox, 1, 2)
+        slice_layout.addWidget(QtWidgets.QLabel(f"/{self.image.shape[2] - 1}"), 1, 3)
 
         slice_group.setLayout(slice_layout)
         control_layout.addWidget(slice_group)
 
-        # Orientation controls
         orient_group = QtWidgets.QGroupBox("Orientation")
-        orient_layout = QtWidgets.QHBoxLayout()
+        orient_layout = (
+            QtWidgets.QHBoxLayout()
+        )  # or QGridLayout() if you want grid format
 
         self.orient_y_spinbox = QtWidgets.QSpinBox()
         self.orient_y_spinbox.setRange(-1, 1)
@@ -1117,7 +1399,7 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         self._roi_circles = []
 
         # Draw circles for each ROI (centers are in Y,X format)
-        for roi in self.roi_defs:
+        for i, roi in enumerate(self.roi_defs):
             y, x = roi["center_yx"]
             radius_pix = (roi["diameter_mm"] / 2) / self.spacing
             color = roi.get("color", "yellow")
@@ -1127,10 +1409,18 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
                 (y - radius_pix, x - radius_pix),
                 (radius_pix * 2, radius_pix * 2),
                 pen=pg.mkPen(color, width=2),
-                movable=False,
+                movable=True,
                 rotatable=False,
                 resizable=False,
             )
+
+            circle_roi.removeHandle(0)
+
+            circle_roi.roi_type = "main"
+            circle_roi.roi_idx = i
+
+            circle_roi.sigRegionChanged.connect(self._on_any_roi_moved)
+
             self.view_axial.addItem(circle_roi)
             self._roi_circles.append(circle_roi)
             label_text = f"{roi.get('diameter_mm', 0)}mm"
@@ -1259,6 +1549,20 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         self.sagittal_slice_x = value
         self._update_display()
 
+    def _on_slice_spinbox_changed(self, value: int) -> None:
+        """Handle slice spinbox change and sync with slider."""
+        self.slice_slider.blockSignals(True)
+        self.slice_slider.setValue(value)
+        self.slice_slider.blockSignals(False)
+        self._on_slice_changed(value)
+
+    def _on_sagittal_slice_spinbox_changed(self, value: int) -> None:
+        """Handle sagittal slice spinbox change and sync with slider."""
+        self.sagittal_slice_x_slider.blockSignals(True)
+        self.sagittal_slice_x_slider.setValue(value)
+        self.sagittal_slice_x_slider.blockSignals(False)
+        self._on_sagittal_slice_changed(value)
+
     def _on_spacing_changed(self, value: float) -> None:
         """Handle spacing change."""
         self.spacing = value
@@ -1277,6 +1581,56 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         self.airwater_separation_mm = float(self.airwater_sep_spin.value())
         self._masks_cache_key = None
         self._update_display()
+
+    def _on_any_roi_moved(self, roi_obj=None) -> None:
+        """Handle any ROI being moved"""
+        sender = self.sender()
+
+        if not isinstance(sender, pg.CircleROI):
+            return
+
+        roi_type = getattr(sender, "roi_type", None)
+        roi_idx = getattr(sender, "roi_idx", None)
+
+        if roi_type is None or roi_idx is None:
+            logger.warning(
+                f"[_on_any_roi_moved] Missing metadata! type={roi_type}, idx={roi_idx}"
+            )
+            return
+
+        if roi_type == "main":
+            logger.debug(
+                f"[_on_any_roi_moved] Calling _handle_main_roi_moved for idx={roi_idx}"
+            )
+            self._handle_main_roi_moved(sender, roi_idx)
+
+    def _handle_main_roi_moved(self, circle_roi: pg.CircleROI, idx: int) -> None:
+        diameter = self.roi_defs[idx]["diameter_mm"]
+        radius_pix = (diameter / 2) / self.spacing
+
+        roi_pos = circle_roi.pos()
+        y_new = roi_pos.x() + radius_pix
+        x_new = roi_pos.y() + radius_pix
+
+        # Update in roi_defs instead of roi_centers
+        self.roi_defs[idx]["center_yx"] = [int(round(y_new)), int(round(x_new))]
+
+        label_index = (idx * 2) + 1
+        if label_index < len(self._roi_circles):
+            label = self._roi_circles[label_index]
+            if isinstance(label, pg.TextItem):
+                label.setPos(y_new, x_new - radius_pix)
+
+        if idx < len(self.roi_spinboxes):
+            self.roi_spinboxes[idx][0].blockSignals(True)
+            self.roi_spinboxes[idx][1].blockSignals(True)
+            self.roi_spinboxes[idx][0].setValue(int(round(y_new)))
+            self.roi_spinboxes[idx][1].setValue(int(round(x_new)))
+            self.roi_spinboxes[idx][0].blockSignals(False)
+            self.roi_spinboxes[idx][1].blockSignals(False)
+
+        if idx == 0:
+            self._update_background_roi_positions(int(round(y_new)), int(round(x_new)))
 
     def _on_center_params_changed(self, _value: object = None) -> None:
         """Handle phantom center parameter changes."""
@@ -1566,6 +1920,11 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         # Initialize ROI circles list
         self._roi_circles: List[pg.CircleROI] = []
 
+        self._main_roi_circles: List[pg.CircleROI] = []
+
+        # (circle, index)
+        self._background_rois_circles: List[Tuple[pg.CircleROI, int]] = []
+
         self._update_display()
 
     def _auto_detect_centers(self) -> List[List[int]]:
@@ -1591,7 +1950,7 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
 
         # Calculate threshold from percentile
         threshold = float(np.max(slice_img) * self.threshold_percentile)
-        logger.info(
+        logger.debug(
             f"Detection threshold: {threshold:.6f} (percentile {self.threshold_percentile}%)"
         )
 
@@ -1599,7 +1958,7 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         binary_mask = slice_img > threshold
         labeled_mask, num_features = ndimage_label(binary_mask)  # type: ignore[misc]
         num_features = int(num_features)
-        logger.info(f"Number of objects found: {num_features}")
+        logger.debug(f"Number of objects found: {num_features}")
 
         if num_features == 0:
             logger.warning("No objects detected. Using default positions.")
@@ -1699,11 +2058,45 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         self.activity_ratio_spin.setValue(self.activity_ratio)
         self.activity_ratio_spin.setSingleStep(0.1)
 
-        self.activity_units_edit = QtWidgets.QLineEdit()
-        self.activity_units_edit.setText(self.activity_units)
+        self.activity_units_edit = QtWidgets.QComboBox()
+        self.activity_units_edit.addItems(["mCi/mL", "MBq/mL", "kBq/mL"])
+        self.activity_units_edit.setCurrentText(self.activity_units)
+        self.activity_units_edit.currentTextChanged.connect(
+            self._on_activity_units_changed
+        )
 
-        self.activity_total_edit = QtWidgets.QLineEdit()
-        self.activity_total_edit.setText(self.activity_total)
+        total_layout = QtWidgets.QHBoxLayout()
+
+        self.activity_total_spin = QtWidgets.QDoubleSpinBox()
+        self.activity_total_spin.setLocale(QtCore.QLocale("en_US"))
+        self.activity_total_spin.setRange(0, 10000.0)
+        self.activity_total_spin.setDecimals(2)
+        self.activity_total_spin.setSingleStep(1.0)
+
+        total_value = 0
+        self.activity_total_units = "MBq/mL"
+
+        if self.activity_total:
+            try:
+                parts = self.activity_total.split()
+                total_value = float(parts[0])
+                if len(parts) > 1:
+                    self.activity_total_units = parts[1]
+            except (ValueError, IndexError):
+                total_value = 0
+
+        self.activity_total_spin = QtWidgets.QDoubleSpinBox()
+        self.activity_total_spin.setLocale(QtCore.QLocale("en_US"))
+        self.activity_total_spin.setRange(0, 10000.0)
+        self.activity_total_spin.setDecimals(2)
+        self.activity_total_spin.setSingleStep(1.0)
+        self.activity_total_spin.setValue(total_value)
+
+        self.activity_total_units_combo = QtWidgets.QComboBox()
+        self.activity_total_units_combo.addItems(["mCi/mL", "MBq/mL", "kBq/mL"])
+        self.activity_total_units_combo.setCurrentText("MBq/mL")
+
+        act_layout.addLayout(total_layout, 4, 0, 1, 2)
 
         act_layout.addWidget(QtWidgets.QLabel("HOT:"), 0, 0)
         act_layout.addWidget(self.activity_hot_spin, 0, 1)
@@ -1714,7 +2107,9 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         act_layout.addWidget(QtWidgets.QLabel("UNITS:"), 3, 0)
         act_layout.addWidget(self.activity_units_edit, 3, 1)
         act_layout.addWidget(QtWidgets.QLabel("TOTAL:"), 4, 0)
-        act_layout.addWidget(self.activity_total_edit, 4, 1)
+        act_layout.addWidget(self.activity_total_spin, 4, 1)
+        act_layout.addWidget(QtWidgets.QLabel("UNITS:"), 5, 0)
+        act_layout.addWidget(self.activity_total_units_combo, 5, 1)
 
         act_group.setLayout(act_layout)
         control_layout.addWidget(act_group)
@@ -1722,30 +2117,55 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         # Slice control
         slice_group = QtWidgets.QGroupBox("Slice")
         slice_layout = QtWidgets.QHBoxLayout()
+
+        self.slice_slider = QtWidgets.QSlider(QtCore.Qt.Orientation.Horizontal)
+        self.slice_slider.setRange(0, self.image.shape[0] - 1)
+        self.slice_slider.setValue(self.central_slice)
+        self.slice_slider.setTickPosition(QtWidgets.QSlider.TickPosition.TicksBelow)
+        self.slice_slider.setTickInterval(max(1, (self.image.shape[0] - 1) // 10))
+        self.slice_slider.valueChanged.connect(self._on_slice_changed)
+
         self.slice_spinbox = QtWidgets.QSpinBox()
         self.slice_spinbox.setRange(0, self.image.shape[0] - 1)
         self.slice_spinbox.setValue(self.central_slice)
-        self.slice_spinbox.valueChanged.connect(self._on_slice_changed)
+        self.slice_spinbox.valueChanged.connect(self._on_slice_spinbox_changed)
+
         slice_layout.addWidget(QtWidgets.QLabel("Z:"))
+        slice_layout.addWidget(self.slice_slider, 1)
         slice_layout.addWidget(self.slice_spinbox)
+        slice_layout.addWidget(QtWidgets.QLabel(f"/{self.image.shape[0] - 1}"))
+
         slice_group.setLayout(slice_layout)
         control_layout.addWidget(slice_group)
 
         # Orientation controls
         orient_group = QtWidgets.QGroupBox("Orientation")
-        orient_layout = QtWidgets.QGridLayout()
-        self.orient_y_spinbox = QtWidgets.QSpinBox()
-        self.orient_y_spinbox.setRange(-1, 1)
-        self.orient_y_spinbox.setValue(self.orientation_yx[0])
-        self.orient_y_spinbox.valueChanged.connect(self._on_orientation_changed)
-        self.orient_x_spinbox = QtWidgets.QSpinBox()
-        self.orient_x_spinbox.setRange(-1, 1)
-        self.orient_x_spinbox.setValue(self.orientation_yx[1])
-        self.orient_x_spinbox.valueChanged.connect(self._on_orientation_changed)
-        orient_layout.addWidget(QtWidgets.QLabel("Y:"), 0, 0)
-        orient_layout.addWidget(self.orient_y_spinbox, 0, 1)
-        orient_layout.addWidget(QtWidgets.QLabel("X:"), 1, 0)
-        orient_layout.addWidget(self.orient_x_spinbox, 1, 1)
+        orient_layout = QtWidgets.QHBoxLayout()
+
+        # Y orientation
+        y_widget = QtWidgets.QWidget()
+        y_layout = QtWidgets.QHBoxLayout()
+        self.orient_y_combo = QtWidgets.QComboBox()
+        self.orient_y_combo.addItems(["-1", "1"])
+        self.orient_y_combo.setCurrentText(str(self.orientation_yx[0]))
+        self.orient_y_combo.currentTextChanged.connect(self._on_orientation_changed)
+        y_layout.addWidget(QtWidgets.QLabel("Y:"))
+        y_layout.addWidget(self.orient_y_combo)
+        y_widget.setLayout(y_layout)
+
+        # X orientation
+        x_widget = QtWidgets.QWidget()
+        x_layout = QtWidgets.QHBoxLayout()
+        self.orient_x_combo = QtWidgets.QComboBox()
+        self.orient_x_combo.addItems(["-1", "1"])
+        self.orient_x_combo.setCurrentText(str(self.orientation_yx[1]))
+        self.orient_x_combo.currentTextChanged.connect(self._on_orientation_changed)
+        x_layout.addWidget(QtWidgets.QLabel("X:"))
+        x_layout.addWidget(self.orient_x_combo)
+        x_widget.setLayout(x_layout)
+
+        orient_layout.addWidget(y_widget)
+        orient_layout.addWidget(x_widget)
         orient_group.setLayout(orient_layout)
         control_layout.addWidget(orient_group)
 
@@ -1801,26 +2221,6 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         acq_group.setLayout(acq_layout)
         control_layout.addWidget(acq_group)
 
-        # FILE parameters (collapsible)
-        file_group = QtWidgets.QGroupBox("FILE")
-        file_group.setCheckable(True)
-        file_group.setChecked(False)
-        file_layout = QtWidgets.QGridLayout()
-
-        self.file_pattern_edit = QtWidgets.QLineEdit()
-        self.file_pattern_edit.setText(self.file_user_pattern)
-
-        self.file_case_edit = QtWidgets.QLineEdit()
-        self.file_case_edit.setText(self.file_case)
-
-        file_layout.addWidget(QtWidgets.QLabel("USER_PATTERN:"), 0, 0)
-        file_layout.addWidget(self.file_pattern_edit, 0, 1)
-        file_layout.addWidget(QtWidgets.QLabel("CASE:"), 1, 0)
-        file_layout.addWidget(self.file_case_edit, 1, 1)
-
-        file_group.setLayout(file_layout)
-        control_layout.addWidget(file_group)
-
         center_group = QtWidgets.QGroupBox("Phantom Center")
         center_group.setCheckable(True)
         center_group.setChecked(False)
@@ -1839,6 +2239,17 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         self.center_threshold_spinbox.valueChanged.connect(
             self._on_center_params_changed
         )
+
+        bg_roi_group = QtWidgets.QGroupBox("Background ROIs")
+        bg_roi_group.setCheckable(True)
+        bg_roi_group.setChecked(False)
+        bg_roi_layout = QtWidgets.QHBoxLayout()
+        self.btn_reset_bg = QtWidgets.QPushButton("Reset Background ROIs")
+        self.btn_reset_bg.clicked.connect(self._on_reset_background_rois)
+        bg_roi_layout.addWidget(self.btn_reset_bg)
+        bg_roi_group.setLayout(bg_roi_layout)
+        control_layout.addWidget(bg_roi_group)
+
         center_layout.addWidget(QtWidgets.QLabel("Method:"), 0, 0)
         center_layout.addWidget(self.center_method_combo, 0, 1)
         center_layout.addWidget(QtWidgets.QLabel("Threshold:"), 1, 0)
@@ -1896,71 +2307,268 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
 
     def _draw_roi_circles(self) -> None:
         """Draw interactive ROI circles on axial view."""
-        # Clear previous ROIs
+        logger.debug(f"[_draw_roi_circles] START - roi_centers: {self.roi_centers}")
+        # Clear previous ROIs and disconnect signals
         if not hasattr(self, "_roi_circles"):
             self._roi_circles = []
+
+        # Disconnect all signal handlers from old main ROI circles BEFORE removing them
+        if hasattr(self, "_main_roi_circles"):
+            logger.debug(
+                f"[_draw_roi_circles] Disconnecting {len(self._main_roi_circles)} old main ROI signals"
+            )
+            for circle in self._main_roi_circles:
+                try:
+                    circle.sigRegionChanged.disconnect()
+                except (TypeError, RuntimeError):
+                    pass  # Already disconnected
+
+        # Remove items from view
         for circle in self._roi_circles:
             try:
                 self.view_axial.removeItem(circle)
             except (ValueError, RuntimeError):
                 pass  # Already removed
+
         self._roi_circles = []
+        self._background_roi_circles = []
+        self._main_roi_circles = []
+
+        logger.debug("[_draw_roi_circles] Cleared all ROI lists")
 
         # Draw circles for each ROI sphere (centers are in Y,X format)
         for i, (x, y) in enumerate(self.roi_centers):
+            logger.debug(f"[_draw_roi_circles] Drawing main ROI {i}: y={y}, x={x}")
             diameter = self.sphere_diameters[i]
             radius_pix = (diameter / 2) / self.pixel_spacing
             color = self.sphere_colors[i]
 
-            # Create circle ROI (PyQtGraph expects x, y)
+            # Create circle ROI - NOW MOVABLE
             circle_roi = pg.CircleROI(
                 (x - radius_pix, y - radius_pix),
                 (radius_pix * 2, radius_pix * 2),
                 pen=pg.mkPen(color, width=2),
-                movable=False,
+                movable=True,
                 rotatable=False,
                 resizable=False,
             )
+
+            circle_roi.removeHandle(0)
+
+            # Store metadata on the circle object itself
+            circle_roi.roi_type = "main"
+            circle_roi.roi_idx = i
+            logger.debug(
+                f"[_draw_roi_circles] Set metadata for ROI {i}: type=main, idx={i}"
+            )
+
+            circle_roi.sigRegionChanged.connect(self._on_any_roi_moved)
+
             self.view_axial.addItem(circle_roi)
             self._roi_circles.append(circle_roi)
+            self._main_roi_circles.append(circle_roi)
+
             label = pg.TextItem(text=f"{diameter}mm", color=color, anchor=(0.5, -0.5))
             self.view_axial.addItem(label)
-            label.setPos(x, y - radius_pix - 10)  # Position label above the circle
-            self.view_axial.addItem(label)
+            label.setPos(x - radius_pix, y - radius_pix)
             self._roi_circles.append(label)
 
+            if i < len(self.roi_spinboxes):
+                logger.debug(
+                    f"[_draw_roi_circles] Syncing spinboxes for ROI {i}: y={y}, x={x}"
+                )
+                self.roi_spinboxes[i][0].blockSignals(True)
+                self.roi_spinboxes[i][1].blockSignals(True)
+                self.roi_spinboxes[i][0].setValue(y)
+                self.roi_spinboxes[i][1].setValue(x)
+                self.roi_spinboxes[i][0].blockSignals(False)
+                self.roi_spinboxes[i][1].blockSignals(False)
+
+        logger.debug(
+            f"[_draw_roi_circles] END - Drew {len(self._main_roi_circles)} main ROIs"
+        )
+        self.view_axial.repaint()
+        self.view_axial.getImageItem().update()
         # Draw background ROIs offset from 37mm sphere center
-        # Find the 37mm sphere (hot_sphere_37mm) - should be first in list (index 0)
         if len(self.roi_centers) > 0:
             centro_20_y, centro_20_x = self.roi_centers[0]
             background_radius = (20 / 2) / self.pixel_spacing
 
-            for dy, dx in self.background_offset_yx:
+            # Clear previous background ROI tracking
+            self._background_roi_circles = []
+
+            for bg_idx, (dx, dy) in enumerate(self.background_offset_yx):
                 # Apply orientation to offsets
                 dy_oriented = dy * self.orientation_yx[0]
                 dx_oriented = dx * self.orientation_yx[1]
 
                 # Calculate background ROI position
-                bg_y = centro_20_y + dy_oriented
-                bg_x = centro_20_x + dx_oriented
+                if self.pixel_spacing != 0.5:
+                    ratio = self.pixel_spacing / 0.5
+                    bg_y = centro_20_y + dy_oriented / ratio
+                    bg_x = centro_20_x + dx_oriented / ratio
+                else:
+                    bg_y = centro_20_y + dy_oriented
+                    bg_x = centro_20_x + dx_oriented
 
-                # Create dashed circle for background ROI
+                # Create movable circle for background ROI (NOT resizable)
+                # CircleROI expects (x, y) position for visual display
                 pen = pg.mkPen("orange", width=2)
                 pen.setDashPattern([5, 5])
                 background_roi = pg.CircleROI(
                     (bg_y - background_radius, bg_x - background_radius),
                     (background_radius * 2, background_radius * 2),
                     pen=pen,
-                    movable=False,
+                    movable=True,
                     rotatable=False,
                     resizable=False,
                 )
+
+                background_roi.removeHandle(0)
+
+                # Store metadata on the circle object itself
+                background_roi.roi_type = "background"
+                background_roi.roi_idx = bg_idx
+
+                background_roi.sigRegionChanged.connect(self._on_any_roi_moved)
+
                 self.view_axial.addItem(background_roi)
                 self._roi_circles.append(background_roi)
+                self._background_roi_circles.append(
+                    (background_roi, bg_idx, background_radius)
+                )
+
+    def _on_slice_spinbox_changed(self, value: int) -> None:
+        """Handle slice spinbox change and sync with slider."""
+        self.slice_slider.blockSignals(True)
+        self.slice_slider.setValue(value)
+        self.slice_slider.blockSignals(False)
+        self._on_slice_changed(value)
+
+    def _on_activity_total_units_changed(self, units: str) -> None:
+        """Handle activity total units change."""
+        logger.debug(f"Activity total units changed to {units}")
+        self.activity_total_units = units
+        self.activity_total_spin.setSuffix(f" {units}")
+
+    def _on_reset_background_rois(self) -> None:
+        """Reset background ROIs to default positions."""
+        logger.debug("[_on_reset_background_rois] START")
+        logger.debug(
+            f"[_on_reset_background_rois] roi_centers BEFORE reset: {self.roi_centers}"
+        )
+
+        self.background_offset_yx = list(BACKGROUND_OFFSET_YX_DEDICATEDIQ)
+
+        logger.debug("[_on_reset_background_rois] Reset background_offset_yx")
+        logger.debug("[_on_reset_background_rois] Calling _update_display...")
+
+        self._update_display()
+
+        logger.debug(
+            f"[_on_reset_background_rois] roi_centers AFTER reset: {self.roi_centers}"
+        )
+        logger.debug("[_on_reset_background_rois] END")
+
+    def _on_activity_units_changed(self, units: str) -> None:
+        """Handle activity units change and convert values."""
+        logger.debug(f"Activity units changed from {self.activity_units} to {units}")
+
+        # READ FROM STORED VALUES, NOT FROM SPINBOX (which may be clamped)
+        current_hot = self.activity_hot
+        current_bg = self.activity_background
+
+        logger.debug(
+            f"Current stored values: hot={current_hot}, bg={current_bg}, old_units={self.activity_units}"
+        )
+
+        # Convert FROM old units TO new units
+        if self.activity_units == "mCi/mL":
+            if units == "MBq/mL":
+                hot_value = current_hot * 37.0
+                bg_value = current_bg * 37.0
+            elif units == "kBq/mL":
+                hot_value = current_hot * 37000.0
+                bg_value = current_bg * 37000.0
+            else:
+                hot_value = current_hot
+                bg_value = current_bg
+
+        elif self.activity_units == "MBq/mL":
+            if units == "mCi/mL":
+                hot_value = current_hot / 37.0
+                bg_value = current_bg / 37.0
+            elif units == "kBq/mL":
+                hot_value = current_hot * 1000.0
+                bg_value = current_bg * 1000.0
+            else:
+                hot_value = current_hot
+                bg_value = current_bg
+
+        elif self.activity_units == "kBq/mL":
+            if units == "mCi/mL":
+                hot_value = current_hot / 37000.0
+                bg_value = current_bg / 37000.0
+            elif units == "MBq/mL":
+                hot_value = current_hot / 1000.0
+                bg_value = current_bg / 1000.0
+            else:
+                hot_value = current_hot
+                bg_value = current_bg
+        else:
+            hot_value = current_hot
+            bg_value = current_bg
+
+        logger.debug(
+            f"Converted values: hot={hot_value}, bg={bg_value}, new_units={units}"
+        )
+
+        # Update spinbox ranges FIRST, THEN set values
+        self.activity_hot_spin.blockSignals(True)
+        self.activity_bg_spin.blockSignals(True)
+
+        if units == "mCi/mL":
+            self.activity_hot_spin.setRange(0, 1.0)
+            self.activity_hot_spin.setSingleStep(0.00001)
+            self.activity_bg_spin.setRange(0, 0.001)
+            self.activity_bg_spin.setSingleStep(0.000001)
+
+        elif units == "MBq/mL":
+            self.activity_hot_spin.setRange(0, 50.0)
+            self.activity_hot_spin.setSingleStep(0.0001)
+            self.activity_bg_spin.setRange(0, 1.0)
+            self.activity_bg_spin.setSingleStep(0.00001)
+
+        elif units == "kBq/mL":
+            self.activity_hot_spin.setRange(0, 50000.0)
+            self.activity_hot_spin.setSingleStep(0.1)
+            self.activity_bg_spin.setRange(0, 1000.0)
+            self.activity_bg_spin.setSingleStep(0.001)
+
+        # NOW set values (after ranges are updated)
+        logger.debug(f"Setting spinbox values: hot={hot_value}, bg={bg_value}")
+        self.activity_hot_spin.setValue(hot_value)
+        self.activity_bg_spin.setValue(bg_value)
+
+        self.activity_hot_spin.blockSignals(False)
+        self.activity_bg_spin.blockSignals(False)
+
+        # Update stored values
+        self.activity_hot = hot_value
+        self.activity_background = bg_value
+        self.activity_units = units
+
+        logger.debug(
+            f"Final: hot={self.activity_hot}, bg={self.activity_background}, units={self.activity_units}"
+        )
 
     def _on_slice_changed(self, value: int) -> None:
         """Handle slice change."""
         self.central_slice = value
+        # Sync spinbox when slider moves
+        self.slice_spinbox.blockSignals(True)
+        self.slice_spinbox.setValue(value)
+        self.slice_spinbox.blockSignals(False)
         self._update_display()
 
     def _on_threshold_changed(self, value: float) -> None:
@@ -1989,10 +2597,13 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
     def _on_orientation_changed(self, value: int) -> None:
         """Handle orientation change."""
         self.orientation_yx = [
-            self.orient_y_spinbox.value(),
-            self.orient_x_spinbox.value(),
+            int(self.orient_y_combo.currentText()),
+            int(self.orient_x_combo.currentText()),
         ]
-        self._update_display()
+
+        if len(self.roi_centers) > 0:
+            centro_20_y, centro_20_x = self.roi_centers[0]
+            self._update_background_roi_positions(centro_20_y, centro_20_x)
 
     def _on_roi_center_changed(self, idx: int, value: int, is_y: bool) -> None:
         """Handle ROI center change."""
@@ -2000,7 +2611,158 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
             self.roi_centers[idx][0] = value
         else:
             self.roi_centers[idx][1] = value
-        self._draw_roi_circles()
+
+        if idx < len(self._main_roi_circles):
+            y, x = self.roi_centers[idx]
+            diameter = self.sphere_diameters[idx]
+            radius_pix = (diameter / 2) / self.pixel_spacing
+
+            circle = self._main_roi_circles[idx]
+            circle.setPos(x - radius_pix, y - radius_pix)
+
+            # If 20mm moved, update background positions too
+            if idx == 0:
+                self._update_background_roi_positions(y, x)
+
+    def _on_any_roi_moved(self, roi_obj=None) -> None:
+        """Handle any ROI (main or background) being moved."""
+        sender = self.sender()
+        if not isinstance(sender, pg.CircleROI):
+            return
+
+        roi_type = getattr(sender, "roi_type", None)
+        roi_idx = getattr(sender, "roi_idx", None)
+
+        logger.debug(f"[_on_any_roi_moved] Detected: type={roi_type}, idx={roi_idx}")
+
+        if roi_type is None or roi_idx is None:
+            logger.warning(
+                f"[_on_any_roi_moved] Missing metadata! type={roi_type}, idx={roi_idx}"
+            )
+            return
+
+        if roi_type == "main":
+            logger.debug(
+                f"[_on_any_roi_moved] Calling _handle_main_roi_moved for idx={roi_idx}"
+            )
+            self._handle_main_roi_moved(sender, roi_idx)
+        elif roi_type == "background":
+            logger.debug(
+                f"[_on_any_roi_moved] Calling _handle_background_roi_moved for idx={roi_idx}"
+            )
+            self._handle_background_roi_moved(sender, roi_idx)
+
+    def _handle_main_roi_moved(self, circle_roi: pg.CircleROI, idx: int) -> None:
+        """Handle main ROI circle movement."""
+        logger.debug(f"[_handle_main_roi_moved] START - idx={idx}")
+        logger.debug(f"[_handle_main_roi_moved] roi_centers BEFORE: {self.roi_centers}")
+
+        diameter = self.sphere_diameters[idx]
+        radius_pix = (diameter / 2) / self.pixel_spacing
+
+        roi_pos = circle_roi.pos()
+        # pos() returns (x, y) as top-left corner, add radius to get center
+        x_new = roi_pos.x() + radius_pix
+        y_new = roi_pos.y() + radius_pix
+
+        logger.debug(
+            f"[_handle_main_roi_moved] New position: y={y_new:.1f}, x={x_new:.1f}"
+        )
+
+        self.roi_centers[idx] = [int(round(y_new)), int(round(x_new))]
+        logger.debug(
+            f"[_handle_main_roi_moved] Updated roi_centers[{idx}] = {self.roi_centers[idx]}"
+        )
+        logger.debug(f"[_handle_main_roi_moved] roi_centers AFTER: {self.roi_centers}")
+
+        # Update label position (convert to display coords: x, y)
+        label_index = (idx * 2) + 1
+        if label_index < len(self._roi_circles):
+            label = self._roi_circles[label_index]
+            if isinstance(label, pg.TextItem):
+                label.setPos(x_new, y_new - radius_pix)
+
+        # Sync spinboxes
+        if idx < len(self.roi_spinboxes):
+            self.roi_spinboxes[idx][0].blockSignals(True)
+            self.roi_spinboxes[idx][1].blockSignals(True)
+            self.roi_spinboxes[idx][0].setValue(int(round(y_new)))
+            self.roi_spinboxes[idx][1].setValue(int(round(x_new)))
+            self.roi_spinboxes[idx][0].blockSignals(False)
+            self.roi_spinboxes[idx][1].blockSignals(False)
+
+        if idx == 0:
+            logger.debug(
+                "[_handle_main_roi_moved] Updating background ROI positions in place"
+            )
+            self._update_background_roi_positions(int(round(y_new)), int(round(x_new)))
+
+        logger.debug(f"[_handle_main_roi_moved] END - idx={idx}")
+
+    def _update_background_roi_positions(
+        self, centro_20_y: int, centro_20_x: int
+    ) -> None:
+        """Update background ROI visual positions without redrawing."""
+        background_radius = (20 / 2) / self.pixel_spacing
+
+        for bg_roi, stored_bg_idx, _ in self._background_roi_circles:
+            # BLOCK SIGNALS to prevent cascading updates
+            bg_roi.sigRegionChanged.disconnect()
+
+            dx, dy = self.background_offset_yx[stored_bg_idx]
+            dy_oriented = dy * self.orientation_yx[0]
+            dx_oriented = dx * self.orientation_yx[1]
+
+            if self.pixel_spacing != 0.5:
+                ratio = self.pixel_spacing / 0.5
+                bg_y = centro_20_y + dy_oriented / ratio
+                bg_x = centro_20_x + dx_oriented / ratio
+            else:
+                bg_y = centro_20_y + dy_oriented
+                bg_x = centro_20_x + dx_oriented
+
+            # Move the circle directly
+            bg_roi.setPos(bg_x - background_radius, bg_y - background_radius)
+
+            # RECONNECT SIGNAL
+            bg_roi.sigRegionChanged.connect(self._on_any_roi_moved)
+
+    def _handle_background_roi_moved(self, circle_roi: pg.CircleROI, idx: int) -> None:
+        """Handle background ROI circle movement."""
+        if idx >= len(self.background_offset_yx):
+            return
+
+        # Find background_radius from tracking
+        background_radius = None
+        for bg_roi, bg_idx, rad in self._background_roi_circles:
+            if bg_idx == idx:
+                background_radius = rad
+                break
+
+        if background_radius is None:
+            return
+
+        roi_pos = circle_roi.pos()
+        bg_x = roi_pos.x() + background_radius
+        bg_y = roi_pos.y() + background_radius
+
+        if len(self.roi_centers) > 0:
+            centro_20_y, centro_20_x = self.roi_centers[0]
+
+            dy_new = bg_y - centro_20_y
+            dx_new = bg_x - centro_20_x
+
+            if self.orientation_yx[0] != 0:
+                dy_new = dy_new / self.orientation_yx[0]
+            if self.orientation_yx[1] != 0:
+                dx_new = dx_new / self.orientation_yx[1]
+
+            if self.pixel_spacing != 0.5:
+                ratio = self.pixel_spacing / 0.5
+                dy_new = dy_new * ratio
+                dx_new = dx_new * ratio
+
+            self.background_offset_yx[idx] = (int(round(dy_new)), int(round(dx_new)))
 
     def _on_redetect(self) -> None:
         """Re-detect sphere centers."""
@@ -2018,10 +2780,8 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         self.activity_hot = self.activity_hot_spin.value()
         self.activity_background = self.activity_bg_spin.value()
         self.activity_ratio = self.activity_ratio_spin.value()
-        self.activity_units = self.activity_units_edit.text()
-        self.activity_total = self.activity_total_edit.text()
-        self.file_user_pattern = self.file_pattern_edit.text()
-        self.file_case = self.file_case_edit.text()
+        self.activity_units = self.activity_units_edit.currentText()
+        self.activity_total = f"{self.activity_total_spin.value()} {self.activity_total_units_combo.currentText()}"
 
         # Generate YAML content
         yaml_content = self._generate_yaml_content()
@@ -2059,7 +2819,7 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         # ACQUISITION section
         yaml_lines.append("ACQUISITION:")
         yaml_lines.append(
-            f"  EMMISION_IMAGE_TIME_MINUTES: {self.emission_image_time_minutes}"
+            f"  EMMISION_IMAGE_TIME_MINUTES: {int(self.emission_image_time_minutes)}"
         )
 
         # ACTIVITY section
@@ -2080,7 +2840,7 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
 
         for i in range(6):
             y, x = self.roi_centers[i]
-            yaml_lines.append(f"    - center_yx: [{y}, {x}]")
+            yaml_lines.append(f"    - center_yx: [{x}, {y}]")
             yaml_lines.append(f"      diameter_mm: {self.sphere_diameters[i]}")
             yaml_lines.append(f'      color: "{self.sphere_colors[i]}"')
             yaml_lines.append("      alpha: 0.18")
@@ -2091,10 +2851,18 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         yaml_lines.append("ROIS:")
         yaml_lines.append(f"  CENTRAL_SLICE: {self.central_slice}")
         yaml_lines.append(f"  SPACING: {self.pixel_spacing}")
-        yaml_lines.append(f"  ORIENTATION_YX: {self.orientation_yx}")
+        yaml_lines.append(
+            f"  ORIENTATION_YX: [{self.orientation_yx[1]}, {self.orientation_yx[0]}]"
+        )
         yaml_lines.append("  BACKGROUND_OFFSET_YX:")
-        for y, x in self.background_offset_yx:
-            yaml_lines.append(f"    - [{y}, {x}]")
+        for dy, dx in self.background_offset_yx:
+            if self.pixel_spacing != 0.5:
+                ratio = self.pixel_spacing / 0.5
+                dy = int(round(dy / ratio))
+                dx = int(round(dx / ratio))
+                yaml_lines.append(f"    - [{dy}, {dx}]")
+            else:
+                yaml_lines.append(f"    - [{dy}, {dx}]")
 
         return "\n".join(yaml_lines) + "\n"
 
