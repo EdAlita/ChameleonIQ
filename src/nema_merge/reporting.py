@@ -122,7 +122,7 @@ def generate_merged_plots(
 
     unique_diameters = sorted(df["diameter_mm"].unique())
     ax1.set_xlabel("Sphere Diameter (mm)")
-    ax1.set_ylabel("Contrast Recovery (%)")
+    ax1.set_ylabel("Percent Contrast (%)")
     ax1.set_xticks(unique_diameters)
 
     ax1.legend()
@@ -453,7 +453,7 @@ def generate_dose_merged_plot(
         framealpha=0.95,
     )
 
-    ax1.set_xlabel("Contrast Recovery (%)")
+    ax1.set_xlabel("Percent Contrast (%)")
     ax1.set_ylabel("DLP")
 
     ax1.yaxis.set_major_locator(MaxNLocator(6))
@@ -619,7 +619,7 @@ def generate_dose_merged_plot_any_sphere(
     cbar.set_label("DLP")
 
     ax1.set_xlabel("DLP")
-    ax1.set_ylabel("Contrast Recovery (%)")
+    ax1.set_ylabel("Percent Contrast (%)")
 
     ax2.set_xlabel("DLP")
     ax2.set_ylabel("Background Variability (%)")
