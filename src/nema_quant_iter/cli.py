@@ -21,6 +21,7 @@ import matplotlib
 import numpy as np
 import numpy.typing as npt
 import yacs.config
+from rich.highlighter import Highlighter
 from rich.logging import RichHandler
 
 from config.defaults import get_cfg_defaults
@@ -53,6 +54,18 @@ if is_headless:
 os.environ["QT_LOGGING_RULES"] = "*.debug=false;qt.qpa.*=false"
 
 matplotlib.use("Agg")  # Set non-interactive backend before importing pyplot
+
+
+class NumberHighlighter(Highlighter):
+    """Highlight numeric values in log messages without highlighting paths."""
+
+    _number_pattern = re.compile(
+        r"(?<![A-Za-z0-9_/.-])([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?%?)(?![A-Za-z0-9_/.-])"
+    )
+
+    def highlight(self, text: Any) -> None:
+        for match in self._number_pattern.finditer(text.plain):
+            text.stylize("bold cyan", match.start(1), match.end(1))
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -130,6 +143,14 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _log_section(title: str) -> None:
+    logging.info(f"── {title} ──")
+
+
+def _log_kv(key: str, value: Any, key_width: int = 20) -> None:
+    logging.info(f"{key + ':':<{key_width}} {value}")
+
+
 def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> None:
     """Configure logging for the application."""
 
@@ -153,7 +174,27 @@ def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> Non
         datefmt="[%H:%M:%S]",
         handlers=[
             logging.FileHandler(log_file_path, mode="w", encoding="utf-8"),
-            RichHandler(rich_tracebacks=True),
+            RichHandler(
+                rich_tracebacks=True,
+                markup=True,
+                show_path=False,
+                highlighter=NumberHighlighter(),
+                keywords=[
+                    "Logging initialized. Log file:",
+                    "Tool:",
+                    "Input folder:",
+                    "Output file:",
+                    "Config file:",
+                    "NEMA standard:",
+                    "Number of ROIs defined:",
+                    "Background offsets:",
+                    "File pattern:",
+                    "Number of .nii files found:",
+                    "Processing file:",
+                    "Average of Accuracy Corrections:",
+                    "Weighted CBR:",
+                ],
+            ),
         ],
     )
 
@@ -161,7 +202,7 @@ def setup_logging(log_level: int = 20, output_path: Optional[str] = None) -> Non
     logging.getLogger("PIL").setLevel(logging.WARNING)
     logging.getLogger("report_lab").setLevel(logging.WARNING)
 
-    logging.info(f"Log file created: {log_file_path}")
+    logging.info(f"Logging initialized. Log file: {log_file_path}")
 
 
 def load_configuration(
@@ -170,34 +211,12 @@ def load_configuration(
     """Load configuration from file or use defaults."""
     cfg = get_cfg_defaults()
 
-    standard_config_map = {
-        "NU_2_2018": "nema_phantom_config.yaml",
-        "NU_4_2008": "nema_phantom_config_nu4_2008.yaml",
-    }
-    standard_config_name = standard_config_map.get(standard)
-    if standard_config_name:
-        standard_config_path = (
-            Path(__file__).resolve().parents[2] / "config" / standard_config_name
-        )
-        if standard_config_path.exists():
-            logging.info(
-                f"Loading base config for standard {standard}: {standard_config_path}"
-            )
-            cfg.merge_from_file(str(standard_config_path))
-        else:
-            logging.warning(
-                f"Base config for standard {standard} not found at {standard_config_path}"
-            )
-
     if config_path:
         config_file = Path(config_path)
         if not config_file.exists():
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-        logging.info(f"Loading configuration: {config_path}")
         cfg.merge_from_file(config_path)
-    else:
-        logging.info("Using default configuration")
 
     return cfg
 
@@ -276,22 +295,16 @@ def process_single_iteration(
     """Process a single NIfTI iteration and return results based on standard."""
     iteration_num = iteration_info["iteration"]
     file_path = Path(iteration_info["path"])
-
-    logging.info(f" Processing iteration {iteration_num}: {file_path.name}")
+    _log_kv("Processing file", file_path.name)
 
     try:
-        logging.info(" Loading NIfTI image")
         image_data, affine = load_nii_image(file_path, return_affine=True)
-        logging.info(" Image loaded successfully")
 
         image_dims, voxel_spacing = get_image_properties(
             image_data, affine, args.spacing
         )
 
-        logging.info(" Initializing NEMA phantom...")
         phantom = NemaPhantom(cfg, image_dims, voxel_spacing)
-        logging.info(f" Phantom initialized with {len(phantom.rois)} ROIs")
-        logging.info(" Performing NEMA analysis...")
 
         if args.standard == "NU_4_2008":
             logging.info("Running NU_4_2008 analysis path")
@@ -304,10 +317,8 @@ def process_single_iteration(
                     visualizations_dir=args.visualizations_dir,
                 )
             )
-            logging.info(f" Iteration {iteration_num}: NU_4_2008 analysis completed")
             return crc_results, spillover_results, uniformity_results, None
         else:
-            logging.info("Running NU_2_2018 analysis path")
             results, lung_results = calculate_nema_metrics(
                 image_data,
                 phantom,
@@ -319,12 +330,8 @@ def process_single_iteration(
 
             values = list(lung_results.values())
             average = float(np.mean(values)) if values else 0.0
-            if args.standard == "DEDICATED_IQ":
-                logging.info(f" Iteration {iteration_num}: Spheres: {len(results)}")
-            else:
-                logging.info(
-                    f" Iteration {iteration_num}: Average Accuracy Correction: {average:.3f}%, Spheres: {len(results)}"
-                )
+            if args.standard != "DEDICATED_IQ":
+                _log_kv("Average of Accuracy Corrections", f"{average:.3f}%")
 
             return results, lung_results, None, None
 
@@ -343,18 +350,20 @@ def run_analysis(args: argparse.Namespace) -> int:
     try:
         numeric_level = getattr(logging, args.log_level.upper(), logging.INFO)
         setup_logging(numeric_level, args.output)
-
-        logging.info("Starting ChameleonIQ for Multiple Iterations")
-        logging.info(f" Input folder: {args.input_path}")
-        logging.info(f" Output file: {args.output}")
-        logging.info(f" NEMA standard: {args.standard}")
+        _log_section("Run")
+        _log_kv("Tool", "ChameleonIQ for Multiple Iterations")
+        _log_kv("Input folder", args.input_path)
+        _log_kv("Output file", args.output)
+        _log_kv("Config file", args.config)
+        _log_kv("NEMA standard", args.standard)
 
         try:
             cfg = load_configuration(args.config, args.standard)
-            logging.info(
-                f"Number of ROIs defined: {len(cfg.PHANTHOM.ROI_DEFINITIONS_MM)}"
-            )
-            logging.info(f"Background offsets: {len(cfg.ROIS.BACKGROUND_OFFSET_YX)}")
+
+            _log_section("Initialize")
+            _log_kv("Number of ROIs defined", len(cfg.PHANTHOM.ROI_DEFINITIONS_MM))
+            _log_kv("Background offsets", len(cfg.ROIS.BACKGROUND_OFFSET_YX))
+
         except Exception as e:
             logging.error(f"Failed to load configuration: {e}")
             if args.verbose:
@@ -372,9 +381,8 @@ def run_analysis(args: argparse.Namespace) -> int:
             print(f"ERROR: {error_msg}")
             return 1
 
-        logging.info(" Finding NIfTI iterations...")
         pattern = cfg.FILE.USER_PATTERN
-        logging.info(f" Looking for pattern: {pattern}")
+        _log_kv("File pattern", pattern)
         nii_iterations = get_nii_iterations(input_path, pattern)
 
         if not nii_iterations:
@@ -385,7 +393,7 @@ def run_analysis(args: argparse.Namespace) -> int:
             print(f"ERROR: {error_msg}")
             return 1
 
-        logging.info(f" Found {len(nii_iterations)} .nii files matching pattern")
+        _log_kv("Number of .nii files found", len(nii_iterations))
 
         all_results = []
         all_lung_results: Dict[int, Dict[int, float]] = {}
@@ -398,9 +406,7 @@ def run_analysis(args: argparse.Namespace) -> int:
         for i, iteration_info in enumerate(nii_iterations, 1):
             iteration_num = iteration_info["iteration"]
 
-            logging.info(
-                f"Processing iteration {i}/{total_iterations}: {iteration_num}"
-            )
+            _log_section(f"Processing Iteration {iteration_num}/{total_iterations}")
 
             result1, result2, result3, error = process_single_iteration(
                 iteration_info, cfg, args
@@ -427,14 +433,9 @@ def run_analysis(args: argparse.Namespace) -> int:
                 results, lung_results = result1, result2
                 metrics = calculate_weighted_cbr_from(results)
                 _cbrs = [float(x) for x in metrics["CBRs"]] if metrics["CBRs"] else []
-                logging.info(f"With the diameters {metrics['diameters']}")
-                logging.info(f"With the CBRs {_cbrs}")
-                logging.info(
-                    f"Iteration {iteration_num} Weighted CBR: {metrics['weighted_CBR']:.3f}"
-                )
-                logging.info(
-                    f"Iteration {iteration_num} Weighted FOM: {metrics['weighted_FOM']:.3f}"
-                )
+                logging.debug(f"With the diameters {metrics['diameters']}")
+                logging.debug(f"With the CBRs {_cbrs}")
+                _log_kv("Weighted CBR", f"{metrics['weighted_CBR']:.3f}")
 
                 if error is None and results is not None and lung_results is not None:
                     for result in results:
@@ -488,50 +489,25 @@ def run_analysis(args: argparse.Namespace) -> int:
             best_fom_iter_num, best_fom_metrics = max(
                 iteration_metrics.items(), key=lambda x: x[1]["weighted_FOM"]
             )
-            logging.info(
-                f"Iteration with highest weighted CBR: {best_cbr_iter_num} (CBR={best_cbr_metrics['weighted_CBR']:.3f})"
-            )
-            logging.info(
-                f"Iteration with highest weighted FOM: {best_fom_iter_num} (FOM={best_fom_metrics['weighted_FOM']:.3f})"
-            )
 
-            logging.info(
-                f"Processing complete: {successful_iterations // 6} successful, {failed_count // 6} failed"
+            _log_section("Data Summary")
+
+            _log_kv("Iteration with highest weighted CBR", best_cbr_iter_num)
+            _log_kv(
+                "Processing complete",
+                f"{successful_iterations // 6} successful, {failed_count // 6} failed",
             )
 
             if failed_iterations:
-                logging.warning("Failed iterations:")
+                _log_section("Failed iterations")
                 for iteration_num, error in failed_iterations:
-                    logging.warning(f"  Iteration {iteration_num}: {error}")
+                    _log_kv(f"  Iteration {iteration_num}", error)
 
             if successful_iterations == 0:
                 error_msg = "No iterations were processed successfully"
                 logging.error(error_msg)
                 print(f"ERROR: {error_msg}")
                 return 1
-
-            logging.info("Summary of results:")
-            for iteration_num in sorted(all_lung_results.keys()):
-                sphere_count = len(
-                    [r for r in all_results if r["iteration"] == iteration_num]
-                )
-                if args.standard == "DEDICATED_IQ":
-                    logging.info(f"  Iteration {iteration_num}: {sphere_count} spheres")
-                    continue
-
-                lung_results = all_lung_results[iteration_num]
-
-                lung_values = list(lung_results.values())
-                avg_lung = float(np.mean(lung_values)) if lung_values else 0.0
-
-                logging.info(
-                    f"  Iteration {iteration_num}: {sphere_count} spheres, avg lung correction: {avg_lung:.3f}%"
-                )
-
-            logging.info(
-                f"Total sphere measurements across all iterations: {len(all_results)}"
-            )
-            logging.info(f"Results stored for {successful_iterations // 6} iterations")
 
             from collections import defaultdict
 
@@ -551,21 +527,20 @@ def run_analysis(args: argparse.Namespace) -> int:
                 lung_values = list(lung_results.values())
                 avg_lung = float(np.mean(lung_values)) if lung_values else 0.0
                 if args.standard == "DEDICATED_IQ":
-                    logging.info(
-                        f"  Iteration {iteration_num}: {len(sphere_results)} spheres"
-                        f"avg contrast: {avg_contrast:.1f}%, avg background varibility: {avg_background:.1f}% "
+                    _log_kv(
+                        f"  Iteration {iteration_num}",
+                        f"avg contrast: {avg_contrast:.1f}%, avg background varibility: {avg_background:.1f}%",
                     )
                 else:
-                    logging.info(
-                        f"  Iteration {iteration_num}: {len(sphere_results)} spheres, "
-                        f"avg contrast: {avg_contrast:.1f}%, avg background varibility: {avg_background:.1f}% "
-                        f"avg lung correction: {avg_lung:.3f}%"
+                    _log_kv(
+                        f"  Iteration {iteration_num}",
+                        f"avg contrast: {avg_contrast:.1f}%, avg background varibility: {avg_background:.1f}% ,avg lung: {avg_lung:.1f}%",
                     )
 
-            logging.info("Data ready for plotting and analysis")
         else:
-            logging.info(
-                f"NU_4_2008 Analysis Iterations: {len(all_crc_results)} successful"
+            _log_section("Data Summary")
+            _log_kv(
+                "NU_4_2008 Analysis Iterations", f"{len(all_crc_results)} successful"
             )
 
             if failed_iterations:
@@ -579,8 +554,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                 print(f"ERROR: {error_msg}")
                 return 1
 
-            logging.info("Data ready for plotting and analysis")
-
+        _log_section("Plot Summary")
         try:
             output_path = Path(args.output)
             png_dir = output_path.parent / "png"
@@ -611,14 +585,12 @@ def run_analysis(args: argparse.Namespace) -> int:
 
                         logging.error(traceback.format_exc())
             else:
-                logging.info("Generating NU_2_2018 plots...")
                 generate_plots(all_results, png_dir, cfg)
                 generate_pc_vs_bg_plot(all_results, png_dir, cfg)
                 if args.standard == "NU_2_2018":
                     generate_boxplot_with_mean_std(all_lung_results, png_dir, cfg)
                 generate_wcbr_convergence_plot(all_results, png_dir, cfg)
                 generate_cbr_convergence_plot(all_results, png_dir, cfg)
-            logging.info("Plots generated successfully")
         except Exception as e:
             logging.error(f"Failed to generate plots: {e}")
             if args.verbose:
@@ -627,7 +599,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                 logging.error(traceback.format_exc())
             print(f"WARNING: Failed to generate plots: {e}")
 
-        logging.info(f"Saving results to: {args.output}")
+        _log_kv("Plots saved to", png_dir)
         try:
             output_path = Path(args.output)
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -709,11 +681,11 @@ def run_analysis(args: argparse.Namespace) -> int:
                     (cfg.ROIS.SPACING, cfg.ROIS.SPACING, cfg.ROIS.SPACING),
                     args.standard,
                 )
-                logging.info("Text results saved successfully")
+                logging.debug("Text results saved successfully")
 
                 try:
                     pdf_output_path = output_path.with_suffix(".pdf")
-                    logging.info(f"Generating PDF report: {pdf_output_path}")
+                    _log_kv("Generating PDF report", pdf_output_path)
                     generate_reportlab_report(
                         all_results,
                         all_lung_results,
@@ -729,7 +701,7 @@ def run_analysis(args: argparse.Namespace) -> int:
                         wcbr_conv_path,
                         args.standard,
                     )
-                    logging.info("PDF report saved successfully")
+                    logging.debug("PDF report saved successfully")
                 except Exception as e:
                     logging.error(f"Failed to generate PDF report: {e}")
                     if args.verbose:
@@ -747,8 +719,6 @@ def run_analysis(args: argparse.Namespace) -> int:
             print(f"ERROR: Failed to save results: {e}")
             return 1
 
-        logging.info("Analysis completed successfully")
-        print("SUCCESS: Analysis completed successfully")
         return 0
 
     except KeyboardInterrupt:
