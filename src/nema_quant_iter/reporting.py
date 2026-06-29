@@ -94,7 +94,6 @@ def generate_plots(
 
     csv_path = output_dir.parent / "csv" / "results_data.csv"
     df_filtered.to_csv(csv_path, index=False)
-    logger.info(f"Results data saved as CSV: {csv_path}")
 
     if len(df_filtered) == 0:
         logger.warning("No data available after filtering iterations 1-2")
@@ -179,7 +178,7 @@ def generate_plots(
     plot_configs = [
         (
             "percentaje_constrast_QH",
-            "Contrast Recovery (%)",
+            "Percent Contrast (%)",
             "Contrast by Sphere Diameter",
         ),
         (
@@ -265,16 +264,6 @@ def generate_plots(
     plt.savefig(str(output_path), bbox_inches="tight", dpi=600)
 
     plt.close()
-
-    logger.info("Publication-quality plots saved:")
-    logger.info(f"  PNG (600 DPI): {output_path}")
-    logger.info(f"  Total iterations: {len(iterations)}")
-    logger.info(f"  Key iterations shown: {[int(i) for i in key_iterations]}")
-    logger.info(
-        f"  BEST CBR iteration: {int(highest_cbr_iter)} (CBR: {iter_cbr_map[highest_cbr_iter]:.2f}) - SOLID LINE"
-    )
-    logger.info("  All other iterations shown with DASHED LINES")
-    logger.info(f"  Sphere diameters: {[int(d) for d in unique_diameters]} mm")
 
 
 def generate_pc_vs_bg_plot(
@@ -432,7 +421,7 @@ def generate_pc_vs_bg_plot(
                             zorder=20,
                         )
 
-    ax.set_ylabel("Contrast Recovery (%)")
+    ax.set_ylabel("Percent Contrast (%)")
     ax.set_xlabel("Background Variability (%)")
 
     ax.tick_params(axis="both", labelsize=20, width=1.2)
@@ -477,16 +466,6 @@ def generate_pc_vs_bg_plot(
     plt.savefig(str(output_path), bbox_inches="tight", dpi=600)
 
     plt.close()
-
-    logger.info("Simplified Contrast vs BG plot saved:")
-    logger.info(f"  Sphere diameters: {[int(d) for d in diameters]} mm")
-    logger.info(f"  Total iterations: {len(iterations)} (excluded 1, 2)")
-    logger.info("  Key iterations highlighted:")
-    logger.info(f"    - First: It{first_iter}")
-    logger.info(
-        f"    - Best CBR: It{best_cbr_iter}* (CBR: {iter_cbr_map[best_cbr_iter]:.2f})"
-    )
-    logger.info(f"    - Final: It{final_iter}")
 
 
 def generate_wcbr_convergence_plot(
@@ -666,9 +645,6 @@ def generate_wcbr_convergence_plot(
 
     plt.close()
 
-    logger.info("wCBR convergence analysis plot saved:")
-    logger.info(f"  PNG (600 DPI): {output_path}")
-    logger.info(f"  Total iterations: {len(iterations)} (excluded 1, 2)")
     logger.info("  wCBR Analysis:")
     logger.info(
         f"    - Peak wCBR: {max_cbr_value:.3f} at iteration {int(max_cbr_iter)}"
@@ -680,18 +656,6 @@ def generate_wcbr_convergence_plot(
         logger.info(f"    - Convergence detected at iteration {int(convergence_iter)}")
     else:
         logger.info("    - No clear convergence pattern detected")
-
-    logger.info(f"  Best wCBR iteration set globally: {BEST_CBR_ITERATION}")
-
-    logger.info("  wCBR statistics by iteration:")
-    for _, row in cbr_stats.iterrows():
-        logger.info(
-            f"    Iter {int(row['iteration'])}: "
-            f"Mean={row['mean']:.3f}, "
-            f"Std={row['std']:.3f}, "
-            f"Range=[{row['min']:.3f}-{row['max']:.3f}], "
-            f"N={int(row['count'])} spheres"
-        )
 
 
 def generate_cbr_convergence_plot(
@@ -1114,10 +1078,6 @@ def generate_cbr_convergence_plot(
 
     plt.close()
 
-    logger.info("CBR convergence analysis plot saved:")
-    logger.info(f"  PNG (600 DPI): {output_path}")
-    logger.info(f"  Total iterations: {len(iterations)} (excluded 1, 2)")
-
 
 def generate_boxplot_with_mean_std(
     all_lung_results: Dict[int, Dict[int, float]],
@@ -1312,29 +1272,6 @@ def generate_boxplot_with_mean_std(
     plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
 
     plt.close()
-
-    logger.info("Publication-quality lung correction boxplot saved:")
-    logger.info(f"  Total iterations available: {len(iterations)} (excluded 1, 2)")
-    logger.info(f"  Key iterations shown: {[int(i) for i in key_iterations]}")  # type: ignore[arg-type]
-    logger.info(
-        f"    - First: Iter {first_iter} (Mean: {iteration_means[first_iter]:.2f}%)"  # type: ignore[index]
-    )
-    logger.info(
-        f"    - Best CBR: Iter {best_cbr_iter} (Mean: {iteration_means[best_cbr_iter]:.2f}%)"  # type: ignore[index]
-    )
-    logger.info(
-        f"    - Final: Iter {final_iter} (Mean: {iteration_means[final_iter]:.2f}%)"  # type: ignore[index]
-    )
-
-    logger.info("  Lung correction statistics for key iterations:")
-    for __iteration in key_iterations:
-        values = list(filtered_results[__iteration].values())  # type: ignore[index]
-        logger.info(
-            f"    Iteration {int(__iteration)}: "  # type: ignore[arg-type]
-            f"Mean={float(np.mean(values)):.2f}%, "
-            f"Std={float(np.std(values)):.2f}%, "
-            f"N={len(values)} slices"
-        )
 
 
 def _header(
@@ -1784,7 +1721,6 @@ def generate_reportlab_report(
         elements.append(Paragraph(line, body_style))
 
     doc.build(elements)
-    logger.info(f"NEMA NU 2-2018 PDF report generated: {output_path}")
 
 
 def save_results_to_txt(
@@ -2085,8 +2021,6 @@ def save_results_to_txt(
         f.write("End of Multi-Iteration NU 2-2018 Report\n")
         f.write("=" * 90 + "\n")
 
-    logger.info(f"NEMA NU 2-2018 results saved to: {output_path}")
-
 
 # ============================================================================
 # NU 4-2008 ITERATION-BASED REPORTING FUNCTIONS
@@ -2170,7 +2104,6 @@ def generate_crc_convergence_plot_nu4_iter(
     plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
     plt.close()
 
-    logger.info(f"CRC convergence plot saved: {output_path}")
     return output_path
 
 
@@ -2256,7 +2189,6 @@ def generate_spillover_convergence_plot_nu4_iter(
     plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
     plt.close()
 
-    logger.info(f"Spillover convergence plot saved: {output_path}")
     return output_path
 
 
@@ -2338,7 +2270,6 @@ def generate_uniformity_convergence_plot_nu4_iter(
     plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
     plt.close()
 
-    logger.info(f"Uniformity convergence plot saved: {output_path}")
     return output_path
 
 
@@ -2485,8 +2416,6 @@ def save_results_to_txt_nu4_iter(
         f.write("=" * 90 + "\n")
         f.write("End of Multi-Iteration NU 4-2008 Report\n")
         f.write("=" * 90 + "\n")
-
-    logger.info(f"NEMA NU 4-2008 results saved to: {output_path}")
 
 
 def generate_reportlab_report_nu4_iter(
@@ -2729,4 +2658,3 @@ def generate_reportlab_report_nu4_iter(
         elements.append(Spacer(1, 0.2 * inch))
 
     doc.build(elements)
-    logger.info(f"NEMA NU 4-2008 PDF report generated: {output_path}")
