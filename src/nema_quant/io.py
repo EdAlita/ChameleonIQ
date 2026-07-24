@@ -23,7 +23,10 @@ logger = logging.getLogger(__name__)
 
 
 def load_nii_image(
-    filepath: Path, return_affine: bool = False, inverse_axes: bool = False
+    filepath: Path,
+    return_affine: bool = False,
+    inverse_axes: bool = False,
+    outliner: bool = False,
 ) -> Tuple[npt.NDArray[Any], Optional[npt.NDArray[Any]]]:
     """Load a NIfTI image into a NumPy array.
 
@@ -37,6 +40,10 @@ def load_nii_image(
         Path to the NIfTI image file.
     return_affine : bool, optional
         If True, also return the 4x4 affine matrix. Default is False.
+    inverse_axes : bool, optional
+        If True, invert the y and x axes. Default is False.
+    outliner : bool, optional
+        If True, remove outliers from the image data. Default is False.
 
     Returns
     -------
@@ -66,6 +73,20 @@ def load_nii_image(
         image_data = sitk.GetArrayFromImage(sitk_image)
 
         image_data = image_data.astype(np.float32)
+
+        if outliner:
+            # Remove outliers by clipping the maximum value to the second highest value
+            logger.debug(
+                f"Min and Max values before clipping: {np.min(image_data)}, {np.max(image_data)}"
+            )
+            max_val = image_data.max()
+            second_max = image_data[image_data < max_val].max()
+
+            image_data = np.where(image_data == max_val, second_max, image_data)
+            logger.debug(
+                f"Min and Max values after clipping: {np.min(image_data)}, {np.max(image_data)}"
+            )
+
         if inverse_axes:
             image_data = np.transpose(image_data, (0, 2, 1))  # Reorder to (z, y, x)
 
