@@ -27,30 +27,6 @@ from .utils import (
 _logger = logging.getLogger(__name__)
 
 
-def _propagate_ratio(
-    mu1: float,
-    mu2: float,
-    var1: float,
-    var2: float,
-    cov12: float = 0.0,
-    eps: float = 1e-12,
-) -> float:
-    """
-    First-order Taylor variance propagation for ratio mu1 / mu2.
-    Returns standard deviation.
-    """
-
-    if abs(mu2) < eps:
-        return 0.0
-
-    grad1 = 1.0 / mu2
-    grad2 = -mu1 / (mu2**2)
-
-    var = grad1**2 * var1 + grad2**2 * var2 + 2.0 * grad1 * grad2 * cov12
-
-    return float(np.sqrt(max(var, 0.0)))
-
-
 def extract_circular_mask_2d(
     slice_dims: Tuple[int, int],
     roi_center_vox: Tuple[float, float],
@@ -224,13 +200,16 @@ def _calculate_hot_sphere_counts_offset_zxy(
     central_slice_idx: int,
     save_visualizations: bool = False,
     viz_dir: Optional[Path] = None,
+    protocol: Optional[str] = "NU_2_2018",
 ) -> Dict[str, Dict[str, float]]:  # Changed return type
     """Internal function to calculate the mean counts (C_H) for each hot sphere."""
 
     offsets_xy = [(dy, dx) for dy in range(-10, 11) for dx in range(-10, 11)]
-    offsets_z = list(range(-10, 11))
-    # offsets_xy = [(dy, dx) for dy in range(-1, 2) for dx in range(-1, 2)]
-    # offsets_z = list(range(-1, 2))
+
+    if protocol == "DEDICATED_IQ":
+        offsets_z = list(range(0, 1))
+    else:
+        offsets_z = list(range(-10, 11))
 
     hot_sphere_counts = {}
 
@@ -404,14 +383,12 @@ def _calculate_crc_std(
 
         y, x = sphere_roi["center_vox"]
 
-        # Create 2D mask for the ROD VOI
         roi_mask = extract_circular_mask_2d(
             (image_data.shape[1], image_data.shape[2]),
             sphere_roi["center_vox"],
             voi_radius_vox,
         )
 
-        # Get (y,x) coordinates where mask is True
         y_coords, x_coords = np.where(roi_mask)
 
         if len(y_coords) == 0:
@@ -479,7 +456,6 @@ def _calculate_crc_std(
         else:
             rc_est = rod_est.ratio(uniform_est)
 
-        # Calculate coefficient of variation for rod and uniform region (NEMA NU4 style)
         cv_rod = (
             np.std(best_profile) / np.mean(best_profile)
             if abs(np.mean(best_profile)) > eps
@@ -491,7 +467,6 @@ def _calculate_crc_std(
             else 0.0
         )
 
-        # Combined %STD: propagate both rod and uniform variability
         percentage_std_combined = 100.0 * np.sqrt(cv_rod**2 + cv_uniform**2)
 
         crc_results[voi_radius_vox / 2.0] = {  # type: ignore[index]
@@ -742,16 +717,38 @@ def calculate_nema_metrics(
         )
 
     central_slices_idx = cfg.ROIS.CENTRAL_SLICE
-    cm_in_z_vox = phantom._mm_to_voxels(10, 2)
-    slices_indices = sorted(
-        {
-            central_slices_idx,
-            int(round(central_slices_idx + cm_in_z_vox)),
-            int(round(central_slices_idx - cm_in_z_vox)),
-            int(round(central_slices_idx + 2 * cm_in_z_vox)),
-            int(round(central_slices_idx - 2 * cm_in_z_vox)),
-        }
-    )
+
+    if protocol == "DEDICATED_IQ":
+        cm_in_z_vox = 1.0  # phantom._mm_to_voxels(2.00, 2)
+        slices_indices = sorted(
+            {
+                central_slices_idx,
+                int(round(central_slices_idx + cm_in_z_vox)),
+                int(round(central_slices_idx - cm_in_z_vox)),
+                int(round(central_slices_idx + 2 * cm_in_z_vox)),
+                int(round(central_slices_idx - 2 * cm_in_z_vox)),
+                int(round(central_slices_idx + 3 * cm_in_z_vox)),
+                int(round(central_slices_idx - 3 * cm_in_z_vox)),
+                int(round(central_slices_idx + 4 * cm_in_z_vox)),
+                int(round(central_slices_idx - 4 * cm_in_z_vox)),
+                int(round(central_slices_idx + 5 * cm_in_z_vox)),
+            }
+        )
+        _logger.debug(
+            f"Using DEDICATED_IQ protocol: z offsets ±0.25mm steps, total slices: {len(slices_indices)}"
+        )
+        _logger.debug(f"Calculated slice indices for background: {slices_indices}")
+    else:
+        cm_in_z_vox = phantom._mm_to_voxels(10, 2)
+        slices_indices = sorted(
+            {
+                central_slices_idx,
+                int(round(central_slices_idx + cm_in_z_vox)),
+                int(round(central_slices_idx - cm_in_z_vox)),
+                int(round(central_slices_idx + 2 * cm_in_z_vox)),
+                int(round(central_slices_idx - 2 * cm_in_z_vox)),
+            }
+        )
 
     background_stats = _calculate_background_stats(
         image_data,
@@ -771,6 +768,7 @@ def calculate_nema_metrics(
         central_slices_idx,
         save_visualizations=save_visualizations,
         viz_dir=viz_dir,
+        protocol=protocol,
     )
 
     results = []
@@ -781,7 +779,11 @@ def calculate_nema_metrics(
     mode = cfg.STATISTICS.MODE
     sd_model = cfg.STATISTICS.SD_VARIANCE_MODEL
 
-    _logger.info(f"{'mm':^4} | {'RC [%]':^13} | {'BV [%]':^12}")
+    if protocol == "NU_2_2018":
+        _logger.info(f"{'mm':^4} | {'PC [%]':^13} | {'BV [%]':^12}")
+    else:
+        _logger.info(f"{'mm':^4} | {'PC [%]':^13} | {'BV [%]':^12}")
+
     _logger.info(f"{'-'*4} | {'-'*13} | {'-'*12}")
 
     for name, hot_data in hot_sphere_counts.items():
@@ -789,8 +791,6 @@ def calculate_nema_metrics(
         sphere_def = phantom.get_roi(name)
         if sphere_def is None:
             continue
-
-        sphere_diam_mm = int(round(sphere_def["diameter"]))
 
         sphere_diam_mm = int(round(sphere_def["diameter"]))
 
@@ -812,7 +812,7 @@ def calculate_nema_metrics(
 
         if abs(bkg_est.mean) < eps:
             _logger.warning(
-                f"Sphere {sphere_diam_mm}mm skipped: C_B too small ({bkg_est.mean:.3e})"
+                f"Sphere {sphere_def['diameter']}mm skipped: C_B too small ({bkg_est.mean:.3e})"
             )
             continue
 
@@ -837,14 +837,14 @@ def calculate_nema_metrics(
         if sphere_diam_mm == 37:
             CB_37 = bkg_est.mean
         _logger.info(
-            f"{sphere_diam_mm:>4.1f} | "
-            f"{qh_est.mean:>5.2f} ± {qh_est.std:>4.2f}% | "
-            f"{n_est.mean:>5.2f} ± {n_est.std:>4.2f}%"
+            f"{sphere_def['diameter']:>4.1f} | "
+            f"{qh_est.mean:>5.2f} ± {qh_est.std:>5.2f} | "
+            f"{n_est.mean:>5.2f} ± {n_est.std:>4.2f}"
         )
 
         results.append(
             {
-                "diameter_mm": sphere_diam_mm,
+                "diameter_mm": sphere_def["diameter"],
                 "percentaje_constrast_QH": qh_est.mean,
                 "percentaje_constrast_QH_error": qh_est.std,
                 "percentaje_constrast_QH_%STD": (
