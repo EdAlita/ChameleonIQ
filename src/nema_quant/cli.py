@@ -156,6 +156,13 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--outliner",
+        action="store_true",
+        help="Remove outliers from the image data by clipping the maximum value to the second highest value",
+        default=False,
+    )
+
+    parser.add_argument(
         "--version", action="version", version=f"%(prog)s {version('ChameleonIQ')}"
     )
 
@@ -308,8 +315,12 @@ def run_analysis(args: argparse.Namespace) -> int:
         _log_kv("Loading NIfTI image", input_path.name)
         try:
             image_data, affine = load_nii_image(
-                input_path, return_affine=True, inverse_axes=cfg.ROIS.INVERSE_AXES
+                input_path,
+                return_affine=True,
+                inverse_axes=cfg.ROIS.INVERSE_AXES,
+                outliner=args.outliner,
             )
+
             logging.debug("Image loaded successfully")
         except Exception as e:
             logging.error(f"Failed to load image: {e}")
