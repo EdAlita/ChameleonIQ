@@ -45,6 +45,21 @@ BACKGROUND_OFFSET_YX: List[Tuple[int, int]] = [
     (25, -3),
 ]
 
+# BACKGROUND_OFFSET_YX: List[Tuple[int, int]] = [
+#     (-50, -57),  # (-16 - 34, -28 - 29)
+#     (-67, -48),  # (-33 - 34, -19 - 29)
+#     (-74, -30),  # (-40 - 34, -1 - 29)
+#     (-69, -1),   # (-35 - 34, 28 - 29)
+#     (-73, 21),   # (-39 - 34, 50 - 29)
+#     (-66, 40),   # (-32 - 34, 69 - 29)
+#     (-49, 50),   # (-15 - 34, 79 - 29)
+#     (-31, 47),   # (3 - 34, 76 - 29)
+#     (-15, 36),   # (19 - 34, 65 - 29)
+#     (0, 22),     # (34 - 34, 51 - 29)
+#     (4, -1),     # (38 - 34, 28 - 29)
+#     (-9, -32),   # (25 - 34, -3 - 29)
+# ]
+
 BACKGROUND_OFFSET_YX_DEDICATEDIQ = [
     (-41, 44),  # + , -
     (100, -60),
@@ -76,6 +91,7 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         threshold_percentile: float = 50.0,
         pixel_spacing: float = DEFAULT_PIXEL_SPACING,
         background_offset_yx: Optional[List[Tuple[int, int]]] = None,
+        rotate_angle: float = 0.0,
     ):
         """
         Initialize the interactive ROI editor.
@@ -92,6 +108,8 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
             Voxel spacing in mm
         background_offset_yx : Optional[List[Tuple[int, int]]]
             Background ROI offsets from center 37mm sphere
+        rotate_angle : float
+            Angle in degrees to rotate the background ROIs around the 37mm sphere
         """
         super().__init__()
         self.image = image
@@ -99,6 +117,7 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         self.orientation_yx = [1, 1]
         self.threshold_percentile = threshold_percentile
         self.pixel_spacing = pixel_spacing
+        self.rotate_angle = rotate_angle
         self.background_offset_yx = self._convert_offsets_to_current_spacing(
             BACKGROUND_OFFSET_YX
         )
@@ -137,6 +156,12 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
         # Auto-detect sphere centers
         self.roi_centers = self._auto_detect_centers()
 
+        # Rotate background offsets if necessary
+        if self.rotate_angle != 0.0:
+            self.background_offset_yx = self.rotate_background_offsets(
+                self.background_offset_yx, self.rotate_angle
+            )
+
         # Setup Qt UI with PyQtGraph
         self.setWindowTitle("NEMA NU 2-2018 ROIs Editor")
         self.setGeometry(100, 100, 1600, 900)
@@ -163,6 +188,25 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
             f"Converted offsets from spacing {DEFAULT_PIXEL_SPACING} to {self.pixel_spacing}: ratio={ratio}"
         )
         return converted
+
+    def rotate_background_offsets(
+        self, offsets: List[Tuple[int, int]], degrees: float
+    ) -> List[Tuple[int, int]]:
+        """
+        Rotate a list of (y, x) offsets by a given number of degrees
+        and return the values rounded to integers.
+        """
+        theta = np.radians(degrees)
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
+
+        new_offsets = []
+        for dy, dx in offsets:
+            new_dy = dy * cos_theta - dx * sin_theta
+            new_dx = dy * sin_theta + dx * cos_theta
+            new_offsets.append((int(round(new_dy)), int(round(new_dx))))
+        logger.debug(f"Rotated background offsets: {new_offsets}")
+        return new_offsets
 
     def _auto_detect_centers(self) -> List[List[int]]:
         """
@@ -2922,6 +2966,13 @@ def main() -> None:
         default=False,
     )
 
+    parser.add_argument(
+        "--rotate-angle",
+        type=float,
+        default=0.0,
+        help="Angle in degrees to rotate the background ROIs around the 37mm sphere",
+    )
+
     args = parser.parse_args()
 
     # Load image
@@ -3052,6 +3103,7 @@ def main() -> None:
         initial_slice=initial_slice,
         threshold_percentile=args.threshold,
         pixel_spacing=spacing_value,
+        rotate_angle=args.rotate_angle,
     )
     editor.show()
     app.exec()
