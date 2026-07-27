@@ -442,7 +442,7 @@ def generate_pc_vs_bg_plot(
                 [0],
                 color=color,
                 linewidth=3,
-                linestyle=line_style,
+                linestyle=line_style,  # type: ignore[arg-type]
                 marker=marker_style,
                 markersize=8,
                 markerfacecolor="white",

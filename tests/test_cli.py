@@ -785,6 +785,7 @@ def test_cli_advanced_metrics_calculation_error_returns_1(
 @patch("src.nema_quant.cli.generate_coronal_sphere_plots")
 @patch("src.nema_quant.cli.generate_boxplot_with_mean_std")
 @patch("src.nema_quant.cli.generate_transverse_sphere_plots")
+@patch("src.nema_quant.cli.generate_rois_plots_coronal")
 @patch("src.nema_quant.cli.generate_rois_plots")
 @patch("src.nema_quant.cli.generate_plots")
 @patch("src.nema_quant.cli.calculate_nema_metrics")
@@ -792,6 +793,7 @@ def test_cli_integration_with_temp_nifti(
     mock_calculate_metrics,
     mock_generate_plots,
     mock_generate_rois,
+    mock_generate_rois_coronal,
     mock_generate_transverse,
     mock_generate_boxplot,
     mock_generate_coronal,
@@ -831,6 +833,7 @@ def test_cli_integration_with_temp_nifti(
     assert result == 0
     assert mock_calculate_metrics.called
     assert mock_save_results.called
+    assert mock_generate_rois_coronal.called
 
 
 @patch("src.nema_quant.cli.generate_reportlab_report_nu4")

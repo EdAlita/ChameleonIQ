@@ -561,7 +561,7 @@ class InteractiveROIEditor(QtWidgets.QMainWindow):
             except (ValueError, RuntimeError):
                 pass  # Already removed
         self._roi_circles = []
-        self._background_roi_circles = []
+        self._background_roi_circles: List[Tuple[pg.CircleROI, int, float]] = []
 
         # Draw circles for each ROI sphere (centers are in Y,X format)
         for i, (x, y) in enumerate(self.roi_centers):
@@ -2117,7 +2117,7 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
         self.activity_total_spin.setDecimals(2)
         self.activity_total_spin.setSingleStep(1.0)
 
-        total_value = 0
+        total_value: float = 0.0
         self.activity_total_units = "MBq/mL"
 
         if self.activity_total:
@@ -2375,7 +2375,7 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
                 pass  # Already removed
 
         self._roi_circles = []
-        self._background_roi_circles = []
+        self._background_roi_circles: List[Tuple[pg.CircleROI, int, float]] = []
         self._main_roi_circles = []
 
         logger.debug("[_draw_roi_circles] Cleared all ROI lists")
@@ -2778,7 +2778,7 @@ class InteractiveROIEditorDedicatedIQ(QtWidgets.QMainWindow):
 
         # Find background_radius from tracking
         background_radius = None
-        for bg_roi, bg_idx, rad in self._background_roi_circles:
+        for _bg_roi, bg_idx, rad in self._background_roi_circles:
             if bg_idx == idx:
                 background_radius = rad
                 break

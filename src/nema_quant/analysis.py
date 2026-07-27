@@ -1274,3 +1274,14 @@ def calculate_advanced_metrics(
     for k, v in values.items():
         _logger.info(f" {k}: {v:.7f}")
     return values
+
+
+def _propagate_ratio(mu1, mu2, var1, var2, cov12, eps=1e-9) -> float:
+    if abs(mu2) < eps:
+        return 0.0
+    ratio = mu1 / mu2
+    term1 = (var1 / mu1**2) if abs(mu1) >= eps else 0.0
+    term2 = var2 / mu2**2
+    term3 = (2.0 * cov12 / (mu1 * mu2)) if abs(mu1) >= eps else 0.0
+    variance = max((ratio**2) * (term1 + term2 - term3), 0.0)
+    return float(np.sqrt(variance))

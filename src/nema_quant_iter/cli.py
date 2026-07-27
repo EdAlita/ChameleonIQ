@@ -403,7 +403,7 @@ def run_analysis(args: argparse.Namespace) -> int:
         failed_iterations: List[Tuple[int, str]] = []
 
         total_iterations = len(nii_iterations)
-        for i, iteration_info in enumerate(nii_iterations, 1):
+        for _i, iteration_info in enumerate(nii_iterations, 1):
             iteration_num = iteration_info["iteration"]
 
             _log_section(f"Processing Iteration {iteration_num}/{total_iterations}")

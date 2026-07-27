@@ -104,7 +104,9 @@ def test_generate_rois_plots(mock_close, mock_savefig, mock_cfg):
     test_image = np.random.rand(100, 250, 250)
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        reporting.generate_rois_plots(test_image, Path(tmpdir), mock_cfg)
+        reporting.generate_rois_plots(
+            test_image, Path(tmpdir), mock_cfg, protocol="NU_2_2018"
+        )
         # Function should complete without error
 
 

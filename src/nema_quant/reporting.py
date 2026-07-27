@@ -1458,8 +1458,8 @@ def generate_rois_plots_coronal(
 
     for dy, dx in background_offset:
         rz = cfg.ROIS.CENTRAL_SLICE
-        bg_y = centro_37[0] + dy
-        bg_x = centro_37[1] + dx
+        bg_y = centro_37[0] + dy  # type: ignore[index]
+        bg_x = centro_37[1] + dx  # type: ignore[index]
 
         if abs(bg_y - center_y) < background_radius:
             x_start = bg_x - background_radius

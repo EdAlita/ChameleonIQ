@@ -182,7 +182,7 @@ ax.imshow(
     sagittal.T,
     cmap="gray",
     vmin=0,
-    vmax=np.percentile(data, 99),
+    vmax=float(np.percentile(data, 99)),
     aspect="auto",
     origin="lower",
 )
