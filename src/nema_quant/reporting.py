@@ -54,6 +54,7 @@ def save_results_to_txt(
     cfg: yacs.config.CfgNode,
     input_image_path: Path,
     voxel_spacing: Tuple[float, float, float],
+    protocol: str = "NU_2_2018",
 ) -> None:
     """
     Saves NEMA analysis results to a formatted text file.
@@ -115,10 +116,14 @@ def save_results_to_txt(
         f.write("ANALYSIS RESULTS:\n")
         f.write("-" * 40 + "\n")
         f.write("Sphere Analysis Results (NEMA NU 2-2018 Section 7.4.1)\n\n")
-
-        f.write(
-            f"{'Diameter':<10} {'Q_H (%)':<10} {'N (%)':<10} {'C_H':<12} {'C_B':<12} {'SD_B':<12}\n"
-        )
+        if protocol == "NU_2_2018":
+            f.write(
+                f"{'Diameter':<10} {'PC (%)':<10} {'BV (%)':<10} {'C_H':<12} {'C_B':<12} {'SD_B':<12}\n"
+            )
+        else:
+            f.write(
+                f"{'Diameter':<10} {'PC (%)':<10} {'N (%)':<10} {'C_H':<12} {'C_B':<12} {'SD_B':<12}\n"
+            )
         f.write(
             f"{'(mm)':<10} {'':<10} {'':<10} {'(counts)':<12} {'(counts)':<12} {'(counts)':<12}\n"
         )
@@ -140,8 +145,11 @@ def save_results_to_txt(
 
         f.write("LEGEND:\n")
         f.write("-" * 40 + "\n")
-        f.write("Q_H (%)  : Percent Contrast (Hot sphere)\n")
-        f.write("N (%)    : Percent Background Variability\n")
+        if protocol == "NU_2_2018":
+            f.write("PC (%)  : Percent Contrast (Hot sphere)\n")
+        else:
+            f.write("PC (%)  : Percent Contrast (Hot Rods)\n")
+        f.write("BV (%)    : Background Variability\n")
         f.write("C_H      : Mean counts in hot sphere\n")
         f.write("C_B      : Mean background counts\n")
         f.write("SD_B     : Standard deviation of background\n")
@@ -149,8 +157,12 @@ def save_results_to_txt(
 
         f.write("NEMA NU 2-2018 FORMULAS:\n")
         f.write("-" * 40 + "\n")
-        f.write("Q_H,j (%) = [(C_H,j / C_B,j) - 1] / [(a_H / a_B) - 1] × 100\n")
-        f.write("N_j (%)   = (SD_B,j / C_B,j) × 100\n")
+        if protocol == "NU_2_2018":
+            f.write("PC,j (%) = [(C_H,j / C_B,j) - 1] / [(a_H / a_B) - 1] × 100\n")
+            f.write("BV_j (%)   = (SD_B,j / C_B,j) × 100\n")
+        else:
+            f.write("PC,j (%) = [(C_H,j / C_B,j) - 1] / [(a_H / a_B) - 1] × 100\n")
+            f.write("BV_j (%)   = (SD_B,j / C_B,j) × 100\n")
         f.write("\n")
         f.write("Where:\n")
         f.write("  j       = sphere index\n")
@@ -167,7 +179,10 @@ def save_results_to_txt(
         avg_variability = sum(r["background_variability_N"] for r in results) / len(
             results
         )
-        f.write(f"Average Percent Contrast: {avg_contrast:.2f}%\n")
+        if protocol != "NU_2_2018":
+            f.write(f"Average Percent Contrast: {avg_contrast:.2f}%\n")
+        else:
+            f.write(f"Average Contrast Recovery: {avg_contrast:.2f}%\n")
         f.write(f"Average Background Variability: {avg_variability:.2f}%\n")
         f.write(f"Number of spheres analyzed: {len(results)}\n")
         f.write("\n")
@@ -244,7 +259,7 @@ def save_results_to_txt_nu4(
         f.write("-" * 40 + "\n")
         f.write("Sphere Analysis Results (NEMA NU 4-2008 Section 7.4.1)\n\n")
 
-        f.write("CRC RESULTS (NU 4-2008):\n")
+        f.write("RC RESULTS (NU 4-2008):\n")
         f.write("-" * 40 + "\n")
         f.write(f"{'ROD Diameter':<14} {'RC':<10} {'%STD':<10}\n")
         f.write(f"{'(mm)':<14} {'':<10} {'':<10}\n")
@@ -373,6 +388,7 @@ def generate_reportlab_report(
     plot_path: Optional[Path] = None,
     rois_loc_path: Optional[Path] = None,
     boxplot_path: Optional[Path] = None,
+    protocol: str = "NU_2_2018",
 ) -> None:
     """
     Generates a PDF report for NEMA quality analysis results using ReportLab.
@@ -496,9 +512,14 @@ def generate_reportlab_report(
         if results
         else 0.0
     )
-    elements.append(
-        Paragraph(f"Average Percent Contrast: {avg_contrast:.2f}%", body_style)
-    )
+    if protocol != "NU_2_2018":
+        elements.append(
+            Paragraph(f"Average Percent Contrast: {avg_contrast:.2f}%", body_style)
+        )
+    else:
+        elements.append(
+            Paragraph(f"Average Percent Contrast: {avg_contrast:.2f}%", body_style)
+        )
     elements.append(
         Paragraph(f"Average Background Variability: {avg_variability:.2f}%", body_style)
     )
@@ -515,13 +536,23 @@ def generate_reportlab_report(
     elements.append(Paragraph("<b>Analysis Results</b>", header_style))
     elements.append(Spacer(1, 0.1 * inch))
 
-    table_data = [
-        [
-            "Sphere Diameter (mm)",
-            "Percent Contrast Q_H (%)",
-            "Background Variability N (%)",
+    if protocol == "NU_2_2018":
+        table_data = [
+            [
+                "Sphere Diameter (mm)",
+                "Percent Contrast Q_H (%)",
+                "Background Variability N (%)",
+            ]
         ]
-    ]
+    else:
+        table_data = [
+            [
+                "Sphere Diameter (mm)",
+                "Percent Contrast Q_H (%)",
+                "Background Variability N (%)",
+            ]
+        ]
+
     for result in results:
         table_data.append(
             [
@@ -604,7 +635,11 @@ def generate_reportlab_report(
 
     elements.append(Paragraph("<b>Legend and Formulas</b>", header_style))
     legend = [
-        "• Q<sub>H</sub> (%): Percent contrast for hot spheres",
+        (
+            "• Q<sub>H</sub> (%): Contrast Recovery for hot spheres"
+            if protocol == "NU_2_2018"
+            else "• Q<sub>H</sub> (%): Percent contrast for hot spheres"
+        ),
         "• N (%): Background variability",
         "• C<sub>H</sub>: Mean counts in hot sphere",
         "• C<sub>B</sub>: Mean background counts",
@@ -886,6 +921,7 @@ def generate_plots(
     results: List[Dict[str, Any]],
     output_dir: Path,
     cfg: yacs.config.CfgNode,
+    protocol: str = "NU_2_2018",
 ) -> None:
     """
     Generates the plot for the results of the NEMA analysis.
@@ -900,6 +936,8 @@ def generate_plots(
         Destination path for saving the plot.
     cfg : yacs.config.CfgNode
         Configuration object used for the analysis.
+    protocol : str, optional
+        The protocol to use for generating the plot, by default "NU_2_2018".
 
     Returns
     -------
@@ -917,11 +955,13 @@ def generate_plots(
 
     fig, axes = plt.subplots(1, 2, figsize=(24, 10), sharex=True)
 
+    ylabels = ["PC [%]" if protocol == "NU_2_2018" else "PC [%]", "BV [%]"]
+
     for ax, yvar, yerror, ylabel in zip(
         axes,
         ["percentaje_constrast_QH", "background_variability_N"],
         ["percentaje_constrast_QH_error", "background_variability_error"],
-        ["CR [%]", "BV [%]"],
+        ylabels,
     ):
         ax.errorbar(
             df["diameter_mm"],
@@ -1001,7 +1041,7 @@ def generate_crc_plots_nu4(
     for ax, yvar, ylabel, yerror in zip(
         axes,
         ["RC", "percent_std"],
-        ["CR [%]", "Percent STD [%]"],
+        ["RC [%]", "Percent STD [%]"],
         ["cError", None],
     ):
         if yerror == "cError":
@@ -1185,7 +1225,7 @@ def generate_boxplot_with_mean_std(
         f"μ={mean_val:.2f}",
         ha="center",
         va="bottom",
-        fontsize=10,
+        fontsize=24,
         bbox={
             "boxstyle": "round,pad=0.3",
             "facecolor": "white",
@@ -1202,7 +1242,7 @@ def generate_boxplot_with_mean_std(
         "Accuracy of Correction in Lung Insert (%)",
     )
 
-    plt.tick_params(axis="both", labelsize=12, width=1.2)
+    plt.tick_params(axis="both", labelsize=24, width=1.2)
     plt.tick_params(axis="x", rotation=0)
 
     plt.gca().set_axisbelow(True)
@@ -1242,20 +1282,37 @@ def generate_rois_plots(
         for y, x in cfg.ROIS.BACKGROUND_OFFSET_YX
     ]
     pixel_spacing = cfg.ROIS.SPACING
+    slice_data = image[cfg.ROIS.CENTRAL_SLICE]
 
-    fig, ax2 = plt.subplots(figsize=(10, 10))
-    ax2.imshow(image[cfg.ROIS.CENTRAL_SLICE], cmap="binary", origin="lower")
+    useful_pixels = slice_data[slice_data > 0.0001]
+
+    if len(useful_pixels) > 0:
+        dinamic_vmax = np.percentile(useful_pixels, 99)
+    else:
+        dinamic_vmax = np.max(slice_data)
+
+    fig, ax2 = plt.subplots(figsize=(12, 12))
+    ax2.imshow(
+        slice_data,
+        cmap="binary",
+        origin="lower",
+        vmax=dinamic_vmax,
+    )
 
     for roi in rois:
         y, x = roi["center_yx"]
         radius_pix = (roi["diameter_mm"] / 2) / pixel_spacing
+        if protocol == "DEDICATED_IQ":
+            label = roi["name"].replace("sphere", "circle")
+        else:
+            label = roi["name"]
         circle = Circle(
             (x, y),
             radius_pix,
             edgecolor=roi["color"],
             alpha=roi["alpha"],
             lw=2,
-            label=roi["name"],
+            label=label,
         )
         if roi["name"] == "hot_sphere_37mm":
             centro_37 = roi["center_yx"]
@@ -1267,14 +1324,12 @@ def generate_rois_plots(
     else:
         background_radius = (20 / 2) / pixel_spacing
 
-    # Find the 37mm sphere center, use it as reference for background ROIs
     centro_37 = None
     for roi in rois:
         if roi["name"] == "hot_sphere_37mm":
             centro_37 = roi["center_yx"]
             break
 
-    # If 37mm sphere not found, use first ROI or default center
     if centro_37 is None:
         if rois:
             centro_37 = rois[0]["center_yx"]
@@ -1295,14 +1350,27 @@ def generate_rois_plots(
         ax2.add_patch(circle)
         ax2.plot(background_x, background_y, "o", color="orange", markersize=7)
 
+    noise_threshold = 0.05 * dinamic_vmax
+    active_rows = np.any(slice_data > noise_threshold, axis=1)
+    active_cols = np.any(slice_data > noise_threshold, axis=0)
+
+    if np.any(active_rows) and np.any(active_cols):
+        ymin, ymax = np.where(active_rows)[0][[0, -1]]
+        xmin, xmax = np.where(active_cols)[0][[0, -1]]
+
+        padding = 5
+        ax2.set_ylim(ymin - padding, ymax + padding)
+        ax2.set_xlim(xmin - padding, xmax + padding)
+
     handles, labels = ax2.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ax2.legend(
         by_label.values(),
         by_label.keys(),
-        loc="lower right",
-        fontsize=12,
-        framealpha=0.7,
+        loc="center left",
+        bbox_to_anchor=(1.02, 0.5),
+        fontsize=20,
+        framealpha=0.9,
     )
     ax2.set_aspect("equal")
     ax2.set_xlabel("X (pixels)")
@@ -1312,6 +1380,159 @@ def generate_rois_plots(
 
     output_path = output_dir / "rois_location.png"
     plt.savefig(str(output_path), dpi=300, bbox_inches="tight")
+    plt.close()
+
+
+def generate_rois_plots_coronal(
+    image: npt.NDArray[Any], output_dir: Path, cfg: Any, protocol: str
+) -> None:
+    """
+    Generates a coronal projection/slice plot centered on the largest ROI.
+    """
+    rois = cfg.PHANTHOM.ROI_DEFINITIONS_MM
+    pixel_spacing = cfg.ROIS.SPACING
+    background_offset = [
+        (y * cfg.ROIS.ORIENTATION_YX[0], x * cfg.ROIS.ORIENTATION_YX[1])
+        for y, x in cfg.ROIS.BACKGROUND_OFFSET_YX
+    ]
+
+    largest_roi = max(rois, key=lambda x: x["diameter_mm"])
+    center_y, center_x = largest_roi["center_yx"]
+
+    coronal_slice = image[:, center_y, :]
+
+    useful_pixels = coronal_slice[coronal_slice > 0.0001]
+    dinamic_vmax = (
+        np.percentile(useful_pixels, 99)
+        if len(useful_pixels) > 0
+        else np.max(coronal_slice)
+    )
+
+    fig, ax2 = plt.subplots(figsize=(12, 6))
+    ax2.imshow(
+        coronal_slice,
+        cmap="binary",
+        origin="lower",
+        aspect="auto",
+        vmax=dinamic_vmax,
+    )
+
+    for roi in rois:
+        rz = cfg.ROIS.CENTRAL_SLICE
+        ry, rx = roi["center_yx"]
+
+        diameter_pix = roi["diameter_mm"] / pixel_spacing
+
+        if protocol == "DEDICATED_IQ":
+            label = roi["name"].replace("sphere", "circle")
+        else:
+            label = roi["name"]
+
+        if abs(ry - center_y) < (diameter_pix / 2):
+            z_start = rx - (diameter_pix / 2)
+            z_end = rx + (diameter_pix / 2)
+
+            ax2.plot(
+                [z_start, z_end],
+                [rz, rz],
+                color=roi["color"],
+                linewidth=4,
+                alpha=0.8,
+                label=label,
+            )
+
+            ax2.plot(rx, rz, "+", color=roi["color"], markersize=10)
+
+    centro_37 = next(
+        (r["center_yx"] for r in rois if r["name"] == "hot_sphere_37mm"), None
+    )
+    if centro_37 is None and rois:
+        centro_37 = rois[0]["center_yx"]
+
+    if protocol == "NU_2_2018":
+        background_radius = (37 / 2) / pixel_spacing
+    else:
+        background_radius = (20 / 2) / pixel_spacing
+
+    bg_label_added = False
+
+    for dy, dx in background_offset:
+        rz = cfg.ROIS.CENTRAL_SLICE
+        bg_y = centro_37[0] + dy
+        bg_x = centro_37[1] + dx
+
+        if abs(bg_y - center_y) < background_radius:
+            x_start = bg_x - background_radius
+            x_end = bg_x + background_radius
+
+            label = ""
+            if not bg_label_added:
+                label = "Background"
+                bg_label_added = True
+
+            ax2.plot(
+                [x_start, x_end], [rz, rz], color="orange", lw=2, ls="--", label=label
+            )
+
+            cm_in_z_vox = 1.0
+            slices_indices = sorted(
+                {
+                    rz,
+                    int(round(rz + cm_in_z_vox)),
+                    int(round(rz - cm_in_z_vox)),
+                    int(round(rz + 2 * cm_in_z_vox)),
+                    int(round(rz - 2 * cm_in_z_vox)),
+                    int(round(rz + 3 * cm_in_z_vox)),
+                    int(round(rz - 3 * cm_in_z_vox)),
+                    int(round(rz + 4 * cm_in_z_vox)),
+                    int(round(rz - 4 * cm_in_z_vox)),
+                    int(round(rz + 5 * cm_in_z_vox)),
+                }
+            )
+
+            for slice_idx in slices_indices:
+                ax2.plot(
+                    [x_start, x_end],
+                    [slice_idx, slice_idx],
+                    color="orange",
+                    lw=1,
+                    ls="--",
+                    label="",
+                )
+            ax2.plot(bg_x, rz, "o", color="orange", markersize=5)
+
+    noise_threshold = 0.05 * dinamic_vmax
+    active_rows = np.any(coronal_slice > noise_threshold, axis=1)
+    active_cols = np.any(coronal_slice > noise_threshold, axis=0)
+
+    if np.any(active_rows) and np.any(active_cols):
+        ymin, ymax = np.where(active_rows)[0][[0, -1]]
+        xmin, xmax = np.where(active_cols)[0][[0, -1]]
+
+        padding = 5
+        ax2.set_ylim(ymin - padding, ymax + padding)
+        ax2.set_xlim(xmin - padding, xmax + padding)
+
+    handles, labels = ax2.get_legend_handles_labels()
+
+    by_label = dict(zip(labels, handles))
+    ax2.legend(
+        by_label.values(),
+        by_label.keys(),
+        loc="center left",
+        bbox_to_anchor=(1.02, 0.5),
+        fontsize=20,
+        framealpha=0.9,
+    )
+    ax2.set_aspect("equal")
+
+    ax2.set_xlabel("X (pixels)")
+    ax2.set_ylabel("Z (pixels)")
+    ax2.grid(False)
+
+    plt.tight_layout()
+    output_path = output_dir / "rois_location_coronal.png"
+    plt.savefig(str(output_path), dpi=300)
     plt.close()
 
 
@@ -1337,6 +1558,15 @@ def generate_transverse_sphere_plots(
     """
     rois = cfg.PHANTHOM.ROI_DEFINITIONS_MM
 
+    central_slice = image[cfg.ROIS.CENTRAL_SLICE]
+
+    pixeles_utiles = central_slice[central_slice > 0.0001]
+
+    if len(pixeles_utiles) > 0:
+        vmax_dinamico = np.percentile(pixeles_utiles, 99)
+    else:
+        vmax_dinamico = np.max(central_slice)
+
     _, axs = plt.subplots(1, len(rois), figsize=(3 * len(rois), 3))
     if len(rois) == 1:
         axs = [axs]
@@ -1347,9 +1577,8 @@ def generate_transverse_sphere_plots(
         crop = image[
             cfg.ROIS.CENTRAL_SLICE, y - 10 : y + 10, x - 10 : x + 10  # noqa: E203
         ]
-        # crop = crop >= 0.41 * np.max(crop)
-        # logging.debug(f"Unique values in crop for {roi['name']}: {np.unique(crop)}")
-        ax.imshow(crop, cmap="binary", origin="lower")
+
+        ax.imshow(crop, cmap="binary", origin="lower", vmin=0.0, vmax=vmax_dinamico)
         ax.axis("off")
         ax.set_title(roi["diameter_mm"], y=-0.15)
 
@@ -1384,6 +1613,15 @@ def generate_coronal_sphere_plots(
     """
     rois = cfg.PHANTHOM.ROI_DEFINITIONS_MM
 
+    central_slice = image[cfg.ROIS.CENTRAL_SLICE]
+
+    pixeles_utiles = central_slice[central_slice > 0.0001]
+
+    if len(pixeles_utiles) > 0:
+        vmax_dinamico = np.percentile(pixeles_utiles, 99)
+    else:
+        vmax_dinamico = np.max(central_slice)
+
     fig, axs = plt.subplots(1, len(rois), figsize=(3 * len(rois), 3))
     if len(rois) == 1:
         axs = [axs]
@@ -1397,7 +1635,7 @@ def generate_coronal_sphere_plots(
             x - 10 : x + 10,  # noqa: E203
         ]
 
-        ax.imshow(crop, cmap="binary", origin="lower")
+        ax.imshow(crop, cmap="binary", origin="lower", vmin=0.0, vmax=vmax_dinamico)
         ax.axis("off")
         ax.set_title(roi["diameter_mm"], y=-0.15)
 
@@ -1430,8 +1668,31 @@ def generate_torso_plot(
     None
         This function does not return a value; the plot is saved to disk.
     """
-    fig, ax2 = plt.subplots(figsize=(10, 10))
-    ax2.imshow(image[cfg.ROIS.CENTRAL_SLICE], cmap="binary", origin="lower")
+    slice_data = image[cfg.ROIS.CENTRAL_SLICE]
+
+    pixeles_utiles = slice_data[slice_data > 0.0001]
+
+    vmax_dinamico = np.percentile(pixeles_utiles, 99)
+
+    fig, ax2 = plt.subplots(figsize=(12, 12))
+    ax2.imshow(
+        slice_data,
+        cmap="binary",
+        origin="lower",
+        vmax=vmax_dinamico,
+    )
+
+    noise_threshold = 0.05 * vmax_dinamico
+    active_rows = np.any(slice_data > noise_threshold, axis=1)
+    active_cols = np.any(slice_data > noise_threshold, axis=0)
+
+    if np.any(active_rows) and np.any(active_cols):
+        ymin, ymax = np.where(active_rows)[0][[0, -1]]
+        xmin, xmax = np.where(active_cols)[0][[0, -1]]
+
+        padding = 5
+        ax2.set_ylim(ymin - padding, ymax + padding)
+        ax2.set_xlim(xmin - padding, xmax + padding)
 
     ax2.set_aspect("equal")
     ax2.axis("off")
@@ -1520,9 +1781,15 @@ def generate_iq_plot(
     plt.rcParams.update(dict(cfg.STYLE.RCPARAMS))
 
     fig, axes = plt.subplots(1, 2, figsize=(20, 10))
-    fig.suptitle("NEMA NU 4-2008 IQ ROIs")
 
-    axes[0].imshow(image[cfg.ROIS.CENTRAL_SLICE], cmap="binary", origin="lower")
+    slice_data = image[cfg.ROIS.CENTRAL_SLICE]
+    useful_pixels = slice_data[slice_data > 0.0001]
+    if len(useful_pixels) > 0:
+        dynamic_vmax = np.percentile(useful_pixels, 99)
+    else:
+        dynamic_vmax = np.max(slice_data)
+
+    axes[0].imshow(slice_data, cmap="binary", origin="lower", vmax=dynamic_vmax)
     axes[0].plot(
         phantom_center_x,
         phantom_center_y,
@@ -1548,14 +1815,31 @@ def generate_iq_plot(
         axes[0].add_patch(circle)
         axes[0].plot(x, y, "+", color=rois["color"], markersize=12)
 
-    axes[0].set_title(f"Axial z={cfg.ROIS.CENTRAL_SLICE}")
+    noise_threshold = 0.05 * dynamic_vmax
+    active_rows = np.any(slice_data > noise_threshold, axis=1)
+    active_cols = np.any(slice_data > noise_threshold, axis=0)
+    if np.any(active_rows) and np.any(active_cols):
+        ymin, ymax = np.where(active_rows)[0][[0, -1]]
+        xmin, xmax = np.where(active_cols)[0][[0, -1]]
+
+        padding = 5
+        axes[0].set_ylim(ymin - padding, ymax + padding)
+        axes[0].set_xlim(xmin - padding, xmax + padding)
+
     axes[0].set_xlabel("X (pixels)")
     axes[0].set_ylabel("Y (pixels)")
-    axes[0].legend(loc="lower right", fontsize=10, framealpha=0.7)
+    axes[0].legend(loc="lower right", fontsize=16, framealpha=0.7)
     axes[0].set_aspect("equal")
     axes[0].grid(False)
 
-    axes[1].imshow(image[:, :, phantom_center_x], cmap="binary", origin="lower")
+    slice_data = image[:, :, phantom_center_x]
+    useful_pixels = slice_data[slice_data > 0.0001]
+    if len(useful_pixels) > 0:
+        dynamic_vmax = np.percentile(useful_pixels, 99)
+    else:
+        dynamic_vmax = np.max(slice_data)
+
+    axes[1].imshow(slice_data, cmap="binary", origin="lower", vmax=dynamic_vmax)
     axes[1].plot(
         phantom_center_y,
         phantom_center_z,
@@ -1621,13 +1905,13 @@ def generate_iq_plot(
         markeredgewidth=2,
         label="Phantom Center",
     )
-    axes[1].set_title(f"Saggital x={phantom_center_x}")
+
     axes[1].set_xlabel("Y (pixels)")
     axes[1].set_ylabel("Z (pixels)")
     axes[1].legend(
         handles=[center_handle, uniform_handle, air_handle, water_handle],
         loc="lower right",
-        fontsize=10,
+        fontsize=16,
         framealpha=0.7,
     )
     axes[1].set_aspect("equal")
