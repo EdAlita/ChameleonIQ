@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v3.0.0](https://github.com/EdAlita/nema_analysis_tool/compare/v2.3.0...v3.0.0) - 2026-07-27
+
+### Commits
+- feat(roi-editor): Add metadata handling for main and background ROI circle movements ([d3da334](https://github.com/EdAlita/nema_analysis_tool/commit/d3da334bd04954b757de2c5615309b60e1a73a78))
+- fix(nema_quant/interactive_roi_editor): Fix naming convention for NEMA NU4 2008 and NEMA NU 2 2018 ([2b7314a](https://github.com/EdAlita/nema_analysis_tool/commit/2b7314a8b99383bf07cf8391d7df25d7947fabf9))
+- docs(docs): Update docs to include better examples ([c16249a](https://github.com/EdAlita/nema_analysis_tool/commit/c16249a63c59daff17e6bc3572fd7630676b66bd))
+- feat(nema_quant_iter/cli): Add Rich logging and formatting for improved output ([f66e9e3](https://github.com/EdAlita/nema_analysis_tool/commit/f66e9e39bd3d353dafefc0215dd7cb332d130d53))
+- fixes(nema_quant/analysis): Update NEMA protocol and slice calculation. ([138a1a7](https://github.com/EdAlita/nema_analysis_tool/commit/138a1a745c2f25c804c58f2776e921a9bc73db44))
+- fixes(nema_quant_iter/reporting): update logging statements to remove unnecessary comments and improve formatting consistency throughout the file. ([75cb9f2](https://github.com/EdAlita/nema_analysis_tool/commit/75cb9f23f0271aac0b5a1e8e986b47cef816a886))
+- fix(nema_quant/cli): Improve logging and add ROI plots for various standards ([36cd581](https://github.com/EdAlita/nema_analysis_tool/commit/36cd581e86a2ef07ed7b953fb86b21bd1ee7ade2))
+- feat(nema_quant/interactive_roi_editor): Add optional rotate_angle parameter to interactive ROI editor ([51e39d1](https://github.com/EdAlita/nema_analysis_tool/commit/51e39d13d2e5eeb5961538c4e4c245fd63cff3c2))
+- fix: Fix failing mypy, flake and pytest test ([ef14e7d](https://github.com/EdAlita/nema_analysis_tool/commit/ef14e7d0cf0835cd94a0cd9c0d2569cd4d60ee21))
+- fixes(nema_quant/io): update load_nii_image to include new optional parameters for outlier removal and axis inversion ([b86f45f](https://github.com/EdAlita/nema_analysis_tool/commit/b86f45f3202f31c3b9579010b003ef9b3bfcc53e))
+- fixes(nema_quant/cli): Add --outliner argument for outlier removal ([743dd2c](https://github.com/EdAlita/nema_analysis_tool/commit/743dd2c0792fd943f0a0c3b1ae066df8b27b2cbf))
+- chore: Update to v3.0.0 ([3969218](https://github.com/EdAlita/nema_analysis_tool/commit/39692180c3564ce384934bf21faa01d3719cc802))
+- fix(nema_merge/reporting): Update plot labels to be consistent ([3fce5cd](https://github.com/EdAlita/nema_analysis_tool/commit/3fce5cd182f00be0a081511d8d18d9712a03b220))
+- docs(README): Update to latest release ([8dcf571](https://github.com/EdAlita/nema_analysis_tool/commit/8dcf5715b94ecfe9bd281b1f28da4e6be92da70f))
+- docs(nema_quant/io): Remove logging statement from file loading to reduce noise ([bc84908](https://github.com/EdAlita/nema_analysis_tool/commit/bc84908c6055dd5bbc1aaf56f3194414356d460e))
+- Update pytest version to &gt;=9.0.4 ([71e6e00](https://github.com/EdAlita/nema_analysis_tool/commit/71e6e00bf6e8526fb860cab27729913ac8dd3405))
+- chore(deps): bump pillow in the pip group across 1 directory ([488c6a7](https://github.com/EdAlita/nema_analysis_tool/commit/488c6a715bc1913bbb4013fce21be63666cd7f8f))
+- Update pillow version to 12.2.0 ([b841fc0](https://github.com/EdAlita/nema_analysis_tool/commit/b841fc093d82f8ca6683ae8eec65df4b51f60bec))
+- Update pillow version requirement in requirements_dev.txt ([40c221b](https://github.com/EdAlita/nema_analysis_tool/commit/40c221b0dff45615908d062c4385a809506d81ae))
+
 ## [v2.3.0](https://github.com/EdAlita/nema_analysis_tool/compare/v2.2.2...v2.3.0) - 2026-05-06
 
 ### Commits
