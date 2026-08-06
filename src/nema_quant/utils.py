@@ -16,7 +16,7 @@ from scipy.ndimage import label as ndimage_label
 
 _logger = logging.getLogger(__name__)
 
-is_headless = not os.environ.get("DISPLAY") and sys.platform != "win32"
+is_headless = sys.platform.startswith("linux") and not os.environ.get("DISPLAY")
 if is_headless:
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
