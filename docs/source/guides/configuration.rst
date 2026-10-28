@@ -175,4 +175,19 @@ Create ``custom_config.yaml``::
     FILE:
       CASE: "My_Study"
 
+Printing Available Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To see every configurable option and its default value without leaving the
+terminal, run:
+
+.. code-block:: bash
+
+    chameleoniq_quant --show-config
+
+This prints the full default configuration as YAML, which can be redirected
+to a file and edited as a starting point for a custom ``--config``::
+
+    chameleoniq_quant --show-config > my_config.yaml
+
 For detailed configuration options, see :doc:`../api/config`.
