@@ -11,8 +11,15 @@ from typing import Any, Optional, Tuple
 import cv2
 import numpy as np
 import numpy.typing as npt
-from scipy.ndimage import binary_fill_holes, center_of_mass, gaussian_filter
+from scipy.ndimage import (
+    binary_fill_holes,
+    binary_opening,
+    center_of_mass,
+    find_objects,
+    gaussian_filter,
+)
 from scipy.ndimage import label as ndimage_label
+from scipy.ndimage import sum as ndimage_sum
 
 _logger = logging.getLogger(__name__)
 
@@ -185,6 +192,50 @@ def find_phantom_center_cv2_threshold(
         raise RuntimeError("No se pudo calcular el centro con el umbral actual.")
 
     return (sum_z / sum_area, sum_y / sum_area, sum_x / sum_area)
+
+
+def find_phantom_center_robust(
+    image_data_3d: npt.NDArray[Any],
+    threshold_fraction: float = 0.41,
+    ref_percentile: float = 99.0,
+    smooth_sigma: float = 1.0,
+    edge_margin: int = 2,
+) -> Tuple[float, float, float]:
+    if image_data_3d.ndim != 3:
+        raise ValueError("La imagen de entrada debe ser un array 3D (z,y,x).")
+
+    vol = np.nan_to_num(image_data_3d, nan=0.0, posinf=0.0, neginf=0.0)
+    if smooth_sigma > 0:
+        vol = gaussian_filter(vol, sigma=smooth_sigma)
+
+    # Ignore border slices/voxels (noisy end planes)
+    s = slice(edge_margin, -edge_margin) if edge_margin > 0 else slice(None)
+    core = np.zeros(vol.shape, dtype=bool)
+    core[s, s, s] = True
+
+    # Robust reference instead of the absolute max
+    ref = float(np.percentile(vol[core], ref_percentile))
+    mask = (vol > threshold_fraction * ref) & core
+    mask = binary_opening(mask, iterations=1)
+
+    labels, n = ndimage_label(mask)  # type: ignore[misc]
+    if n == 0:
+        raise RuntimeError(
+            "No se pudo encontrar ningún objeto en la imagen con el umbral actual."
+        )
+    # keep only the largest connected component (the phantom)
+    sizes = ndimage_sum(mask, labels, index=np.arange(1, n + 1))
+    keep = int(np.argmax(sizes)) + 1
+    comp = labels == keep
+
+    # Warn if the phantom is truncated by the volume border
+    bbox = find_objects(comp.astype(np.uint8))[0]
+    for ax, sl in enumerate(bbox):
+        if sl.start <= edge_margin or sl.stop >= vol.shape[ax] - edge_margin:
+            _logger.warning("Phantom may be truncated along axis %d", ax)
+
+    zc, yc, xc = center_of_mass(comp)
+    return float(zc), float(yc), float(xc)
 
 
 def voxel_to_mm(
