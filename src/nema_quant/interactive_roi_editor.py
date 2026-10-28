@@ -25,7 +25,7 @@ from scipy.ndimage import label as ndimage_label
 from config.defaults import get_cfg_defaults
 from nema_quant.analysis import create_cylindrical_mask
 from nema_quant.io import load_nii_image
-from nema_quant.utils import find_phantom_center, find_phantom_center_cv2_threshold
+from nema_quant.utils import find_phantom_center_robust
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1054,11 +1054,7 @@ class InteractiveROIEditorNU4(QtWidgets.QMainWindow):
         self._update_display()
 
     def _compute_phantom_center(self) -> None:
-        ce_z, ce_y, ce_x = find_phantom_center_cv2_threshold(
-            self.image,
-            threshold_fraction=self.center_threshold,
-            method=self.center_method,
-        )
+        ce_z, ce_y, ce_x = find_phantom_center_robust(self.image)
         self.phantom_center_z = int(ce_z)
         self.phantom_center_y = int(ce_y)
         self.phantom_center_x = int(ce_x)
@@ -3038,7 +3034,7 @@ def main() -> None:
 
         if args.slice is None:
             try:
-                z_com, _, _ = find_phantom_center(
+                z_com, _, _ = find_phantom_center_robust(
                     image_array_3d, threshold=np.min(image_array_3d) * 0.6
                 )
                 initial_slice = int(np.ceil(z_com))
@@ -3077,7 +3073,7 @@ def main() -> None:
     # Determine initial slice for NU 2-2018
     if args.slice is None:
         try:
-            z_com, _, _ = find_phantom_center(
+            z_com, _, _ = find_phantom_center_robust(
                 image_array_3d, threshold=np.max(image_array_3d) * 0.41
             )
             initial_slice = int(np.ceil(z_com))
