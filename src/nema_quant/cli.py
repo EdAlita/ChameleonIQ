@@ -86,6 +86,9 @@ def create_parser() -> argparse.ArgumentParser:
     # Basic analysis
     chameleoniq_quant input.nii --config custom_config.yaml --output results.txt
 
+    # Print all configurable options and their default values
+    chameleoniq_quant --show-config
+
     """,
     )
 
@@ -164,6 +167,22 @@ def create_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {version('ChameleonIQ')}"
+    )
+
+    parser.add_argument(
+        "--show-config",
+        action="store_true",
+        help="Print every available configuration option and its default value "
+        "(YAML format) to the console and exit. Useful as a starting point for "
+        "writing a custom --config file.",
+    )
+
+    parser.add_argument(
+        "--att-map",
+        type=str,
+        help="Path to attenuation map NIfTI image file (.nii or .nii.gz)",
+        default=None,
+        required=False,
     )
 
     return parser
@@ -330,7 +349,25 @@ def run_analysis(args: argparse.Namespace) -> int:
                 logging.error(traceback.format_exc())
             print(f"ERROR: Failed to load image: {e}")
             return 1
-
+        if args.att_map:
+            att_map_path = Path(args.att_map)
+            if not att_map_path.exists():
+                error_msg = f"Attenuation map file not found: {args.att_map}"
+                logging.error(error_msg)
+                print(f"ERROR: {error_msg}")
+                return 1
+            if not att_map_path.suffix.lower() in [".nii", ".gz"]:
+                error_msg = f"Attenuation map file must be a NIfTI file (.nii or .nii.gz): {args.att_map}"
+                logging.error(error_msg)
+                print(f"ERROR: {error_msg}")
+                return 1
+            att_map_data, att_map_affine = load_nii_image(
+                att_map_path,
+                return_affine=True,
+                inverse_axes=cfg.ROIS.INVERSE_AXES,
+                outliner=args.outliner,
+            )
+            logging.debug("Attenuation map loaded successfully")
         try:
             image_dims, voxel_spacing = get_image_properties(
                 image_data, affine, args.spacing
@@ -348,6 +385,7 @@ def run_analysis(args: argparse.Namespace) -> int:
         try:
             phantom = NemaPhantom(cfg, image_dims, voxel_spacing)
             _log_kv("Phantom initialized with", f"{len(phantom.rois)} ROIs")
+            logging.debug(f"Phantom ROIs: {phantom.rois}")
         except Exception as e:
             logging.error(f"Failed to initialize phantom: {e}")
             if args.log_level == "DEBUG":
@@ -445,6 +483,10 @@ def run_analysis(args: argparse.Namespace) -> int:
                         image=image_data, output_dir=png_dir, cfg=cfg
                     )
                 generate_torso_plot(image=image_data, output_dir=png_dir, cfg=cfg)
+                if args.att_map:
+                    generate_torso_plot(
+                        image=att_map_data, output_dir=png_dir, cfg=cfg, is_att_map=True
+                    )
                 logging.debug("Plots saved successfully")
             except Exception as e:
                 logging.error(f"Failed to generate plots: {e}")
@@ -628,8 +670,16 @@ def run_analysis(args: argparse.Namespace) -> int:
 
 def main(cli_args: Optional[list[str]] = None) -> int:
     """Main entry point for the CLI."""
+    args_list = list(cli_args) if cli_args is not None else sys.argv[1:]
+
+    # Handled before the parser's required arguments (input_image, --output,
+    # --config) are enforced, so `--show-config` can be used on its own.
+    if "--show-config" in args_list:
+        print(get_cfg_defaults().dump())
+        return 0
+
     parser = create_parser()
-    args = parser.parse_args(cli_args)
+    args = parser.parse_args(args_list)
     return run_analysis(args)
 
 
