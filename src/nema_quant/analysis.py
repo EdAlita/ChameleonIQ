@@ -18,11 +18,7 @@ import yacs.config
 from .metrics import get_values
 from .phantom import NemaPhantom
 from .statistics import Estimator
-from .utils import (
-    extract_canny_mask,
-    find_phantom_center,
-    find_phantom_center_cv2_threshold,
-)
+from .utils import extract_canny_mask, find_phantom_center_robust
 
 _logger = logging.getLogger(__name__)
 
@@ -379,7 +375,7 @@ def _calculate_crc_std(
 
         # NEMA NU4-2008: VOI diameter must be TWICE the rod diameter
         # Config contains rod diameter, so VOI radius = 2 × rod radius
-        voi_radius_vox = sphere_roi["radius_vox"] * 2.0
+        voi_radius_vox = sphere_roi["radius_vox"] * float(2.0)  # type: ignore[index]
 
         y, x = sphere_roi["center_vox"]
 
@@ -393,7 +389,7 @@ def _calculate_crc_std(
 
         if len(y_coords) == 0:
             _logger.warning(f"  No voxels found in ROI mask for {name}")
-            crc_results[voi_radius_vox / 2.0] = {  # type: ignore[index]
+            crc_results[voi_radius_vox * phantom.voxel_spacing[0]] = {  # type: ignore[index]
                 "mean_signal": 0.0,
                 "std_signal": 0.0,
                 "uniform_mean": 0.0,  # type: ignore[name-defined]
@@ -469,7 +465,7 @@ def _calculate_crc_std(
 
         percentage_std_combined = 100.0 * np.sqrt(cv_rod**2 + cv_uniform**2)
 
-        crc_results[voi_radius_vox / 2.0] = {  # type: ignore[index]
+        crc_results[voi_radius_vox * phantom.voxel_spacing[0]] = {  # type: ignore[index]
             "mean_signal": rod_est.mean,
             "std_signal": rod_est.std,
             "uniform_mean": uniform_est.mean,
@@ -862,9 +858,7 @@ def calculate_nema_metrics(
         )
 
     if protocol == "NU_2_2018":
-        phantom_center_zyx = find_phantom_center(
-            image_data, threshold=(np.max(image_data) * 0.41)
-        )
+        phantom_center_zyx = find_phantom_center_robust(image_data)
 
         if _logger.isEnabledFor(logging.DEBUG):
             _logger.debug(f" Phantom Center found at (z,y,x) : {phantom_center_zyx}")
@@ -923,13 +917,11 @@ def calculate_nema_metrics_nu4_2008(
     _logger.debug(f" Image data dimensions (z,y,x): {dim_z}, {dim_y}, {dim_x}")
 
     # Find phantom center in xy plane only (for centering cylindrical ROIs)
-    center_method = getattr(cfg.ROIS, "PHANTOM_CENTER_METHOD", "weighted_slices")
-    center_threshold = getattr(cfg.ROIS, "PHANTOM_CENTER_THRESHOLD_FRACTION", 0.41)
+    # _center_method = getattr(cfg.ROIS, "PHANTOM_CENTER_METHOD", "weighted_slices")
+    # _center_threshold = getattr(cfg.ROIS, "PHANTOM_CENTER_THRESHOLD_FRACTION", 0.41)
 
-    ce_z, ce_y, ce_x = find_phantom_center_cv2_threshold(
+    ce_z, ce_y, ce_x = find_phantom_center_robust(
         image_data,
-        threshold_fraction=center_threshold,
-        method=center_method,
     )
 
     phantom_center_z = int(ce_z)
