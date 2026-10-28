@@ -124,7 +124,7 @@ def test_extract_circular_mask_2d():
         pytest.fail(f"Expected mask sum between 10-15, got {np.sum(mask)}")
 
 
-@patch("src.nema_quant.analysis.find_phantom_center")
+@patch("src.nema_quant.analysis.find_phantom_center_robust")
 @patch("src.nema_quant.analysis.extract_canny_mask")
 def test_calculate_nema_metrics(
     mock_extract_canny, mock_find_center, mock_cfg, mock_phantom, test_image_data
@@ -202,7 +202,7 @@ def test_calculate_nema_metrics_bad_activity_ratio(
         analysis.calculate_nema_metrics(test_image_data, mock_phantom, mock_cfg)
 
 
-@patch("src.nema_quant.analysis.find_phantom_center")
+@patch("src.nema_quant.analysis.find_phantom_center_robust")
 @patch("src.nema_quant.analysis.extract_canny_mask")
 def test_background_stats_calculation(
     mock_extract_canny, mock_find_center, mock_cfg, mock_phantom, test_image_data
@@ -229,7 +229,7 @@ def test_background_stats_calculation(
         pytest.fail(f"Expected non-negative std dev, got {result['bkg_std_dev_SD']}")
 
 
-@patch("src.nema_quant.analysis.find_phantom_center")
+@patch("src.nema_quant.analysis.find_phantom_center_robust")
 @patch("src.nema_quant.analysis.extract_canny_mask")
 def test_hot_sphere_counts_calculation(
     mock_extract_canny, mock_find_center, mock_cfg, mock_phantom, test_image_data
@@ -458,7 +458,7 @@ def test_save_background_visualization(mock_close, mock_savefig, tmp_path: Path)
 
 @patch("src.nema_quant.analysis._calculate_crc_std")
 @patch("src.nema_quant.analysis._calculate_spillover_ratio")
-@patch("src.nema_quant.analysis.find_phantom_center_cv2_threshold")
+@patch("src.nema_quant.analysis.find_phantom_center_robust")
 def test_calculate_nema_metrics_nu4_2008_basic(
     mock_find_center,
     mock_spillover,
