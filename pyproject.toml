@@ -4,10 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ChameleonIQ"
-version = "3.0.0"
-authors = [
-  { name="EdAlita", email="eyulibri@i3m.upv.es" },
-]
+version = "3.0.2"
+authors = [{ name = "EdAlita", email = "eyulibri@i3m.upv.es" }]
 description = "A tool for NEMA NU 2-2018 Image Quality analysis."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -66,7 +64,7 @@ chameleoniq_gui = "GUI.chameleon_iq:main"
 
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 
 [tool.setuptools.data-files]
 data = ["data/banner.png"]
@@ -84,22 +82,17 @@ dev = [
     "pytest-cov==6.2.1",
     "mypy==1.16.1",
     "mypy_extensions==1.1.0",
-    "flake8==7.3.0"
+    "flake8==7.3.0",
 ]
 
 [tool.pytest.ini_options]
 addopts = "--cov=src/nema_quant --cov-report=term-missing --cov-report=html"
-testpaths = [
-  "tests",
-]
-pythonpath = [
-  "src",
-  "."
-]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
 filterwarnings = [
     "ignore:builtin type SwigPyPacked has no __module__ attribute:DeprecationWarning",
     "ignore:builtin type SwigPyObject has no __module__ attribute:DeprecationWarning",
-    "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning"
+    "ignore:builtin type swigvarlink has no __module__ attribute:DeprecationWarning",
 ]
 
 [tool.coverage.run]
