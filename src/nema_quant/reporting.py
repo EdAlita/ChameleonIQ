@@ -39,7 +39,7 @@ from reportlab.platypus import (
 from reportlab.platypus.doctemplate import BaseDocTemplate, PageTemplate
 
 from .analysis import create_cylindrical_mask
-from .utils import find_phantom_center_cv2_threshold
+from .utils import find_phantom_center_robust
 
 logging.getLogger("matplotlib").setLevel(logging.WARNING)
 logging.getLogger("PIL").setLevel(logging.WARNING)
@@ -1009,6 +1009,7 @@ def generate_crc_plots_nu4(
         This function does not return a value; the plot is saved to disk.
     """
     roi_defs = {roi["diameter_mm"]: roi for roi in cfg.PHANTHOM.ROI_DEFINITIONS_MM}
+    logging.debug(f"ROI definitions: {roi_defs}")
     rows: List[Dict[str, Any]] = []
     for name, metrics in crc_results.items():
         roi = roi_defs.get(name)
@@ -1649,7 +1650,10 @@ def generate_coronal_sphere_plots(
 
 
 def generate_torso_plot(
-    image: npt.NDArray[Any], output_dir: Path, cfg: yacs.config.CfgNode
+    image: npt.NDArray[Any],
+    output_dir: Path,
+    cfg: yacs.config.CfgNode,
+    is_att_map: bool = False,
 ) -> None:
     """
     Generates a plot of the input image.
@@ -1662,7 +1666,8 @@ def generate_torso_plot(
         Directory path for saving the resulting plot.
     cfg : yacs.config.CfgNode
         Configuration object used for the analysis.
-
+    is_att_map : bool, optional
+        Flag indicating if the image is an attenuation map, by default False
     Returns
     -------
     None
@@ -1675,9 +1680,13 @@ def generate_torso_plot(
     vmax_dinamico = np.percentile(pixeles_utiles, 99)
 
     fig, ax2 = plt.subplots(figsize=(12, 12))
+    if is_att_map:
+        cmap = "bone"
+    else:
+        cmap = "binary"
     ax2.imshow(
         slice_data,
-        cmap="binary",
+        cmap=cmap,
         origin="lower",
         vmax=vmax_dinamico,
     )
@@ -1698,8 +1707,10 @@ def generate_torso_plot(
     ax2.axis("off")
     ax2.grid(False)
     plt.tight_layout()
-
-    output_path = output_dir / "torso.png"
+    if is_att_map:
+        output_path = output_dir / "torso_att_map.png"
+    else:
+        output_path = output_dir / "torso.png"
     plt.savefig(str(output_path), bbox_inches="tight", dpi=300)
     plt.close()
 
@@ -1724,12 +1735,8 @@ def generate_iq_plot(
         This function does not return a value; the plot is saved to disk.
     """
 
-    center_method = getattr(cfg.ROIS, "PHANTOM_CENTER_METHOD", "weighted_slices")
-    center_threshold = getattr(cfg.ROIS, "PHANTOM_CENTER_THRESHOLD_FRACTION", 0.41)
-    ce_z, ce_y, ce_x = find_phantom_center_cv2_threshold(
+    ce_z, ce_y, ce_x = find_phantom_center_robust(
         image,
-        threshold_fraction=center_threshold,
-        method=center_method,
     )
     phantom_center_x = int(ce_x)
     phantom_center_y = int(ce_y)
@@ -1815,7 +1822,7 @@ def generate_iq_plot(
         axes[0].add_patch(circle)
         axes[0].plot(x, y, "+", color=rois["color"], markersize=12)
 
-    noise_threshold = 0.05 * dynamic_vmax
+    noise_threshold = cfg.STYLE.PLOT.NOISE_THRESHOLD * dynamic_vmax
     active_rows = np.any(slice_data > noise_threshold, axis=1)
     active_cols = np.any(slice_data > noise_threshold, axis=0)
     if np.any(active_rows) and np.any(active_cols):
@@ -1828,7 +1835,7 @@ def generate_iq_plot(
 
     axes[0].set_xlabel("X (pixels)")
     axes[0].set_ylabel("Y (pixels)")
-    axes[0].legend(loc="lower right", fontsize=16, framealpha=0.7)
+    axes[0].legend(loc="lower right", fontsize=10, framealpha=0.7)
     axes[0].set_aspect("equal")
     axes[0].grid(False)
 
@@ -1906,12 +1913,23 @@ def generate_iq_plot(
         label="Phantom Center",
     )
 
+    noise_threshold = cfg.STYLE.PLOT.NOISE_THRESHOLD * dynamic_vmax
+    active_rows = np.any(slice_data > noise_threshold, axis=1)
+    active_cols = np.any(slice_data > noise_threshold, axis=0)
+    if np.any(active_rows) and np.any(active_cols):
+        ymin, ymax = np.where(active_rows)[0][[0, -1]]
+        xmin, xmax = np.where(active_cols)[0][[0, -1]]
+
+        padding = 5
+        axes[1].set_ylim(ymin - padding, ymax + padding)
+        axes[1].set_xlim(xmin - padding, xmax + padding)
+
     axes[1].set_xlabel("Y (pixels)")
     axes[1].set_ylabel("Z (pixels)")
     axes[1].legend(
         handles=[center_handle, uniform_handle, air_handle, water_handle],
         loc="lower right",
-        fontsize=16,
+        fontsize=10,
         framealpha=0.7,
     )
     axes[1].set_aspect("equal")
